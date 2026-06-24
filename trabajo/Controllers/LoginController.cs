@@ -1,0 +1,1346 @@
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
+using prestamoscreditos.Models;
+using System.Security.Claims;
+using System.Text.RegularExpressions;
+using trabajo.Models;
+using trabajo.Models.Patterns.Observer;
+using trabajo.Service;
+
+namespace trabajo.Controllers
+{
+
+    public class LoginController : Controller
+    {
+        private readonly IusuarioServices _UsuarioService;
+        private readonly UsuarioContext _Context;
+        private static string codigoGlobal = "";
+        private readonly EmailService _emailService = new EmailService();
+
+        public LoginController(IusuarioServices usuarioService, UsuarioContext context)
+        {
+            _UsuarioService = usuarioService;
+            _Context = context;
+        }
+        public IActionResult PantallaPrincipal()
+        {
+            var comentarios = (
+                from c in _Context.ComentarioClientes
+                join u in _Context.Usuario
+                    on c.Usuario_Id equals u.Id
+                orderby c.FechaComentario descending
+                select new ComentarioClienteViewModel
+                {
+                    NombreCompleto = u.Nombre + " " + u.Apellido,
+                    Comentario = c.Comentario,
+                    Calificacion = c.Calificacion
+                }
+            ).ToList();
+
+            return View(comentarios);
+        }
+        public async Task<IActionResult> CerrarSesion()
+        {
+            string dni = User.FindFirst("Dni")?.Value;
+
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+            if (usuario != null && usuario.Rol == "Cliente")
+            {
+                usuario.EstadoActivo = false;
+                _Context.SaveChanges();
+            }
+            await HttpContext.SignOutAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme
+            );
+
+            return RedirectToAction("PantallaPrincipal", "Login");
+        }
+
+        public IActionResult Registro()
+        {
+            return View();
+        }
+        [HttpPost]
+        public async Task<IActionResult> Registro(Usuario usuario, string confirmarClave, string codigoVerificacion)
+        {
+            if (!Regex.IsMatch(usuario.Dni, @"^\d{8}$"))
+            {
+                ViewData["mensaje"] = "El DNI debe tener exactamente 8 números.";
+                return View(usuario);
+            }
+
+            if (!Regex.IsMatch(usuario.Celular, @"^9\d{8}$"))
+            {
+                ViewData["mensaje"] = "El celular debe tener 9 números y empezar con 9.";
+                return View(usuario);
+            }
+
+            if (!Regex.IsMatch(usuario.Correo, @"^[A-Za-z0-9._%+-]+@gmail\.com$"))
+            {
+                ViewData["mensaje"] = "El correo debe ser Gmail.";
+                return View(usuario);
+            }
+            if (string.IsNullOrWhiteSpace(usuario.Genero))
+            {
+                ViewData["mensaje"] = "Debe seleccionar un género.";
+                return View(usuario);
+            }
+
+            if (!Regex.IsMatch(usuario.clave, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$"))
+            {
+                ViewData["mensaje"] = "La contraseña debe tener mínimo 6 caracteres, una mayúscula, una minúscula y un número.";
+                return View(usuario);
+            }
+
+            if (usuario.clave != confirmarClave)
+            {
+                ViewData["mensaje"] = "Las contraseñas no coinciden.";
+                return View(usuario);
+            }
+
+            bool existe = _Context.Usuario.Any(x =>
+                x.Dni == usuario.Dni ||
+                x.Celular == usuario.Celular ||
+                x.Correo == usuario.Correo
+            );
+
+            if (existe)
+            {
+                ViewData["mensaje"] = "El DNI, celular o correo ya está registrado.";
+                return View(usuario);
+            }
+
+            if (codigoVerificacion != codigoGlobal)
+            {
+                ViewData["mensaje"] = "El código de verificación es incorrecto.";
+                return View(usuario);
+            }
+
+            usuario.clave = utilidades.EncriptarClave(usuario.clave);
+            usuario.Rol = "Cliente";
+            Usuario usuarioCreado = await _UsuarioService.SaveUsuario(usuario);
+
+            if (usuarioCreado.Id > 0)
+            {
+                TempData["Mensaje"] = "Usuario registrado exitosamente";
+                return RedirectToAction("IniciarSeccion", "Login");
+            }
+
+            ViewData["mensaje"] = "No se pudo crear el usuario.";
+            return View(usuario);
+        }
+        [HttpGet]
+        public IActionResult IniciarSeccion()
+        {
+            return View();
+        }
+        [HttpPost]
+        public async Task<IActionResult> IniciarSeccion(string dni, string clave)
+        {
+            if (string.IsNullOrWhiteSpace(dni) || !Regex.IsMatch(dni, @"^\d{8}$"))
+            {
+                ViewData["Mensaje"] = "El DNI debe tener exactamente 8 números.";
+                return View();
+            }
+
+            bool dniExiste = _Context.Usuario.Any(x => x.Dni == dni);
+
+            if (!dniExiste)
+            {
+                ViewData["Mensaje"] = "No estás registrado. Primero debes crear una cuenta.";
+                return View();
+            }
+
+            Usuario usuarioEncontrado = _Context.Usuario.FirstOrDefault(x =>
+                x.Dni == dni &&
+                x.clave == utilidades.EncriptarClave(clave)
+            );
+
+            if (usuarioEncontrado == null)
+            {
+                ViewData["Mensaje"] = "La contraseña es incorrecta.";
+                return View();
+            }
+
+            List<Claim> claims = new List<Claim>()
+            {
+             new Claim(ClaimTypes.Name, usuarioEncontrado.Nombre),
+             new Claim("Apellido", usuarioEncontrado.Apellido),
+             new Claim("Dni", usuarioEncontrado.Dni),
+             new Claim("Celular", usuarioEncontrado.Celular),
+             new Claim("Correo", usuarioEncontrado.Correo),
+             new Claim(ClaimTypes.Role, usuarioEncontrado.Rol)
+
+            };
+
+            ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+            AuthenticationProperties properties = new AuthenticationProperties()
+            {
+                AllowRefresh = true,
+            };
+
+            await HttpContext.SignInAsync(
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            new ClaimsPrincipal(claimsIdentity),
+            properties
+            );
+            if (usuarioEncontrado.Rol == "Cliente")
+            {
+                usuarioEncontrado.EstadoActivo = true;
+                _Context.SaveChanges();
+            }
+
+            if (usuarioEncontrado.Rol == "Analista")
+            {
+                return RedirectToAction("ProgramaAnalista", "Analista");
+            }
+            else if (usuarioEncontrado.Rol == "Administrador")
+            {
+                return RedirectToAction("ProgramaAdministrador", "Administrador");
+            }
+
+            return RedirectToAction("SolicitarCredito", "Login");
+
+        }
+
+        [HttpGet]
+        public IActionResult OlvideContrasena()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult OlvideContrasena(string dni, string nuevaClave, string confirmarClave)
+        {
+            if (string.IsNullOrWhiteSpace(dni) || !Regex.IsMatch(dni, @"^\d{8}$"))
+            {
+                ViewData["Mensaje"] = "El DNI debe tener exactamente 8 números.";
+                return View();
+            }
+
+            if (!Regex.IsMatch(nuevaClave, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$"))
+            {
+                ViewData["Mensaje"] = "La contraseña debe tener mínimo 6 caracteres, una mayúscula, una minúscula y un número.";
+                return View();
+            }
+
+            if (nuevaClave != confirmarClave)
+            {
+                ViewData["Mensaje"] = "Las contraseñas no coinciden.";
+                return View();
+            }
+
+            Usuario usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+            if (usuario == null)
+            {
+                ViewData["Mensaje"] = "No existe un usuario con ese DNI.";
+                return View();
+            }
+            if (usuario.clave == utilidades.EncriptarClave(nuevaClave))
+            {
+                ViewData["Mensaje"] = "La nueva contraseña no puede ser igual a la contraseña actual.";
+                return View();
+            }
+
+            usuario.clave = utilidades.EncriptarClave(nuevaClave);
+            _Context.SaveChanges();
+
+            TempData["Mensaje"] = "Contraseña actualizada correctamente";
+            return RedirectToAction("IniciarSeccion", "Login");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> EnviarCodigo(string correo)
+        {
+            try
+            {
+                string caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                Random random = new Random();
+
+                codigoGlobal = new string(Enumerable.Repeat(caracteres, 6)
+                    .Select(s => s[random.Next(s.Length)]).ToArray());
+
+                await _emailService.EnviarCodigoAsync(correo, codigoGlobal);
+
+                return Json(new { ok = true, mensaje = "Código enviado correctamente" });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { ok = false, mensaje = ex.ToString() });
+            }
+        }
+        public IActionResult SolicitarCredito()
+        {
+            string dni = User.FindFirst("Dni")?.Value;
+
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+            if (usuario != null)
+            {
+                var solicitudActiva = _Context.SOLICITUD_CREDITO
+ .FirstOrDefault(x => x.Usuario_Id_Usuario == usuario.Id &&
+     (x.Estado == "Pendiente" ||
+      x.Estado == "En Evaluación" ||
+      x.Estado == "Aprobado"));
+                var solicitudRechazada = _Context.SOLICITUD_CREDITO
+.FirstOrDefault(x => x.Usuario_Id_Usuario == usuario.Id &&
+                     x.Estado == "Rechazado");
+
+                ViewBag.SolicitudRechazada = solicitudRechazada;
+
+                ViewBag.SolicitudActiva = solicitudActiva;
+
+                if (solicitudActiva != null)
+                {
+                    Console.WriteLine("Solicitud: " + solicitudActiva.Id_Solicitud);
+                    var perfil = _Context.PERFIL_FINANCIERO
+                        .FirstOrDefault(x => x.SOLICITUD_CREDITO_Id_Solicitud == solicitudActiva.Id_Solicitud);
+
+                    ViewBag.PerfilFinanciero = perfil;
+                }
+            }
+            var comentarios = (
+     from c in _Context.ComentarioClientes
+     join u in _Context.Usuario
+         on c.Usuario_Id equals u.Id
+     select new ComentarioClienteViewModel
+     {
+         NombreCompleto = u.Nombre + " " + u.Apellido,
+         Comentario = c.Comentario,
+         Calificacion = c.Calificacion
+     }
+ ).ToList();
+            bool yaTieneResena = _Context.ComentarioClientes
+      .Any(x => x.Usuario_Id == usuario.Id);
+
+            bool tieneSolicitudAprobada = _Context.SOLICITUD_CREDITO
+                .Any(x => x.Usuario_Id_Usuario == usuario.Id && x.Estado == "Aprobado");
+
+            ViewBag.MostrarResena = tieneSolicitudAprobada && !yaTieneResena;
+
+            return View(comentarios);
+        }
+        public IActionResult FormularioPrestamo()
+        {
+            string dni = User.FindFirst("Dni")?.Value;
+
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+            if (usuario != null)
+            {
+                var solicitudPendiente = _Context.SOLICITUD_CREDITO
+     .FirstOrDefault(x => x.Usuario_Id_Usuario == usuario.Id &&
+         (x.Estado == "Pendiente" ||
+          x.Estado == "En Evaluación" ||
+          x.Estado == "Aprobado" ||
+          x.Estado == "Rechazado"));
+
+                if (solicitudPendiente != null)
+                {
+                    ViewBag.MostrarConfirmacion = true;
+                }
+            }
+
+            return View();
+        }
+        [HttpPost]
+        public IActionResult RegistrarSolicitudCredito(
+    decimal montoSolicitado,
+
+    int plazoMeses,
+    decimal ingresoMensual,
+    decimal egresoMensual,
+    string tieneOtrosCreditos,
+    string motivoOtro,
+    string ocupacion,
+    string motivoPrestamo,
+    string metodoPago,
+string entidadPago,
+string numeroCuentaPago,
+string titularCuenta
+            )
+        {
+            string dni = User.FindFirst("Dni")?.Value;
+
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+            if (usuario == null)
+            {
+                return RedirectToAction("IniciarSeccion", "Login");
+            }
+
+            var existeSolicitudActiva = _Context.SOLICITUD_CREDITO
+ .Any(x => x.Usuario_Id_Usuario == usuario.Id &&
+      (x.Estado == "Pendiente" ||
+       x.Estado == "En Evaluación" ||
+       x.Estado == "Aprobado" ||
+       x.Estado == "Rechazado"));
+
+            if (existeSolicitudActiva)
+            {
+                TempData["Mensaje"] = "Ya tienes una solicitud pendiente, aprobada o rechazada. Primero debes finalizarla o borrarla.";
+                return RedirectToAction("SolicitarCredito");
+            }
+
+            int cantidadSolicitudes = _Context.SOLICITUD_CREDITO.Count();
+
+            string nuevoNumeroSolicitud = (cantidadSolicitudes + 1).ToString("D4");
+
+            var solicitud = new SolicitudCredito
+            {
+                NumeroSolicitud = nuevoNumeroSolicitud,
+                MontoSolicitado = montoSolicitado,
+                PlazoMeses = plazoMeses,
+                InteresEstimado = 10,
+                FechaSolicitud = DateTime.Now,
+                Estado = "Pendiente",
+                Usuario_Id_Usuario = usuario.Id
+            };
+
+            _Context.SOLICITUD_CREDITO.Add(solicitud);
+            _Context.SaveChanges();
+
+            var metodo = new MetodoPagoSolicitud
+            {
+                MetodoPago = metodoPago,
+                EntidadPago = entidadPago,
+                NumeroCuentaPago = numeroCuentaPago,
+                TitularCuenta = titularCuenta,
+                SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
+            };
+
+            _Context.METODO_PAGO_SOLICITUD.Add(metodo);
+
+
+
+            var perfil = new PerfilFinanciero
+            {
+                IngresoMensual = ingresoMensual,
+                EgresoMensual = egresoMensual,
+                OtrosCreditos = tieneOtrosCreditos == "Si",
+                MotivoPrestamo = motivoPrestamo == "Otros" ? motivoOtro : motivoPrestamo,
+                Ocupacion = ocupacion,
+                NivelRiesgo = null,
+                FechaRegistro = DateTime.Now,
+                SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
+            };
+
+            _Context.PERFIL_FINANCIERO.Add(perfil);
+
+            var historial = new HistorialEstado
+            {
+                EstadoActual = "Pendiente",
+                MotivoCambio = "pendiente en evaluación.",
+                FechaCambio = DateTime.Now,
+                SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
+            };
+
+            _Context.HISTORIAL_ESTADO.Add(historial);
+
+            _Context.SaveChanges();
+
+            TempData["MostrarConfirmacion"] = "true";
+            return RedirectToAction("FormularioPrestamo");
+        }
+
+        [HttpGet]
+        public IActionResult MisSolicitudes()
+        {
+            string dni = User.FindFirst("Dni")?.Value;
+
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+            if (usuario == null)
+                return RedirectToAction("IniciarSeccion", "Login");
+
+            var solicitudes = _Context.SOLICITUD_CREDITO
+    .Where(x => x.Usuario_Id_Usuario == usuario.Id && x.Estado != "Cancelado")
+                .Select(x => new SolicitudCreditoViewModel
+                {
+                    IdSolicitud = x.Id_Solicitud,
+                    NumeroSolicitud = x.NumeroSolicitud,
+                    MontoSolicitado = x.MontoSolicitado,
+                    PlazoMeses = x.PlazoMeses,
+                    InteresEstimado = x.InteresEstimado,
+                    FechaSolicitud = x.FechaSolicitud,
+                    Estado = x.Estado
+                })
+                .ToList();
+            ViewBag.Evaluaciones = _Context.Evaluacion_Riesgo.ToList();
+            return View(solicitudes);
+        }
+        [HttpPost]
+        public IActionResult BorrarSolicitudRechazada(int idSolicitud)
+        {
+            var solicitud = _Context.SOLICITUD_CREDITO
+                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Estado == "Rechazado");
+
+            if (solicitud == null)
+            {
+                return Json(new { mensaje = "No se encontró la solicitud rechazada." });
+            }
+
+            var perfil = _Context.PERFIL_FINANCIERO
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+            var historial = _Context.HISTORIAL_ESTADO
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+            var evaluacion = _Context.Evaluacion_Riesgo
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+            var cuotas = _Context.CUOTA
+    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+            _Context.CUOTA.RemoveRange(cuotas);
+
+            var cronogramas = _Context.CRONOGRAMA
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+            _Context.CRONOGRAMA.RemoveRange(cronogramas);
+
+            var propuestas = _Context.PROPUESTA_CREDITO
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+            _Context.PROPUESTA_CREDITO.RemoveRange(propuestas);
+
+            var mensajes = _Context.MENSAJE
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+            _Context.MENSAJE.RemoveRange(mensajes);
+
+            var historialCredito = _Context.HISTORIAL_CREDITO
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+            _Context.HISTORIAL_CREDITO.RemoveRange(historialCredito);
+
+            var pagosCancelacion = _Context.PAGO_CANCELACION
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+            _Context.PAGO_CANCELACION.RemoveRange(pagosCancelacion);
+
+            _Context.PERFIL_FINANCIERO.RemoveRange(perfil);
+            _Context.HISTORIAL_ESTADO.RemoveRange(historial);
+            _Context.Evaluacion_Riesgo.RemoveRange(evaluacion);
+            _Context.SOLICITUD_CREDITO.Remove(solicitud);
+
+            _Context.SaveChanges();
+
+            return Json(new { mensaje = "Solicitud rechazada eliminada correctamente." });
+        }
+        [HttpPost]
+        public async Task<IActionResult> EnviarCronograma(int idSolicitud)
+        {
+            try
+            {
+                string dni = User.FindFirst("Dni")?.Value;
+
+                var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+                if (usuario == null)
+                {
+                    TempData["Mensaje"] = "No se encontró el usuario.";
+                    return RedirectToAction("MisSolicitudes");
+                }
+
+                var solicitud = _Context.SOLICITUD_CREDITO
+                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Usuario_Id_Usuario == usuario.Id);
+
+                if (solicitud == null)
+                {
+                    TempData["Mensaje"] = "No se encontró la solicitud.";
+                    return RedirectToAction("MisSolicitudes");
+                }
+
+                var cuotas = _Context.CUOTA
+                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
+                    .OrderBy(x => x.NumeroCuota)
+                    .ToList();
+
+                if (cuotas.Count == 0)
+                {
+                    TempData["Mensaje"] = "No hay cuotas registradas para esta solicitud.";
+                    return RedirectToAction("MisSolicitudes");
+                }
+
+                decimal monto = solicitud.MontoSolicitado;
+                int nroCuotas = solicitud.PlazoMeses;
+                decimal interes = solicitud.InteresEstimado;
+                decimal totalPagar = cuotas.Sum(x => x.MontoCuota ?? 0);
+
+                DateTime fechaSolicitud = solicitud.FechaSolicitud;
+                DateTime primeraFechaPago = cuotas.First().FechaVencimiento;
+                DateTime fechaLimite = cuotas.First().FechaLimitePago;
+
+                string filas = "";
+
+                decimal capitalMensual = Math.Round(monto / nroCuotas, 2);
+                decimal cuotaMensual = cuotas.First().MontoCuota ?? Math.Round(totalPagar / nroCuotas, 2);
+                decimal interesMensual = Math.Round(cuotaMensual - capitalMensual, 2);
+                decimal saldo = monto;
+
+                foreach (var c in cuotas)
+                {
+                    decimal montoBase =
+                        c.Capital.GetValueOrDefault()
+                        + c.Interes.GetValueOrDefault()
+                        + c.Comisiones.GetValueOrDefault()
+                        + c.Seguros.GetValueOrDefault();
+
+                    int diasAtraso = 0;
+                    decimal mora = 0;
+                    decimal cuotaConMora = montoBase;
+
+                    if (c.Estado == "Pendiente" &&
+                        DateTime.Now.Date > c.FechaLimitePago.Date)
+                    {
+                        diasAtraso = (DateTime.Now.Date - c.FechaLimitePago.Date).Days;
+                        mora = diasAtraso * 5;
+                        cuotaConMora = montoBase + mora;
+                    }
+
+                    saldo -= c.Capital.GetValueOrDefault();
+                    if (saldo < 0) saldo = 0;
+
+                    filas += $@"
+<tr>
+    <td>{c.NumeroCuota}</td>
+    <td>{c.FechaVencimiento:dd/MM/yyyy}</td>
+    <td>{c.Dias}</td>
+    <td>S/ {c.Capital.GetValueOrDefault():N2}</td>
+    <td>S/ {c.Interes.GetValueOrDefault():N2}</td>
+    <td>S/ {c.Comisiones.GetValueOrDefault():N2}</td>
+    <td>S/ {c.Seguros.GetValueOrDefault():N2}</td>
+    <td>S/ {mora:N2}</td>
+    <td>S/ {cuotaConMora:N2}</td>
+    <td>S/ {saldo:N2}</td>
+</tr>";
+                }
+
+                string cuerpoHtml = $@"
+<h2 style='color:#4c1d95;text-align:center;'>CREDIPLUS FINANCIERA</h2>
+<h3 style='text-align:center;'>CRÉDITO PERSONAL - CRONOGRAMA REFERENCIAL</h3>
+
+<p><b>Cliente:</b> {usuario.Nombre} {usuario.Apellido}</p>
+<p><b>DNI:</b> {usuario.Dni}</p>
+<p><b>Monto del préstamo:</b> S/ {monto:N2}</p>
+<p><b>Nro de cuotas:</b> {nroCuotas}</p>
+<p><b>Fecha de desembolso:</b> {fechaSolicitud:dd/MM/yyyy}</p>
+<p><b>Interés estimado:</b> {interes}%</p>
+<p><b>Total a pagar:</b> S/ {totalPagar:N2}</p>
+
+<div style='background:#fff3cd;padding:15px;border-radius:8px;margin-top:15px;'>
+    <b>Primera fecha de pago:</b> {primeraFechaPago:dd/MM/yyyy}
+</div>
+
+<br/>
+
+<div style='background:#f8d7da;color:#842029;padding:15px;border-radius:8px;'>
+    <b>Fecha límite de pago:</b> {fechaLimite:dd/MM/yyyy}. 
+    Tiene hasta 15 días para pagar. Los domingos no se consideran dentro del plazo. 
+    Si se retrasa, se aplicarán intereses por mora.
+</div>
+
+<br/>
+
+<table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse;width:100%;text-align:center;font-family:Arial;font-size:13px;'>
+    <tr style='background:#4c1d95;color:white;'>
+        <th>Cuota</th>
+        <th>Fecha de vencimiento</th>
+        <th>Días</th>
+        <th>Capital</th>
+        <th>Interés</th>
+        <th>Comisiones</th>
+        <th>Seguros</th>
+        <th>Mora</th>
+<th>Importe de cuota</th>
+<th>Saldo pendiente</th>
+    </tr>
+    {filas}
+</table>
+
+<p style='margin-top:25px;'>
+    Gracias por confiar en CrediPlus. Te recordamos realizar tus pagos dentro del plazo establecido para evitar intereses adicionales.
+</p>
+
+<p><b>Atentamente,<br/>CrediPlus</b></p>
+";
+
+                await _emailService.EnviarCorreoAsync(
+                    usuario.Correo,
+                    "Cronograma de pago - CrediPlus",
+                    cuerpoHtml
+                );
+
+                TempData["Mensaje"] = "Cronograma enviado correctamente al correo registrado.";
+            }
+            catch (Exception ex)
+            {
+                TempData["Mensaje"] = "Error al enviar cronograma: " + ex.Message;
+            }
+
+            return RedirectToAction("MisSolicitudes");
+        }
+
+        private DateTime CalcularFechaLimite(DateTime fechaInicio, int diasPlazo)
+        {
+            DateTime fecha = fechaInicio;
+            int diasContados = 0;
+
+            while (diasContados < diasPlazo)
+            {
+                fecha = fecha.AddDays(1);
+
+                if (fecha.DayOfWeek != DayOfWeek.Sunday)
+                {
+                    diasContados++;
+                }
+            }
+
+            return fecha;
+        }
+
+        [HttpGet]
+        public IActionResult PerfilPersonal()
+        {
+            string dni = User.FindFirst("Dni")?.Value;
+
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+            if (usuario == null)
+            {
+                return RedirectToAction("IniciarSeccion", "Login");
+            }
+
+            return View(usuario);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> PerfilPersonal(Usuario usuarioEditado, string codigoCorreo)
+        {
+            string dniActual = User.FindFirst("Dni")?.Value;
+
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dniActual);
+            if (usuarioEditado.Correo != usuario.Correo)
+            {
+                var codigoGuardado = HttpContext.Session.GetString("CodigoPerfil");
+                if (string.IsNullOrEmpty(codigoCorreo))
+                {
+                    ViewData["Mensaje"] = "Debes ingresar el código de verificación del nuevo correo.";
+                    ViewData["ModoEditar"] = true;
+
+                    ViewBag.LimpiarCorreo = true;
+                    ViewBag.LimpiarCodigo = true;
+
+                    ModelState.Remove("codigoCorreo");
+
+                    return View(usuario);
+                }
+
+                if (codigoGuardado != codigoCorreo)
+                {
+                    ViewData["Mensaje"] = "El código de verificación es incorrecto.";
+                    ViewData["ModoEditar"] = true;
+
+                    ViewBag.LimpiarCorreo = true;
+                    ViewBag.LimpiarCodigo = true;
+
+                    ModelState.Remove("codigoCorreo");
+                    return View(usuario);
+                }
+                HttpContext.Session.Remove("CodigoPerfil");
+                HttpContext.Session.Remove("CorreoPerfil");
+            }
+
+            if (usuario == null)
+            {
+                return RedirectToAction("IniciarSeccion", "Login");
+            }
+
+            if (usuarioEditado.Dni.Length != 8 || !usuarioEditado.Dni.All(char.IsDigit))
+            {
+                ViewData["Mensaje"] = "El DNI debe tener 8 dígitos.";
+                ViewData["ModoEditar"] = true;
+                return View(usuario);
+            }
+
+            if (usuarioEditado.Celular.Length != 9 || !usuarioEditado.Celular.StartsWith("9") || !usuarioEditado.Celular.All(char.IsDigit))
+            {
+                ViewData["Mensaje"] = "El celular debe tener 9 dígitos y empezar con 9.";
+                ViewData["ModoEditar"] = true;
+                return View(usuario);
+            }
+
+            if (!usuarioEditado.Correo.EndsWith("@gmail.com"))
+            {
+                ViewData["Mensaje"] = "El correo debe ser Gmail.";
+                ViewData["ModoEditar"] = true;
+                return View(usuario);
+            }
+
+            bool dniRepetido = _Context.Usuario.Any(x => x.Dni == usuarioEditado.Dni && x.Id != usuario.Id);
+            if (dniRepetido)
+            {
+                ViewData["Mensaje"] = "Ese DNI ya está registrado.";
+                ViewData["ModoEditar"] = true;
+                return View(usuario);
+            }
+
+            bool correoRepetido = _Context.Usuario.Any(x => x.Correo == usuarioEditado.Correo && x.Id != usuario.Id);
+            if (correoRepetido)
+            {
+                ViewData["Mensaje"] = "Ese correo ya está registrado.";
+                ViewData["ModoEditar"] = true;
+                ViewData["CorreoIntentado"] = usuarioEditado.Correo;
+                return View(usuario);
+            }
+
+            usuario.Nombre = usuarioEditado.Nombre;
+            usuario.Apellido = usuarioEditado.Apellido;
+            usuario.Dni = usuarioEditado.Dni;
+            usuario.Celular = usuarioEditado.Celular;
+            usuario.Correo = usuarioEditado.Correo;
+            usuario.Genero = usuarioEditado.Genero;
+
+            if (!string.IsNullOrWhiteSpace(usuarioEditado.clave))
+            {
+                bool tieneMayuscula = usuarioEditado.clave.Any(char.IsUpper);
+                bool tieneMinuscula = usuarioEditado.clave.Any(char.IsLower);
+                bool tieneNumero = usuarioEditado.clave.Any(char.IsDigit);
+
+                if (usuarioEditado.clave.Length < 6 || !tieneMayuscula || !tieneMinuscula || !tieneNumero)
+                {
+                    ViewData["Mensaje"] = "La contraseña debe tener mayúscula, minúscula, número y mínimo 6 caracteres.";
+                    ViewData["ModoEditar"] = true;
+                    return View(usuario);
+                }
+
+                usuario.clave = utilidades.EncriptarClave(usuarioEditado.clave);
+            }
+
+            _Context.SaveChanges();
+
+            TempData["Mensaje"] = "Perfil actualizado correctamente. Vuelve a iniciar sesión para ver los cambios.";
+
+            _Context.SaveChanges();
+            TempData["MensajeOk"] = "Perfil actualizado correctamente.";
+            return RedirectToAction("PerfilPersonal", "Login");
+        }
+        [HttpPost]
+        public async Task<IActionResult> EnviarCodigoPerfil(string correo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(correo) || !correo.EndsWith("@gmail.com"))
+                {
+                    return Json(new { ok = false, mensaje = "Ingrese un correo Gmail válido." });
+                }
+
+                Random random = new Random();
+                string codigo = random.Next(100000, 999999).ToString();
+
+                HttpContext.Session.SetString("CodigoPerfil", codigo);
+                HttpContext.Session.SetString("CorreoPerfil", correo);
+
+                await _emailService.EnviarCodigoAsync(correo, codigo);
+
+                return Json(new { ok = true, mensaje = "Código enviado correctamente al nuevo correo." });
+            }
+            catch
+            {
+                return Json(new { ok = false, mensaje = "No se pudo enviar el código de verificación." });
+            }
+        }
+        public IActionResult Configuracion()
+        {
+            return View();
+        }
+        public IActionResult PagosPendientes()
+        {
+            string dni = User.FindFirst("Dni")?.Value;
+
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+            if (usuario == null)
+                return RedirectToAction("IniciarSeccion", "Login");
+
+            var cuotasAprobacion = _Context.CUOTA
+                .Include(c => c.SOLICITUD_CREDITO)
+                .Where(c =>
+                    c.SOLICITUD_CREDITO.Usuario_Id_Usuario == usuario.Id &&
+                    c.SOLICITUD_CREDITO.Estado == "Aprobado" &&
+                    c.Estado == "Pendiente aprobación")
+                .OrderBy(c => c.NumeroCuota)
+                .ToList();
+
+            var ultimaAprobacion = cuotasAprobacion.LastOrDefault();
+
+            var siguientePendiente = _Context.CUOTA
+                .Include(c => c.SOLICITUD_CREDITO)
+                .Where(c =>
+                    c.SOLICITUD_CREDITO.Usuario_Id_Usuario == usuario.Id &&
+                    c.SOLICITUD_CREDITO.Estado == "Aprobado" &&
+                    c.Estado == "Pendiente" &&
+                    (ultimaAprobacion == null || c.NumeroCuota > ultimaAprobacion.NumeroCuota))
+                .OrderBy(c => c.NumeroCuota)
+                .FirstOrDefault();
+
+            var cuotas = new List<Cuota>();
+
+            cuotas.AddRange(cuotasAprobacion);
+
+            if (siguientePendiente != null)
+                cuotas.Add(siguientePendiente);
+
+            foreach (var cuota in cuotas)
+            {
+                if (cuota.Estado == "Pendiente" &&
+    DateTime.Now.Date > cuota.FechaLimitePago.Date)
+                {
+                    int diasAtraso = (DateTime.Now.Date - cuota.FechaLimitePago.Date).Days;
+
+                    decimal montoBase =
+                        cuota.Capital.GetValueOrDefault()
+                        + cuota.Interes.GetValueOrDefault()
+                        + cuota.Comisiones.GetValueOrDefault()
+                        + cuota.Seguros.GetValueOrDefault();
+
+                    decimal mora = diasAtraso * 5;
+
+                    cuota.MontoCuota = montoBase + mora;
+                }
+            }
+
+            _Context.SaveChanges();
+
+            var idsSolicitudes = cuotas
+                .Select(x => x.SOLICITUD_CREDITO_Id_Solicitud)
+                .Distinct()
+                .ToList();
+
+            ViewBag.MetodosSolicitud = _Context.METODO_PAGO_SOLICITUD
+                .Where(x => idsSolicitudes.Contains(x.SOLICITUD_CREDITO_Id_Solicitud))
+                .ToList();
+
+            return View(cuotas);
+        }
+        public IActionResult SimuladorCredito()
+        {
+            return View();
+        }
+        [HttpPost]
+        public IActionResult RegistrarCancelacion(int idSolicitud, decimal montoDevuelto, string metodoPago, string codigoOperacion, string motivoCancelacion)
+        {
+            try
+            {
+                var pago = new PagoCancelacion
+                {
+                    MontoDevuelto = montoDevuelto,
+                    MetodoPago = metodoPago,
+                    CodigoOperacion = codigoOperacion,
+                    MotivoCancelacion = motivoCancelacion,
+                    FechaPago = DateTime.Now,
+                    Estado = "Pendiente",
+                    SOLICITUD_CREDITO_Id_Solicitud = idSolicitud
+                };
+
+                _Context.PAGO_CANCELACION.Add(pago);
+
+                var solicitud = _Context.SOLICITUD_CREDITO.FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+
+                if (solicitud != null)
+                {
+                    solicitud.Estado = "Pendiente cancelación";
+                }
+
+                _Context.SaveChanges();
+
+                return Json(new { ok = true, mensaje = "Pago registrado correctamente. La cancelación queda pendiente de aprobación." });
+            }
+            catch
+            {
+                return Json(new { ok = false, mensaje = "No se pudo registrar la cancelación." });
+            }
+        }
+        [HttpPost]
+            public IActionResult EditarSolicitud(int idSolicitud, decimal nuevoMonto, int nuevoPlazo)
+            {
+                try
+                {
+                    var solicitud = _Context.SOLICITUD_CREDITO
+                        .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+
+                    if (solicitud == null)
+                    {
+                        return Json(new { ok = false, mensaje = "No se encontró la solicitud." });
+                    }
+
+                    string estadoActual = solicitud.Estado?.Trim().ToLower();
+
+                    if (estadoActual == "pendiente" ||
+                        estadoActual == "pendiente cancelación" ||
+                        estadoActual == "rechazado" ||
+                        estadoActual == "cancelado")
+                    {
+                        return Json(new { ok = false, mensaje = "No puedes editar esta solicitud." });
+                    }
+
+                    if (nuevoMonto < 1000 || nuevoMonto > 50000)
+                    {
+                        return Json(new { ok = false, mensaje = "El monto debe estar entre S/ 1,000 y S/ 50,000." });
+                    }
+
+                    solicitud.MontoSolicitado = nuevoMonto;
+                    solicitud.PlazoMeses = nuevoPlazo;
+
+                    string mensajeHistorial = "";
+
+                    if (estadoActual == "aprobado")
+                    {
+                        solicitud.Estado = "Pendiente";
+                        mensajeHistorial = "Cliente editó una solicitud aprobada. Regresa a Pendiente para nueva revisión.";
+                    }
+                    else if (estadoActual == "en evaluación")
+                    {
+                        solicitud.Estado = "En Evaluación";
+                        solicitud.NotificacionEdicionVista = false;
+                        mensajeHistorial = "Cliente editó monto y plazo mientras la solicitud estaba en evaluación.";
+                    }
+
+                    var subject = new SolicitudSubject();
+
+                    subject.AgregarObservador(
+                        new HistorialEstadoObserver(_Context)
+                    );
+
+                    subject.Notificar(
+                        solicitud,
+                        mensajeHistorial + " Nuevo monto: S/ " + nuevoMonto +
+                        ", nuevo plazo: " + nuevoPlazo + " meses."
+                    );
+
+                    _Context.SaveChanges();
+
+                    return Json(new
+                    {
+                        ok = true,
+                        mensaje = estadoActual == "aprobado"
+                            ? "Cambios guardados. La solicitud volvió a Pendiente."
+                            : "Cambios guardados. La solicitud sigue En Evaluación con el nuevo monto y plazo."
+                    });
+                }
+                catch (Exception ex)
+                {
+                    return Json(new { ok = false, mensaje = "No se pudo editar la solicitud: " + ex.Message });
+                }
+            }
+        [HttpPost]
+        public IActionResult RegistrarPagoCuota(
+    int idCuota,
+    decimal montoPagado,
+    string metodoPago,
+    string entidadPago,
+    string codigoOperacion)
+        {
+            try
+            {
+                var pago = new PagoCuota
+                {
+                    Id_Cuota = idCuota,
+                    MontoPagado = montoPagado,
+                    MetodoPago = metodoPago,
+                    EntidadPago = entidadPago,
+                    CodigoOperacion = codigoOperacion,
+                    FechaPago = DateTime.Now,
+                    Estado = "Pendiente validación"
+                };
+
+                _Context.PAGO_CUOTA.Add(pago);
+
+                var cuota = _Context.CUOTA
+                    .FirstOrDefault(x => x.Id_Cuota == idCuota);
+
+                if (cuota != null)
+                {
+                    cuota.Estado = "Pendiente aprobación";
+                }
+
+                _Context.SaveChanges();
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = "Pago registrado correctamente."
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = ex.Message
+                });
+            }
+        }
+        public IActionResult PreguntasFrecuentes()
+        {
+            return View();
+        }
+        [HttpGet]
+        public JsonResult ObtenerMensajes(int idSolicitud)
+        {
+            var solicitud = _Context.SOLICITUD_CREDITO
+                .Include(x => x.USUARIO)
+                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+
+            var mensajes = _Context.MENSAJE
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
+                .OrderBy(x => x.FechaEnvio)
+                .Select(x => new
+                {
+                    mensaje = x.MensajeTexto,
+                    fecha = x.FechaEnvio,
+                    tipoUsuario = x.Remitente,
+                    imagen = x.Imagen,
+
+                    nombre = x.Remitente == "Usuario"
+                        ? solicitud.USUARIO.Nombre + " " + solicitud.USUARIO.Apellido
+                        : "Rafael Rosales"
+                })
+                .ToList();
+
+            return Json(mensajes);
+        }
+        [HttpPost]
+        public async Task<JsonResult> EnviarMensaje(
+     int idSolicitud,
+     string? mensaje,
+     IFormFile? imagen)
+        {
+            string rutaImagen = null;
+
+            if (imagen != null)
+            {
+                string nombreArchivo =
+                    Guid.NewGuid().ToString() +
+                    Path.GetExtension(imagen.FileName);
+
+                string carpeta =
+                    Path.Combine(
+                        Directory.GetCurrentDirectory(),
+                        "wwwroot",
+                        "imagenesChat");
+
+                if (!Directory.Exists(carpeta))
+                {
+                    Directory.CreateDirectory(carpeta);
+                }
+
+                string rutaCompleta =
+                    Path.Combine(carpeta, nombreArchivo);
+
+                using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+                {
+                    await imagen.CopyToAsync(stream);
+                }
+
+                rutaImagen = "/imagenesChat/" + nombreArchivo;
+            }
+
+            Mensaje nuevo = new Mensaje();
+
+            nuevo.SOLICITUD_CREDITO_Id_Solicitud = idSolicitud;
+            nuevo.MensajeTexto = string.IsNullOrWhiteSpace(mensaje)
+                ? "[Imagen]"
+                : mensaje;
+
+            nuevo.Imagen = rutaImagen;
+
+            nuevo.Remitente = "Usuario";
+            nuevo.FechaEnvio = DateTime.Now;
+            nuevo.Leido = false;
+
+            _Context.MENSAJE.Add(nuevo);
+            _Context.SaveChanges();
+
+            return Json(new { ok = true });
+        }
+        [HttpGet]
+        public JsonResult ObtenerInfoSolicitud(int idSolicitud)
+        {
+            var analista = _Context.Usuario
+                .FirstOrDefault(x => x.Rol == "Analista");
+
+            if (analista == null)
+            {
+                return Json(new
+                {
+                    analista = "",
+                    correo = ""
+                });
+            }
+
+            return Json(new
+            {
+                analista = analista.Nombre + " " + analista.Apellido,
+                correo = analista.Correo
+            });
+        }
+
+        [HttpPost]
+        public JsonResult CancelarEvaluacion(int idSolicitud, string motivo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(motivo))
+                {
+                    return Json(new { ok = false, mensaje = "Debe ingresar el motivo de cancelación." });
+                }
+
+                var solicitud = _Context.SOLICITUD_CREDITO
+                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Estado == "En Evaluación");
+
+                if (solicitud == null)
+                {
+                    return Json(new { ok = false, mensaje = "No se encontró la solicitud en evaluación." });
+                }
+
+                var propuestaRecomendada = _Context.PROPUESTA_CREDITO
+                    .FirstOrDefault(x =>
+                        x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud &&
+                        x.EsRecomendada == true);
+
+                decimal montoFinal = propuestaRecomendada != null
+                    ? propuestaRecomendada.Monto
+                    : solicitud.MontoSolicitado;
+
+                var cancelacion = new CancelacionEvaluacion
+                {
+                    IdSolicitud = null,
+                    MontoSolicitado = montoFinal,
+                    MotivoCancelacion = motivo.Trim(),
+                    FechaCancelacion = DateTime.Now,
+                    Responsable = "Analista de Riesgo"
+                };
+
+                _Context.CancelacionEvaluacion.Add(cancelacion);
+
+
+                var propuestas = _Context.PROPUESTA_CREDITO
+                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+                var perfil = _Context.PERFIL_FINANCIERO
+                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+                var mensajes = _Context.MENSAJE
+                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+                var evaluacion = _Context.Evaluacion_Riesgo
+                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+                var historialCrediticio = _Context.HISTORIAL_CREDITO
+    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+                var cuotas = _Context.CUOTA
+    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+                var cronogramas = _Context.CRONOGRAMA
+                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+                var pagosCancelacion = _Context.PAGO_CANCELACION
+    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+                _Context.PROPUESTA_CREDITO.RemoveRange(propuestas);
+                _Context.PERFIL_FINANCIERO.RemoveRange(perfil);
+                _Context.MENSAJE.RemoveRange(mensajes);
+                _Context.Evaluacion_Riesgo.RemoveRange(evaluacion);
+                _Context.HISTORIAL_CREDITO.RemoveRange(historialCrediticio);
+                _Context.CUOTA.RemoveRange(cuotas);
+                _Context.CRONOGRAMA.RemoveRange(cronogramas);
+                _Context.PAGO_CANCELACION.RemoveRange(pagosCancelacion);
+                var historialEstado = _Context.HISTORIAL_ESTADO
+    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+
+                _Context.HISTORIAL_ESTADO.RemoveRange(historialEstado);
+                _Context.SOLICITUD_CREDITO.Remove(solicitud);
+
+
+
+
+                _Context.SaveChanges();
+
+                return Json(new { ok = true, mensaje = "Tu solicitud fue cancelada correctamente." });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { ok = false, mensaje = ex.Message });
+            }
+        }
+        [HttpPost]
+        public IActionResult GuardarResena(int calificacion, string comentario)
+        {
+            string dni = User.FindFirst("Dni")?.Value;
+
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+            if (usuario == null)
+            {
+                return Json(new { ok = false, mensaje = "Usuario no encontrado." });
+            }
+
+            if (calificacion < 1 || calificacion > 5)
+            {
+                return Json(new { ok = false, mensaje = "Debe seleccionar una calificación." });
+            }
+
+            if (string.IsNullOrWhiteSpace(comentario))
+            {
+                return Json(new { ok = false, mensaje = "Debe escribir un comentario." });
+            }
+
+            bool yaExiste = _Context.ComentarioClientes
+                .Any(x => x.Usuario_Id == usuario.Id);
+
+            if (yaExiste)
+            {
+                return Json(new { ok = false, mensaje = "Ya registraste una reseña." });
+            }
+
+            var resena = new ComentarioCliente
+            {
+                Usuario_Id = usuario.Id,
+                Calificacion = calificacion,
+                Comentario = comentario.Trim(),
+                FechaComentario = DateTime.Now
+            };
+
+            _Context.ComentarioClientes.Add(resena);
+            _Context.SaveChanges();
+
+            return Json(new { ok = true, mensaje = "Reseña enviada correctamente. Gracias por tu opinión." });
+        }
+
+        [HttpPost]
+        public IActionResult MarcarClienteInactivo()
+        {
+            string dni = User.FindFirst("Dni")?.Value;
+
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+
+            if (usuario != null && usuario.Rol == "Cliente")
+            {
+                usuario.EstadoActivo = false;
+                _Context.SaveChanges();
+            }
+
+            return Ok();
+        }
+
+
+
+
+    }
+
+}

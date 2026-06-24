@@ -1,0 +1,1832 @@
+﻿@model List<trabajo.Models.DTOs.PagoGestionDto>
+@{
+    Layout = null;
+    Layout = "~/Views/Shared/_LayoutAnalista.cshtml";
+    ViewData["Title"] = "Gestion De Pago";
+    ViewData["ActivePage"] = "GestionDePago";
+}
+
+<div class="layout">
+
+    @* <div class="sidebar">
+
+        <div class="logo">🛡 CrediPlus</div>
+        <div class="role">Analista de Riesgo</div>
+
+        <div class="menu">
+
+            <div class="section-title">Principal</div>
+
+            <a href="@Url.Action("ProgramaAnalista", "Analista")">
+                🏠 Inicio
+            </a>
+
+            <div class="section-title">Evaluaciones</div>
+
+            <a href="@Url.Action("SolicitudesPendientes", "Analista")">
+                📄 Solicitudes Pendientes
+            </a>
+
+            <a href="@Url.Action("HistorialEvaluaciones", "Analista")">
+                🕘 Historial Evaluaciones
+            </a>
+
+            <div class="section-title">Seguimiento</div>
+
+            <a href="@Url.Action("CalendarioRevisiones", "Analista")">
+                📅 Calendario Revisiones
+            </a>
+
+            <a href="@Url.Action("AlertasNotificaciones", "Analista")"
+               style="display:flex; justify-content:space-between; align-items:center;">
+                <span>🔔 Alertas y Notificaciones</span>
+                @{
+                    int totalNoLeidos = ViewBag.TotalNoLeidos ?? 0;
+                    string colorBadge = ViewBag.ColorNotificacion ?? "#ef4444";
+                }
+
+                @if (totalNoLeidos > 0)
+                {
+                    <span style="background:@colorBadge; color:white; border-radius:50%;
+                                width:22px; height:22px; font-size:12px; font-weight:700;
+                                display:flex; align-items:center; justify-content:center;">
+                        @totalNoLeidos
+                    </span>
+                }
+            </a>
+
+            <a href="@Url.Action("GestionDePago", "Analista")" class="active">
+                💰 Gestión de Pagos
+            </a>
+
+            <div class="section-title">Retroalimentación</div>
+
+            <a href="@Url.Action("CalificacionesServicio", "Analista")">
+                ⭐ Calificaciones del Servicio
+            </a>
+
+            <div class="section-title">Herramientas</div>
+
+            <a href="@Url.Action("PoliticasRiesgo", "Analista")">
+                🛡️ Políticas de Riesgo
+            </a>
+
+            <div class="section-title">Mi Cuenta</div>
+
+            <a href="@Url.Action("PerfilAnalista", "Analista")">
+                👤 Perfil
+            </a>
+
+            <a href="@Url.Action("CerrarSesion", "Login")">
+                🚪 Cerrar Sesión
+            </a>
+
+        </div>
+
+        <div class="help-card">
+            <h4>¿Necesitas ayuda?</h4>
+            <p>Comunícate con el administrador del sistema</p>
+
+            <a href="@Url.Action("ContactarSoporte", "Analista")" class="btn-help">
+                🎧 Contactar Soporte
+            </a>
+        </div>
+
+    </div>
+ *@
+    <main class="content">
+
+        <div class="top-pagos">
+            <div>
+                <h1>Gestión de Métodos de Pago</h1>
+                <p>Supervisa y aprueba los métodos de pago registrados por los clientes.</p>
+            </div>
+
+            <a href="@Url.Action("PerfilAnalista", "Analista")"
+               style="
+        background:white;
+        border-radius:20px;
+        padding:20px 25px;
+        display:flex;
+        align-items:center;
+        gap:15px;
+        width:320px;
+        text-decoration:none;
+        color:#241041;
+        box-shadow:0 10px 30px rgba(124,58,237,.08);
+        cursor:pointer;">
+
+                <div style="
+        width:60px;
+        height:60px;
+        min-width:60px;
+        border-radius:50%;
+        background:linear-gradient(135deg,#6d28d9,#9333ea);
+        color:white;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:25px;">
+                    <i class="fas fa-user"></i>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:3px;">
+                    <strong style="color:#241041; font-size:16px; font-weight:800;">
+                        @ViewBag.NombreAnalista
+                    </strong>
+
+                    <span style="color:#6b7280; font-size:14px;">
+                        @ViewBag.CorreoAnalista
+                    </span>
+
+                    <small style="color:#6d28d9; font-size:12px; font-weight:800;">
+                        Ver perfil completo →
+                    </small>
+                </div>
+            </a>
+        </div>
+
+        <div class="pagos-layout">
+
+            <div class="pagos-main">
+
+                <div class="resumen-metodos">
+
+                    <div class="resumen-card card-pendientes">
+                        <div class="resumen-left">
+                            <div class="resumen-icon naranja">
+                                🕘
+                            </div>
+                            <div>
+                                <span>PENDIENTES</span>
+                                <h2 class="num-pendiente">@ViewBag.TotalPendientes</h2>
+                                <p>Por pagar</p>
+                            </div>
+                        </div>
+                        <div class="pendiente-ilustracion">
+                            <div class="clipboard">
+                                <div class="clip"></div>
+                                <div class="check-line"></div>
+                                <div class="check-line"></div>
+                                <div class="check-line"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="resumen-card card-aprobados">
+                        <div class="resumen-left">
+                            <div class="resumen-icon verde">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div>
+                                <span>APROBADOS</span>
+                                <h2 class="num-aprobado">@ViewBag.TotalAprobados</h2>
+                                <p>Métodos aprobados</p>
+                            </div>
+                        </div>
+                        <div class="resumen-visual visual-aprobado">
+                            <i class="fas fa-shield-alt"></i>
+                            <span class="mini-check">
+                                <i class="fas fa-check"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="mini-resumen-metodos">
+
+                    <div class="mini-metodo">
+                        <span>💳</span>
+                        <div>
+                            <p>Total Métodos</p>
+                            <strong>@ViewBag.TotalMetodosRegistrados</strong>
+                            <small>Registrados</small>
+                        </div>
+                    </div>
+
+                    <div class="mini-metodo">
+                        <span>📅</span>
+                        <div>
+                            <p>Este mes</p>
+                            <strong class="porcentaje-mes">
+                                @ViewBag.PorcentajeEsteMes%
+                            </strong>
+                            <small>vs mes anterior</small>
+                        </div>
+                    </div>
+
+                    <div class="mini-metodo">
+                        <span>👥</span>
+                        <div>
+                            <p>Clientes únicos</p>
+                            <strong>@ViewBag.ClientesUnicosPago</strong>
+                            <small>Con métodos</small>
+                        </div>
+                    </div>
+
+                    <div class="mini-metodo">
+                        <span>🏦</span>
+                        <div>
+                            <p>Transferencias</p>
+                            <strong>@ViewBag.TotalTransferencias</strong>
+                            <small>Este mes</small>
+                        </div>
+                    </div>
+
+                    <div class="mini-metodo">
+                        <span class="mini-icon-yape">
+                            <img src="~/img/YapePlin.png" class="logo-mini-yape" />
+                        </span>
+                        <div>
+                            <p>Yape / Plin</p>
+                            <strong>@ViewBag.TotalYapePlin</strong>
+                            <small>Este mes</small>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="tabla-pagos-card">
+                    <div class="tabla-header">
+                        <h2>💳 Métodos de Pago Registrados</h2>
+                        <input type="text" id="buscarPago" placeholder="Buscar por método, entidad o titular..." onkeyup="filtrarPagos()" />
+                    </div>
+
+                    <table class="tabla-pagos">
+                        <thead>
+                            <tr>
+                                <th>Solicitud</th>
+                                <th>Cliente</th>
+                                <th>Método de Pago</th>
+                                <th>Entidad / Número</th>
+                                <th>Titular</th>
+                                <th>Fecha Registro</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{
+                                var cuotasPago = ViewBag.CuotasPago as Dictionary<int, trabajo.Models.Cuota>;
+                                var metodosSolicitudPago = ViewBag.MetodosSolicitudPago as Dictionary<int, trabajo.Models.MetodoPagoSolicitud>;
+                            }
+
+                            @foreach (var m in Model)
+                            {
+                                var cuotaPago = cuotasPago != null && cuotasPago.ContainsKey(m.IdCuota)
+                                ? cuotasPago[m.IdCuota]
+                                : null;
+                                var solicitud = cuotaPago?.SOLICITUD_CREDITO;
+
+                                var metodoSolicitud = solicitud != null && metodosSolicitudPago != null && metodosSolicitudPago.ContainsKey(solicitud.Id_Solicitud)
+                                ? metodosSolicitudPago[solicitud.Id_Solicitud]
+                                : null;
+
+                                <tr class="fila-pago"
+                                    data-busqueda="@($"{m.MetodoPago} {m.EntidadPago} {m.NumeroCuentaPago} CrediPlus Financiera {m.Cliente} {m.Dni}".ToLower())">
+
+                                    <td>SOL-@m.IdSolicitud.ToString("D5")</td>
+
+                                    <td>
+                                        <strong>@m.Cliente</strong><br />
+                                        <small>DNI: @m.Dni</small>
+                                    </td>
+
+                                    <td>
+                                        <span class="metodo-badge metodo-badge-img">
+                                            @if (m.MetodoPago != null && m.MetodoPago.ToLower().Contains("yape"))
+                                            {
+                                                <img src="~/img/yape.png" class="logo-tabla-metodo" />
+                                            }
+                                            else if (m.MetodoPago != null && m.MetodoPago.ToLower().Contains("plin"))
+                                            {
+                                                <img src="~/img/plin.webp" class="logo-tabla-metodo" />
+                                            }
+                                            else
+                                            {
+                                                <span class="icon-transferencia">🏦</span>
+                                            }
+
+                                            @m.MetodoPago
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <strong>@m.EntidadPago</strong><br />
+                                        <small>@m.NumeroCuentaPago</small>
+                                    </td>
+
+                                    <td>@m.TitularCuenta</td>
+
+                                    <td>
+                                        @m.FechaRegistro.ToString("dd/MM/yyyy")<br />
+                                        <small>@m.FechaRegistro.ToString("hh:mm tt")</small>
+                                    </td>
+
+                                    <td>
+                                        <span class="@(m.Estado == "Pendiente" ? "estado-pendiente" : "estado-aprobado")">
+                                            @m.Estado
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <div class="tabla-footer">
+                        <span id="textoPaginacion">Mostrando 0 de 0 resultados</span>
+
+                        <div class="paginacion" id="paginacionPagos"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <aside class="pagos-sidebar">
+
+                <div class="side-card">
+                    <h3>Resumen de Estados</h3>
+
+                    @{
+                        int pendientes = ViewBag.TotalPendientes ?? 0;
+                        int aprobados = ViewBag.TotalAprobados ?? 0;
+                        int total = ViewBag.TotalMetodosResumen ?? 0;
+
+                        decimal porcPendientes = total > 0 ? Math.Round((decimal)pendientes * 100 / total, 1) : 0;
+                        decimal porcAprobados = total > 0 ? Math.Round((decimal)aprobados * 100 / total, 1) : 0;
+                    }
+
+                    <div class="donut-resumen"
+                         style="background: conic-gradient(#f59e0b 0 @porcPendientes%, #22c55e @porcPendientes% 100%);">
+                        <div class="donut-centro">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                    </div>
+
+                    <div class="estado-linea">
+                        <span><b class="dot pendiente"></b> Pendientes</span>
+                        <strong>@pendientes (@porcPendientes%)</strong>
+                    </div>
+
+                    <div class="estado-linea">
+                        <span><b class="dot aprobado"></b> Aprobados</span>
+                        <strong>@aprobados (@porcAprobados%)</strong>
+                    </div>
+
+                    <p class="total-metodos">Total @total métodos</p>
+                </div>
+
+                <div class="side-card">
+                    <h3>Entidades más usadas</h3>
+
+                    @{
+                        var metodosUsados = ViewBag.MetodosMasUsados as IEnumerable<dynamic>;
+                    }
+
+                    @if (metodosUsados != null && metodosUsados.Any())
+                    {
+                        foreach (var metodo in metodosUsados)
+                        {
+                            string nombreMetodo = metodo.Nombre;
+                            string claseIcono = "gris";
+                            string icono = "•••";
+
+                            if (nombreMetodo == "Yape")
+                            {
+                                claseIcono = "yape";
+                                icono = "yape";
+                            }
+                            else if (nombreMetodo == "Plin")
+                            {
+                                claseIcono = "verde";
+                                icono = "🟢";
+                            }
+                            else if (nombreMetodo == "BCP")
+                            {
+                                claseIcono = "bcp";
+                                icono = "BCP";
+                            }
+                            else if (nombreMetodo == "Interbank")
+                            {
+                                claseIcono = "interbank";
+                                icono = "IB";
+                            }
+                            else if (nombreMetodo == "BBVA")
+                            {
+                                claseIcono = "bbva";
+                                icono = "BBVA";
+                            }
+                            else if (nombreMetodo == "Scotiabank")
+                            {
+                                claseIcono = "scotia";
+                                icono = "S";
+                            }
+                            else if (nombreMetodo == "Caja Arequipa")
+                            {
+                                claseIcono = "caja";
+                                icono = "CA";
+                            }
+                            else if (nombreMetodo == "Transferencia Bancaria")
+                            {
+                                claseIcono = "morado";
+                                icono = "🏦";
+                            }
+
+                            <div class="metodo-uso-bar">
+                                <div class="metodo-info">
+                                    <span class="metodo-icon @claseIcono">
+
+                                        @if (nombreMetodo == "Yape")
+                                        {
+                                            <img src="~/img/yape.png" class="logo-metodo" />
+                                        }
+                                        else if (nombreMetodo == "Plin")
+                                        {
+                                            <img src="~/img/plin.webp" class="logo-metodo" />
+                                        }
+                                        else if (nombreMetodo == "BCP")
+                                        {
+                                            <img src="~/img/bcp.webp" class="logo-metodo" />
+                                        }
+                                        else if (nombreMetodo == "Interbank")
+                                        {
+                                            <img src="~/img/interbank.png" class="logo-metodo" />
+                                        }
+                                        else if (nombreMetodo == "BBVA")
+                                        {
+                                            <img src="~/img/bbva.png" class="logo-metodo" />
+                                        }
+                                        else if (nombreMetodo == "Scotiabank")
+                                        {
+                                            <img src="~/img/scotiabank.png" class="logo-metodo" />
+                                        }
+                                        else if (nombreMetodo == "Caja Arequipa")
+                                        {
+                                            <img src="~/img/cajaArequipa.jpg" class="logo-metodo" />
+                                        }
+                                        else
+                                        {
+                                            @icono
+                                        }
+
+                                    </span>
+                                    <strong>@nombreMetodo</strong>
+                                </div>
+
+                                <b>@metodo.Porcentaje%</b>
+
+                                <div class="barra">
+                                    <div class="barra-fill @claseIcono"
+                                         style="width:@metodo.Porcentaje%">
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+
+                <div class="side-card actividad-card">
+                    <h3>Actividad reciente</h3>
+
+                    <div id="listaActividad" class="actividad-lista">
+                        @foreach (var m in Model)
+                        {
+                            var cuotaAct = cuotasPago != null && cuotasPago.ContainsKey(m.IdCuota)
+                            ? cuotasPago[m.IdCuota]
+                            : null;
+
+                            var solicitudAct = cuotaAct?.SOLICITUD_CREDITO;
+                            var clienteAct = solicitudAct?.USUARIO;
+
+                            <div class="actividad-item actividad-extra">
+                                <span class="actividad-icon">✅</span>
+
+                                <div>
+                                    <strong>@(m.Estado == "Pendiente" ? "Pago pendiente" : "Método aprobado")</strong>
+                                    <p>
+                                        SOL-@(solicitudAct != null ? solicitudAct.Id_Solicitud.ToString("D5") : "00000")
+                                        - @(clienteAct != null ? clienteAct.Nombre + " " + clienteAct.Apellido : "Cliente")
+                                    </p>
+                                    <small>@m.FechaRegistro.ToString("dd/MM/yyyy hh:mm tt")</small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @if (Model.Count > 3)
+                    {
+                        <button type="button" class="btn-historial" onclick="toggleHistorial()">
+                            Ver todo el historial →
+                        </button>
+                    }
+                </div>
+                <div class="consejo-card-pro">
+                    <div class="consejo-shield">
+                        <i class="fas fa-shield-alt"></i>
+                        <span><i class="fas fa-check"></i></span>
+                    </div>
+
+                    <div class="consejo-persona">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+
+                    <div class="consejo-texto-pro">
+                        <strong>Verifica cuidadosamente cada método de pago antes de aprobar.</strong>
+                        <p>Una aprobación incorrecta puede afectar el flujo financiero del cliente.</p>
+                    </div>
+                </div>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+</div>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background: #faf8ff;
+        font-family: 'Segoe UI', sans-serif;
+        color: #241041;
+    }
+
+    .layout {
+        display: flex;
+        min-height: 100vh;
+        width: 100%;
+    }
+
+    .sidebar {
+        width: 280px;
+        min-width: 280px;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+        overflow-y: auto;
+        background: linear-gradient(180deg, #240046, #3c096c, #5a189a);
+        color: white;
+        padding: 25px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .logo {
+        font-size: 28px;
+        font-weight: 800;
+        margin-bottom: 10px;
+    }
+
+    .role {
+        color: #d8b4fe;
+        margin-bottom: 40px;
+        font-size: 14px;
+    }
+
+    .menu {
+        margin-top: 15px;
+    }
+
+        .menu a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            text-decoration: none;
+            padding: 15px 18px;
+            border-radius: 14px;
+            margin-bottom: 10px;
+            transition: .3s;
+        }
+
+            .menu a:hover,
+            .menu a.active {
+                background: rgba(255,255,255,.12);
+            }
+
+    .section-title {
+        margin-top: 25px;
+        margin-bottom: 15px;
+        color: #c4b5fd;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    .content {
+        flex: 1;
+        padding: 30px;
+        min-width: 0;
+    }
+
+        .content h1 {
+            font-size: 42px;
+            color: #4c1d95;
+            font-weight: 800;
+        }
+
+        .content p {
+            color: #6b7280;
+            margin-top: 8px;
+        }
+
+    .help-card {
+        margin-top: auto;
+        background: rgba(255,255,255,.08);
+        border: 1px solid rgba(255,255,255,.1);
+        border-radius: 18px;
+        padding: 18px;
+    }
+
+        .help-card h4 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .help-card p {
+            color: #d8b4fe;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+    .btn-help {
+        width: 100%;
+        border: 1px solid rgba(255,255,255,.15);
+        background: rgba(255,255,255,.05);
+        color: white;
+        border-radius: 12px;
+        padding: 12px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+        .btn-help:hover {
+            background: rgba(255,255,255,.12);
+            color: white;
+        }
+
+    .stats-pagos {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 22px;
+        margin-top: 30px;
+        margin-bottom: 25px;
+    }
+
+    .pago-card {
+        background: white;
+        border-radius: 24px;
+        padding: 25px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        box-shadow: 0 12px 30px rgba(124,58,237,.08);
+    }
+
+    .pago-icon {
+        width: 62px;
+        height: 62px;
+        border-radius: 18px;
+        background: #ede9fe;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+    }
+
+    .pago-card span {
+        color: #4c1d95;
+        font-weight: 800;
+    }
+
+    .pago-card h2 {
+        font-size: 40px;
+        color: #6d28d9;
+        margin: 4px 0;
+    }
+
+    .pago-card p {
+        color: #6b7280;
+    }
+
+    .tabla-pagos-card {
+        background: white;
+        border-radius: 24px;
+        padding: 25px;
+        box-shadow: 0 12px 30px rgba(124,58,237,.08);
+    }
+
+    .tabla-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+        .tabla-header h2 {
+            color: #4c1d95;
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        .tabla-header input {
+            width: 360px;
+            border: 1px solid #e5d4ff;
+            border-radius: 12px;
+            padding: 12px 16px;
+            outline: none;
+        }
+
+    .tabla-pagos {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .tabla-pagos th {
+            text-align: left;
+            color: #4c1d95;
+            font-size: 13px;
+            padding: 14px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .tabla-pagos td {
+            padding: 14px;
+            border-bottom: 1px solid #f0e7ff;
+            color: #241041;
+        }
+
+    .metodo-badge {
+        background: #ede9fe;
+        color: #4c1d95;
+        padding: 8px 12px;
+        border-radius: 12px;
+        font-weight: 800;
+    }
+
+    .estado-aprobado {
+        background: #dcfce7;
+        color: #15803d;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-weight: 800;
+    }
+
+   
+
+    .resumen-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+    }
+
+        .resumen-icon.naranja {
+            background: #fff7ed;
+        }
+
+        .resumen-icon.verde {
+            background: #dcfce7;
+        }
+
+    .resumen-card span {
+        color: #241041;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+
+
+    .resumen-card p {
+        color: #6b7280;
+    }
+
+    .mini-resumen-metodos {
+        margin-top: 22px;
+        margin-bottom: 25px;
+        background: #fff;
+        border-radius: 22px;
+        padding: 18px 12px;
+        display: grid;
+        grid-template-columns: 1.3fr 1.1fr 1.2fr 1.25fr 1.35fr;
+        box-shadow: 0 12px 30px rgba(124,58,237,.08);
+    }
+
+    .mini-metodo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 12px;
+        border-right: 1px solid #eee;
+        min-height: 80px;
+    }
+
+        .mini-metodo:last-child {
+            border-right: none;
+        }
+
+        .mini-metodo span {
+            width: 58px;
+            height: 58px;
+            min-width: 58px;
+            border-radius: 18px;
+            background: #ede9fe;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .mini-metodo div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mini-metodo p {
+            font-size: 14px;
+            font-weight: 700;
+            color: #4c1d95;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .mini-metodo strong {
+            font-size: 20px;
+            color: #6d28d9;
+            margin-top: 3px;
+            line-height: 1;
+        }
+
+        .mini-metodo small {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 3px;
+        }
+
+    .pagos-layout {
+        display: grid;
+        grid-template-columns: 1fr 330px;
+        gap: 24px;
+        align-items: start;
+    }
+
+    .pagos-main {
+        min-width: 0;
+    }
+
+    .pagos-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .side-card {
+        background: white;
+        border-radius: 22px;
+        padding: 22px;
+        box-shadow: 0 12px 30px rgba(124,58,237,.08);
+    }
+
+        .side-card h3 {
+            color: #4c1d95;
+            font-size: 19px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+    .donut-resumen {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 10px;
+        border-radius: 50%;
+        background: conic-gradient(#22c55e 0 100%, #f59e0b 0 0);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .donut-centro {
+        width: 78px;
+        height: 78px;
+        background: #4c1d95;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+    }
+
+    .estado-linea {
+        display: flex;
+        justify-content: space-between;
+        margin: 6px 0;
+        color: #241041;
+        font-weight: 700;
+    }
+
+    .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+
+        .dot.pendiente {
+            background: #f59e0b;
+        }
+
+        .dot.aprobado {
+            background: #22c55e;
+        }
+
+    .total-metodos {
+        text-align: center;
+        color: #6b7280;
+        margin-top: 6px;
+    }
+
+    .metodo-uso {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 13px 0;
+        border-bottom: 1px solid #eee;
+        color: #241041;
+        font-weight: 700;
+    }
+
+        .metodo-uso:last-child {
+            border-bottom: none;
+        }
+
+        .metodo-uso strong {
+            color: #6d28d9;
+            font-size: 18px;
+        }
+
+    .actividad-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+        .actividad-item:last-child {
+            border-bottom: none;
+        }
+
+        .actividad-item strong {
+            color: #241041;
+            font-size: 14px;
+        }
+
+        .actividad-item p {
+            color: #6b7280;
+            font-size: 13px;
+            margin: 2px 0 0;
+        }
+
+    .tabla-footer {
+        padding-top: 16px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .tabla-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 18px;
+        color: #6b7280;
+    }
+
+    .paginacion {
+        display: flex;
+        gap: 8px;
+    }
+
+        .paginacion button {
+            border: 1px solid #e5d4ff;
+            background: white;
+            color: #4c1d95;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+            .paginacion button.active {
+                background: #6d28d9;
+                color: white;
+            }
+
+    .porcentaje-mes {
+        font-size: 22px !important;
+    }
+
+        .mini-metodo {
+            overflow: visible;
+        }
+
+            .mini-metodo div {
+                min-width: 0;
+            }
+
+            .mini-metodo p {
+                white-space: normal;
+            }
+
+    .mini-resumen-metodos {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+
+    .mini-metodo {
+        padding: 0 10px !important;
+        gap: 10px !important;
+    }
+
+        .mini-metodo span {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+        }
+
+    .resumen-metodos {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        margin-top: 30px;
+    }
+
+    .resumen-card {
+        border-radius: 26px;
+        padding: 42px 42px;
+        min-height: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 14px 34px rgba(124,58,237,.12);
+        overflow: hidden;
+    }
+
+    .card-pendientes {
+        background: linear-gradient(135deg, #fff7ed 0%, #ffffff 70%);
+    }
+
+    .card-aprobados {
+        background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 70%);
+    }
+
+    .resumen-left {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+    }
+
+    .resumen-icon {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+    }
+
+        .resumen-icon.naranja {
+            width: 70px;
+            height: 70px;
+            border-radius: 18px;
+            background: linear-gradient(135deg, #f59e0b, #fb923c);
+            color: white;
+            box-shadow: 0 10px 22px rgba(245,158,11,.28);
+        }
+
+            .resumen-icon.naranja i {
+                font-size: 32px;
+            }
+
+        .resumen-icon.verde {
+            background: #10b981;
+            color: white;
+        }
+
+    .resumen-card span {
+        color: #241041;
+        font-weight: 900;
+        font-size: 17px;
+        text-transform: uppercase;
+    }
+
+    .resumen-card h2 {
+        font-size: 68px;
+        font-weight: 900;
+        margin: 8px 0 4px;
+        line-height: 1;
+    }
+
+    .num-pendiente {
+        color: #f59e0b !important;
+    }
+
+    .num-aprobado {
+        color: #10b981 !important;
+    }
+
+    .resumen-card p {
+        color: #6b7280;
+        font-size: 16px;
+        font-weight: 500;
+    }
+
+    .resumen-visual {
+        position: relative;
+        width: 135px;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .visual-pendiente > i {
+        font-size: 92px;
+        color: #7c3aed;
+        filter: drop-shadow(0 8px 8px rgba(124,58,237,.25));
+    }
+
+    .visual-aprobado > i {
+        font-size: 130px;
+        color: #10b981;
+        filter: drop-shadow(0 8px 8px rgba(16,185,129,.25));
+    }
+
+    .mini-clock,
+    .mini-check {
+        position: absolute;
+        right: 2px;
+        bottom: 8px;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 16px rgba(0,0,0,.18);
+    }
+
+    .mini-clock {
+        background: #fed7aa;
+        color: #f59e0b;
+    }
+
+    .mini-check {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+        .mini-clock i,
+        .mini-check i {
+            font-size: 22px;
+        }
+
+    .pendiente-ilustracion {
+        position: relative;
+        width: 190px;
+        height: 150px;
+    }
+
+    .clipboard {
+        position: absolute;
+        right: 20px;
+        top: 6px;
+        width: 92px;
+        height: 112px;
+        background: linear-gradient(180deg, #faf5ff, #ede9fe);
+        border: 6px solid #7c3aed;
+        border-radius: 14px;
+        transform: rotate(-6deg);
+        box-shadow: 0 14px 26px rgba(124,58,237,.28);
+    }
+
+    .clip {
+        position: absolute;
+        top: -20px;
+        left: 25px;
+        width: 38px;
+        height: 24px;
+        background: #7c3aed;
+        border-radius: 12px 12px 5px 5px;
+    }
+
+    .check-line {
+        width: 54px;
+        height: 9px;
+        background: #7c3aed;
+        border-radius: 8px;
+        margin-left: 18px;
+        margin-top: 20px;
+        opacity: .75;
+    }
+
+    .top-pagos {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 25px;
+    }
+
+    .welcome {
+        color: #6b7280;
+        font-size: 15px;
+        margin-bottom: 6px;
+    }
+
+    .perfil-analista {
+        background: white;
+        border-radius: 20px;
+        padding: 16px 22px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        box-shadow: 0 12px 30px rgba(124,58,237,.10);
+    }
+
+    .perfil-avatar {
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        background: #7c3aed;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+    }
+
+    .perfil-analista strong {
+        color: #241041;
+        font-size: 15px;
+    }
+
+    .perfil-analista span {
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .donut-centro {
+        width: 58px;
+        height: 58px;
+        background: white;
+        color: #4c1d95;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+    }
+
+    .resumen-metodos {
+        align-items: stretch;
+    }
+
+    .resumen-card {
+        min-height: 250px;
+    }
+
+    .pagos-sidebar .side-card:first-child {
+        min-height: 220px;
+    }
+
+    .metodo-uso-bar {
+        margin-bottom: 18px;
+    }
+
+    .metodo-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+        .metodo-info strong {
+            font-size: 14px;
+            color: #241041;
+        }
+
+    .metodo-uso-bar b {
+        float: right;
+        margin-top: -22px;
+        color: #4c1d95;
+        font-size: 14px;
+    }
+
+    .metodo-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+        .metodo-icon.morado {
+            background: #7c3aed;
+            color: white;
+        }
+
+        .metodo-icon.azul {
+            background: #e0f2fe;
+            color: #0284c7;
+        }
+
+        .metodo-icon.verde {
+            background: #ccfbf1;
+            color: #0f766e;
+        }
+
+        .metodo-icon.gris {
+            background: #9ca3af;
+            color: white;
+        }
+
+    .barra {
+        margin-left: 54px;
+        margin-top: 8px;
+        height: 7px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .barra-fill {
+        height: 100%;
+        border-radius: 999px;
+    }
+
+        .barra-fill.morado {
+            background: #7c3aed;
+        }
+
+        .barra-fill.azul {
+            background: #3b82f6;
+        }
+
+        .barra-fill.verde {
+            background: #10b981;
+        }
+
+        .barra-fill.gris {
+            background: #6b7280;
+        }
+
+    .metodo-icon.bcp {
+        background: #0046ad;
+        color: white;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .metodo-icon.interbank {
+        background: #22c55e;
+        color: #1e3a8a;
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .metodo-icon.bbva {
+        background: #0f172a;
+        color: white;
+        font-size: 10px;
+        font-weight: 900;
+    }
+
+    .metodo-icon.scotia {
+        background: #ef4444;
+        color: white;
+        font-size: 16px;
+        font-weight: 900;
+    }
+
+    .metodo-icon.caja {
+        background: #f97316;
+        color: white;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .barra-fill.bcp {
+        background: #0046ad;
+    }
+
+    .barra-fill.interbank {
+        background: #22c55e;
+    }
+
+    .barra-fill.bbva {
+        background: #0f172a;
+    }
+
+    .barra-fill.scotia {
+        background: #ef4444;
+    }
+
+    .barra-fill.caja {
+        background: #f97316;
+    }
+    .metodo-icon.yape,
+.mini-icon-yape {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6) !important;
+    color: white !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    font-style: italic;
+    letter-spacing: -1px;
+    text-transform: lowercase;
+}
+
+.barra-fill.yape {
+    background: #7c3aed;
+}
+
+    .logo-metodo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 12px;
+    }
+
+    .logo-mini-yape {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 12px;
+    }
+
+    .metodo-badge-img {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .logo-tabla-metodo {
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+        object-fit: cover;
+    }
+
+    .icon-transferencia {
+        width: 26px;
+        height: 26px;
+        border-radius: 8px;
+        background: #7c3aed;
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+
+    .actividad-card {
+        max-height: 320px;
+        overflow: hidden;
+    }
+
+    .actividad-lista {
+        position: relative;
+        max-height: 210px;
+        overflow: hidden;
+        padding-left: 8px;
+    }
+
+        .actividad-lista.expandido {
+            max-height: 260px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        .actividad-lista::before {
+            content: "";
+            position: absolute;
+            left: 18px;
+            top: 18px;
+            bottom: 18px;
+            width: 3px;
+            background: linear-gradient(#22c55e, #f59e0b, #7c3aed);
+            border-radius: 10px;
+        }
+
+    .actividad-item {
+        position: relative;
+        display: flex;
+        gap: 12px;
+        padding: 10px 0 10px 34px;
+        border-bottom: none !important;
+    }
+
+    .actividad-icon {
+        position: absolute;
+        left: 0;
+        top: 12px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #22c55e;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        z-index: 2;
+    }
+
+    .actividad-item strong {
+        color: #241041;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .actividad-item p {
+        color: #4c1d95;
+        font-size: 12px;
+        font-weight: 700;
+        margin: 3px 0;
+    }
+
+    .actividad-item small {
+        color: #6b7280;
+        font-size: 11px;
+    }
+
+    .actividad-extra:nth-child(n+4) {
+        display: none;
+    }
+
+    .actividad-lista.expandido .actividad-extra {
+        display: flex;
+    }
+
+    .btn-historial {
+        margin-top: 12px;
+        width: 100%;
+        border: none;
+        background: transparent;
+        color: #6d28d9;
+        font-weight: 900;
+        cursor: pointer;
+        text-align: right;
+    }
+
+    .actividad-card {
+        min-height: 170px;
+    }
+
+    .consejo-card-pro {
+        position: relative;
+        min-height: 170px;
+        border-radius: 22px;
+        padding: 22px;
+        overflow: hidden;
+        background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 55%, #4c1d95 100%);
+        box-shadow: 0 16px 35px rgba(91,33,182,.28);
+        color: white;
+    }
+
+        .consejo-card-pro::before {
+            content: "";
+            position: absolute;
+            width: 170px;
+            height: 170px;
+            left: -55px;
+            bottom: -65px;
+            background: rgba(255,255,255,.10);
+            border-radius: 50%;
+        }
+
+        .consejo-card-pro::after {
+            content: "";
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            right: -35px;
+            top: -35px;
+            background: rgba(255,255,255,.12);
+            border-radius: 50%;
+        }
+
+    .consejo-shield {
+        position: absolute;
+        left: 22px;
+        top: 22px;
+        width: 76px;
+        height: 76px;
+        color: #a7f3d0;
+        font-size: 72px;
+        filter: drop-shadow(0 8px 12px rgba(0,0,0,.25));
+    }
+
+        .consejo-shield span {
+            position: absolute;
+            right: -8px;
+            bottom: 4px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #22c55e;
+            color: white;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid rgba(255,255,255,.9);
+        }
+
+    .consejo-persona {
+        position: absolute;
+        right: 22px;
+        bottom: 22px;
+        width: 54px;
+        height: 80px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, #fff, #e9d5ff);
+        color: #4c1d95;
+        font-size: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 12px 25px rgba(0,0,0,.22);
+        z-index: 2;
+    }
+
+    .consejo-texto-pro {
+        position: relative;
+        z-index: 3;
+        margin-left: 88px;
+        padding-right: 55px;
+    }
+
+        .consejo-texto-pro strong {
+            display: block;
+            font-size: 14px;
+            line-height: 1.35;
+            font-weight: 900;
+            margin-bottom: 10px;
+        }
+
+        .consejo-texto-pro p {
+            color: #ede9fe;
+            font-size: 12px;
+            line-height: 1.45;
+            margin: 0;
+        }
+
+    .estado-pendiente {
+        background: #fef3c7;
+        color: #92400e;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-weight: 800;
+    }
+
+    .perfil-link {
+        text-decoration: none;
+        cursor: pointer;
+        transition: .25s;
+    }
+
+        .perfil-link:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 35px rgba(124,58,237,.18);
+        }
+
+        .perfil-link small {
+            display: block;
+            margin-top: 5px;
+            color: #6d28d9;
+            font-size: 12px;
+            font-weight: 800;
+        }
+</style>
+<script>
+        function filtrarPagos() {
+        paginaActual = 1;
+        paginarPagos();
+    }
+
+    let paginaActual = 1;
+    const filasPorPagina = 5;
+
+    function paginarPagos() {
+    let texto = document.getElementById("buscarPago").value.toLowerCase().trim();
+
+    let filasTodas = Array.from(document.querySelectorAll(".fila-pago"));
+
+    let filas = filasTodas.filter(fila => {
+        let busqueda = fila.dataset.busqueda || "";
+        return busqueda.includes(texto);
+    });
+
+    filasTodas.forEach(fila => fila.style.display = "none");
+        let totalFilas = filas.length;
+        let totalPaginas = Math.ceil(totalFilas / filasPorPagina);
+
+        filas.forEach((fila, index) => {
+            let inicio = (paginaActual - 1) * filasPorPagina;
+            let fin = inicio + filasPorPagina;
+
+            fila.style.display =
+                index >= inicio && index < fin ? "" : "none";
+        });
+
+        document.getElementById("textoPaginacion").innerText =
+            `Mostrando ${
+                Math.min(
+                    filasPorPagina,
+                    totalFilas - ((paginaActual - 1) * filasPorPagina)
+                )
+            } de ${totalFilas} resultados`;
+        let contenedor = document.getElementById("paginacionPagos");
+        contenedor.innerHTML = "";
+
+        let btnAnterior = document.createElement("button");
+        btnAnterior.innerText = "‹";
+        btnAnterior.onclick = function () {
+            if (paginaActual > 1) {
+                paginaActual--;
+                paginarPagos();
+            }
+        };
+            if (paginaActual === 1) {
+        btnAnterior.disabled = true;
+        btnAnterior.style.opacity = "0.5";
+        btnAnterior.style.cursor = "not-allowed";
+    } else {
+        btnAnterior.style.cursor = "pointer";
+    }
+        contenedor.appendChild(btnAnterior);
+
+        for (let i = 1; i <= totalPaginas; i++) {
+            let btn = document.createElement("button");
+            btn.innerText = i;
+
+            if (i === paginaActual) {
+                btn.classList.add("active");
+            }
+
+            btn.onclick = function () {
+                paginaActual = i;
+                paginarPagos();
+            };
+
+            contenedor.appendChild(btn);
+        }
+
+        let btnSiguiente = document.createElement("button");
+        btnSiguiente.innerText = "›";
+
+        btnSiguiente.onclick = function () {
+            if (paginaActual < totalPaginas) {
+                paginaActual++;
+                paginarPagos();
+            }
+        };
+            if (paginaActual === totalPaginas || totalPaginas === 0) {
+        btnSiguiente.disabled = true;
+        btnSiguiente.style.opacity = "0.5";
+        btnSiguiente.style.cursor = "not-allowed";
+    } else {
+        btnSiguiente.style.cursor = "pointer";
+    }
+        contenedor.appendChild(btnSiguiente);
+    }
+        function toggleHistorial() {
+        let lista = document.getElementById("listaActividad");
+        let boton = document.querySelector(".btn-historial");
+
+        lista.classList.toggle("expandido");
+
+        if (lista.classList.contains("expandido")) {
+            boton.innerText = "Ver menos historial ↑";
+        } else {
+            boton.innerText = "Ver todo el historial →";
+        }
+    }
+
+    window.onload = paginarPagos;
+</script>

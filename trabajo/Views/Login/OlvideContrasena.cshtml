@@ -1,0 +1,253 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Olvidé Contraseña</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #240046, #3c096c, #4361ee, #00b4d8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+        }
+
+        .main-box {
+            width: 1250px;
+            min-height: 760px;
+            display: flex;
+            background: white;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0,0,0,.35);
+        }
+
+        .left-panel {
+            width: 48%;
+            background: linear-gradient(160deg, #4cc9f0, #4361ee, #7209b7);
+            color: white;
+            padding: 55px 45px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 22px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .welcome {
+            margin-top: 120px;
+            position: relative;
+            z-index: 2;
+        }
+
+            .welcome h1 {
+                font-size: 52px;
+                font-weight: bold;
+            }
+
+            .welcome p {
+                font-size: 20px;
+                opacity: .95;
+                line-height: 1.6;
+            }
+
+        .credit-icon {
+            font-size: 120px;
+            margin-top: 45px;
+        }
+
+        .right-panel {
+            width: 52%;
+            padding: 95px 80px;
+            background: linear-gradient(135deg, #e0e7ff, #c7d2fe, #f3e8ff);
+        }
+
+            .right-panel h2 {
+                color: #4c1d95;
+                font-weight: bold;
+                margin-bottom: 12px;
+                font-size: 42px;
+            }
+
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 35px;
+            font-size: 18px;
+        }
+
+        .password-rules {
+            font-size: 15px;
+            color: #64748b;
+            padding-left: 22px;
+            margin-top: -5px;
+        }
+
+            .password-rules li {
+                margin-bottom: 3px;
+            }
+
+        .form-control {
+            height: 60px;
+            border: none;
+            background: #eef2f7;
+            border-radius: 12px;
+            font-size: 18px;
+            padding-left: 18px;
+        }
+
+        .btn-login {
+            background: linear-gradient(135deg, #4361ee, #7209b7);
+            border: none;
+            color: white;
+            font-weight: bold;
+            height: 62px;
+            border-radius: 18px;
+            font-size: 20px;
+        }
+
+        .register-link {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 12px;
+            font-weight: 500;
+        }
+
+        @@media (max-width: 900px) {
+            .main-box {
+                width: 95%;
+                flex-direction: column;
+            }
+
+            .left-panel, .right-panel {
+                width: 100%;
+            }
+
+            .welcome {
+                margin-top: 40px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-box">
+
+        <div class="left-panel">
+            <div class="logo">💳 CréditoPlus</div>
+
+            <div class="welcome">
+                <h1>Cambiar contraseña</h1>
+                <p>Ingresa tu DNI y coloca tu nueva contraseña.</p>
+
+                <div class="credit-icon">🔐</div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <h2>Olvidé mi contraseña</h2>
+            <p class="subtitle">Actualiza tu contraseña usando tu DNI</p>
+
+            <form asp-controller="Login" asp-action="OlvideContrasena" method="post">
+
+                <input class="form-control mb-3" type="text" placeholder="DNI" required name="dni"
+                       maxlength="8"
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+
+                <input class="form-control mb-2" type="password" placeholder="Nueva contraseña" required name="nuevaClave" />
+
+                <ul class="password-rules mb-3">
+                    <li id="mayus"> Una letra mayúscula</li>
+                    <li id="minus"> Una letra minúscula</li>
+                    <li id="numero"> Un número</li>
+                    <li id="longitud"> Mínimo 6 caracteres</li>
+                </ul>
+
+                <input class="form-control mb-3" type="password" placeholder="Confirmar contraseña" required name="confirmarClave" />
+
+                <div class="d-grid gap-2 mb-3">
+                    <button class="btn btn-login" type="submit">Cambiar contraseña</button>
+                </div>
+
+                @if (ViewData["Mensaje"] != null)
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @ViewData["Mensaje"]
+                    </div>
+                }
+
+                @if (ViewData["Correcto"] != null)
+                {
+                    <div class="alert alert-success" role="alert">
+                        @ViewData["Correcto"]
+                    </div>
+                }
+
+                <div class="register-link">
+                    <a href="@Url.Action("IniciarSeccion", "Login")">Volver a iniciar sesión</a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+    <script>
+        const input = document.querySelector('input[name="nuevaClave"]');
+
+        const mayus = document.getElementById("mayus");
+        const minus = document.getElementById("minus");
+        const numero = document.getElementById("numero");
+        const longitud = document.getElementById("longitud");
+
+        input.addEventListener("keyup", function () {
+            let valor = input.value;
+
+            // Mayúscula
+            if (/[A-Z]/.test(valor)) {
+                mayus.innerHTML = "✔ Una letra mayúscula";
+                mayus.style.color = "green";
+            } else {
+                mayus.innerHTML = "❌ Una letra mayúscula";
+                mayus.style.color = "#64748b";
+            }
+
+            // Minúscula
+            if (/[a-z]/.test(valor)) {
+                minus.innerHTML = "✔ Una letra minúscula";
+                minus.style.color = "green";
+            } else {
+                minus.innerHTML = "❌ Una letra minúscula";
+                minus.style.color = "#64748b";
+            }
+
+            // Número
+            if (/[0-9]/.test(valor)) {
+                numero.innerHTML = "✔ Un número";
+                numero.style.color = "green";
+            } else {
+                numero.innerHTML = "❌ Un número";
+                numero.style.color = "#64748b";
+            }
+
+            // Longitud
+            if (valor.length >= 6) {
+                longitud.innerHTML = "✔ Mínimo 6 caracteres";
+                longitud.style.color = "green";
+            } else {
+                longitud.innerHTML = "❌ Mínimo 6 caracteres";
+                longitud.style.color = "#64748b";
+            }
+        });
+    </script>
+</body>
+</html>

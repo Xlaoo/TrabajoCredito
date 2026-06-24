@@ -1,0 +1,802 @@
+@{
+    Layout = null;
+    Layout = "~/Views/Shared/_LayoutAnalista.cshtml";
+    ViewData["Title"] = "Calificaciones de Servicio";
+    ViewData["ActivePage"] = "CalificacionesServicio";
+}
+@* <!DOCTYPE html>
+<html>
+<head> *@
+    <title>Calificaciones del Servicio - CrediPlus</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #faf8ff;
+            font-family: 'Segoe UI', sans-serif;
+            color: #241041;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #240046, #3c096c, #5a189a);
+            color: white;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .role {
+            color: #d8b4fe;
+            margin-bottom: 40px;
+            font-size: 14px;
+        }
+
+        .menu {
+            margin-top: 15px;
+        }
+
+            .menu a {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                color: white;
+                text-decoration: none;
+                padding: 15px 18px;
+                border-radius: 14px;
+                margin-bottom: 10px;
+                transition: .3s;
+            }
+
+                .menu a:hover, .menu a.active {
+                    background: rgba(255,255,255,.12);
+                }
+
+        .section-title {
+            margin-top: 25px;
+            margin-bottom: 15px;
+            color: #c4b5fd;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .help-card {
+            margin-top: auto;
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 18px;
+            padding: 18px;
+        }
+
+            .help-card h4 {
+                font-size: 20px;
+                font-weight: 700;
+                margin-bottom: 10px;
+            }
+
+            .help-card p {
+                color: #d8b4fe;
+                font-size: 14px;
+                margin-bottom: 15px;
+            }
+
+        .btn-help {
+            width: 100%;
+            border: 1px solid rgba(255,255,255,.15);
+            background: rgba(255,255,255,.05);
+            color: white;
+            border-radius: 12px;
+            padding: 12px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+            .btn-help:hover {
+                background: rgba(255,255,255,.12);
+                color: white;
+            }
+
+        /* ── CONTENIDO ── */
+        .content {
+            flex: 1;
+            padding: 35px;
+            overflow-y: auto;
+        }
+
+        /* Header */
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+            .cal-header h1 {
+                font-size: 38px;
+                font-weight: 800;
+                color: #4c1d95;
+                margin: 0;
+            }
+
+        .cal-bienvenida {
+            color: #6b7280;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .cal-sub {
+            color: #6b7280;
+            font-size: 14px;
+            margin: 4px 0 0;
+        }
+
+        /* Profile box */
+        .profile-box {
+            background: white;
+            border-radius: 20px;
+            padding: 18px 22px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 10px 30px rgba(124,58,237,.08);
+        }
+
+        .avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6d28d9, #9333ea);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .profile-name {
+            font-weight: 700;
+            color: #241041;
+            font-size: 15px;
+        }
+
+        .profile-email {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        /* Métricas */
+        .metrics-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .metric-card {
+            flex: 1;
+            min-width: 190px;
+            border-radius: 20px;
+            padding: 30px 32px;
+            min-height: 170px;
+            color: #fff;
+            box-shadow: 0 14px 32px rgba(0,0,0,.12);
+        }
+
+            .metric-card .mlabel {
+                font-size: 13px;
+                font-weight: 600;
+                opacity: .92;
+                margin-bottom: 10px;
+            }
+
+            .metric-card .mvalue {
+                font-size: 60px;
+                font-weight: 900;
+                line-height: 1;
+            }
+
+            .metric-card .msub {
+                font-size: 12px;
+                margin-top: 8px;
+                opacity: .85;
+            }
+
+        .card-green {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+        }
+
+        .card-blue {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .card-purple {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+        }
+
+        .chart-card {
+            flex: 1.35;
+            min-width: 280px;
+            background: white;
+            border-radius: 20px;
+            padding: 24px 28px;
+            min-height: 170px;
+            box-shadow: 0 14px 32px rgba(124,58,237,.10);
+        }
+
+        .chart-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 14px;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            height: 120px;
+        }
+
+        .bar-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            height: 100%;
+            justify-content: flex-end;
+            gap: 3px;
+        }
+
+        .bar-fill {
+            width: 100%;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .bar-label {
+            font-size: 10px;
+            color: #6b7280;
+            white-space: nowrap;
+        }
+
+        .bar-count {
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* Tabla */
+        .table-card {
+            background: white;
+            border-radius: 22px;
+            box-shadow: 0 10px 25px rgba(124,58,237,.08);
+            padding: 25px;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+            .table-header h2 {
+                font-size: 18px;
+                font-weight: 800;
+                color: #4c1d95;
+                margin: 0;
+            }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            color: #6b7280;
+        }
+
+            .btn-icon:hover {
+                color: #7c3aed;
+            }
+
+        /* Filtros */
+        .filters {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #374151;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .btn-filter {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 5px 13px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 500;
+            background: #fff;
+            color: #374151;
+            transition: all .15s;
+        }
+
+            .btn-filter.active, .btn-filter:hover {
+                background: #3c096c;
+                color: #fff;
+                border-color: #3c096c;
+            }
+
+        .search-input {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 7px 14px;
+            font-size: 13px;
+            outline: none;
+            width: 230px;
+            margin-left: auto;
+        }
+
+            .search-input:focus {
+                border-color: #7c3aed;
+            }
+
+        /* Tabla datos */
+        .cal-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+            .cal-table th {
+                padding: 12px 14px;
+                text-align: left;
+                font-weight: 700;
+                color: #5b21b6;
+                border-bottom: 2px solid #f3e8ff;
+                white-space: nowrap;
+                background: #f3e8ff;
+            }
+
+                .cal-table th:first-child {
+                    border-radius: 10px 0 0 10px;
+                }
+
+                .cal-table th:last-child {
+                    border-radius: 0 10px 10px 0;
+                }
+
+            .cal-table td {
+                padding: 14px 14px;
+                border-bottom: 1px solid #f3f4f6;
+                vertical-align: middle;
+            }
+
+            .cal-table tr:hover td {
+                background: #faf8ff;
+            }
+
+        .badge-stars {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            border-radius: 20px;
+            padding: 5px 12px;
+        }
+
+        .badge-5 {
+            background: #dcfce7;
+            border: 1px solid #86efac;
+        }
+
+        .badge-4 {
+            background: #fef9c3;
+            border: 1px solid #fde047;
+        }
+
+        .badge-3 {
+            background: #ffedd5;
+            border: 1px solid #fdba74;
+        }
+
+        .badge-2 {
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+        }
+
+        .badge-1 {
+            background: #fee2e2;
+            border: 1px solid #f87171;
+        }
+
+        .sol-num {
+            font-weight: 700;
+            color: #4c1d95;
+        }
+
+        .sol-name {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 2px;
+        }
+
+        .fecha-td {
+            font-size: 13px;
+            color: #6b7280;
+            white-space: nowrap;
+        }
+
+        .table-footer {
+            margin-top: 14px;
+            font-size: 12px;
+            color: #9ca3af;
+            text-align: right;
+        }
+
+        .estado-msg {
+            text-align: center;
+            padding: 40px;
+            color: #9ca3af;
+        }
+
+        .estado-error {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: #dc2626;
+            margin-bottom: 24px;
+        }
+
+        .analista-badge {
+            background: #ede9fe;
+            color: #5b21b6;
+            padding: 7px 14px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 13px;
+        }
+    </style>
+@* </head>
+<body> *@
+    <div class="layout">
+
+        @* <!-- ── SIDEBAR ── -->
+        <div class="sidebar">
+            <div class="logo">🛡 CrediPlus</div>
+            <div class="role">Analista de Riesgo</div>
+
+            <div class="menu">
+                <div class="section-title">Principal</div>
+                <a href="@Url.Action("ProgramaAnalista", "Analista")">🏠 Inicio</a>
+
+                <div class="section-title">Evaluaciones</div>
+                <a href="@Url.Action("SolicitudesPendientes", "Analista")">📄 Solicitudes Pendientes</a>
+                <a href="@Url.Action("HistorialEvaluaciones", "Analista")">🕘 Historial Evaluaciones</a>
+
+                <div class="section-title">Seguimiento</div>
+
+                <a href="@Url.Action("CalendarioRevisiones", "Analista")">
+                    📅 Calendario Revisiones
+                </a>
+                <a href="@Url.Action("AlertasNotificaciones", "Analista")"
+                   style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>🔔 Alertas y Notificaciones</span>
+                    @{
+                        int totalNoLeidos = ViewBag.TotalNoLeidos ?? 0;
+                        string colorBadge = ViewBag.ColorNotificacion ?? "#ef4444";
+                    }
+
+                    @if (totalNoLeidos > 0)
+                    {
+                        <span style="background:@colorBadge; color:white; border-radius:50%;
+                            width:22px; height:22px; font-size:12px; font-weight:700;
+                            display:flex; align-items:center; justify-content:center;">
+                            @totalNoLeidos
+                        </span>
+                    }
+                </a>
+
+                <a href="@Url.Action("GestionDePago", "Analista")">
+                    💰 Gestión de Pagos
+                </a>
+
+                <div class="section-title">Retroalimentación</div>
+                <a href="@Url.Action("CalificacionesServicio", "Analista")" class="active">⭐ Calificaciones del Servicio</a>
+
+                <div class="section-title">Herramientas</div>
+                <a href="@Url.Action("PoliticasRiesgo", "Analista")">
+                    🛡️ Políticas de Riesgo
+                </a>
+
+                <div class="section-title">Mi Cuenta</div>
+                <a href="@Url.Action("PerfilAnalista", "Analista")">
+                    👤 Perfil
+                </a>
+
+                <a href="@Url.Action("CerrarSesion", "Login")">
+                    🚪 Cerrar Sesión
+                </a>
+            </div>
+
+            <div class="help-card">
+                <h4>¿Necesitas ayuda?</h4>
+                <p>Comunícate con el administrador del sistema</p>
+                <a href="@Url.Action("ContactarSoporte", "Analista")" class="btn-help">
+                    <i class="fas fa-headset"></i> Contactar Soporte
+                </a>
+            </div>
+        </div>
+ *@
+        <!-- ── CONTENIDO ── -->
+        <div class="content">
+
+            <!-- Header -->
+            <div class="cal-header">
+                <div>
+                    <div class="cal-bienvenida">Bienvenido Analista</div>
+                    <h1>Resumen de Calificaciones del Servicio</h1>
+                    <p class="cal-sub">Monitorea y analiza la satisfacción del cliente.</p>
+                </div>
+            <a href="@Url.Action("PerfilAnalista", "Analista")"
+               style="
+        background:white;
+        border-radius:20px;
+        padding:18px 22px;
+        display:flex;
+        align-items:center;
+        gap:14px;
+        width:320px;
+        text-decoration:none;
+        color:#241041;
+        box-shadow:0 10px 30px rgba(124,58,237,.08);
+        cursor:pointer;">
+
+                <div style="
+        width:52px;
+        height:52px;
+        min-width:52px;
+        border-radius:50%;
+        background:linear-gradient(135deg,#6d28d9,#9333ea);
+        color:white;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:22px;">
+                    <i class="fas fa-user"></i>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:3px;">
+                    <strong style="color:#241041; font-size:15px; font-weight:800;">
+                        @(ViewBag.NombreAnalista ?? "Analista")
+                    </strong>
+
+                    <span style="color:#6b7280; font-size:13px;">
+                        @(ViewBag.CorreoAnalista ?? "")
+                    </span>
+
+                    <small style="color:#6d28d9; font-size:12px; font-weight:800;">
+                        Ver perfil completo →
+                    </small>
+                </div>
+
+            </a>
+            </div>
+
+            <!-- Métricas -->
+            <div class="metrics-row">
+                <div class="metric-card card-green">
+                    <div class="mlabel">Puntaje Promedio (Este mes)</div>
+                    <div class="mvalue" id="metricPromedio">—</div>
+                    <div class="msub" id="metricEstrellas"></div>
+                </div>
+                <div class="metric-card card-blue">
+                    <div class="mlabel">Total Calificaciones (Este mes)</div>
+                    <div class="mvalue" id="metricTotal">—</div>
+                    <div class="msub" id="metricCrecimiento"></div>
+                </div>
+                <div class="metric-card card-purple">
+                    <div class="mlabel">NPS (Net Promoter Score)</div>
+                    <div class="mvalue" id="metricNps">—</div>
+                    <div class="msub" id="metricNpsLabel"></div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title">Distribución de Estrellas (Este mes)</div>
+                    <div class="bar-chart" id="barChart">
+                        <p style="font-size:12px;color:#9ca3af">Cargando...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h2>☰ Listado Detallado de Calificaciones</h2>
+                    <button class="btn-icon" onclick="cargarDatos()" title="Actualizar">↻</button>
+                </div>
+
+                <div class="filters">
+                    <span class="filter-label">Puntaje</span>
+                    <div class="filter-group" id="filterPuntaje">
+                        <button class="btn-filter active" onclick="setFiltro('all',this)">all</button>
+                        <button class="btn-filter" onclick="setFiltro('5',this)">5 ★</button>
+                        <button class="btn-filter" onclick="setFiltro('4',this)">4 ★</button>
+                        <button class="btn-filter" onclick="setFiltro('3',this)">3 ★</button>
+                        <button class="btn-filter" onclick="setFiltro('2',this)">2 ★</button>
+                        <button class="btn-filter" onclick="setFiltro('1',this)">1 ★</button>
+                    </div>
+                    <input class="search-input" id="searchInput"
+                           placeholder="🔍  Buscar cliente o comentario..."
+                           oninput="renderTabla()" />
+                </div>
+
+                <div style="overflow-x:auto">
+                    <table class="cal-table">
+                        <thead>
+                            <tr>
+                                <th>Puntaje</th>
+                                <th>Comentario</th>
+                                <th>Cliente</th>
+                                <th>Fecha</th>
+                                <th>Analista</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaBody">
+                            <tr><td colspan="5" class="estado-msg">Cargando datos...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer" id="tableFooter"></div>
+            </div>
+
+        </div><!-- /content -->
+    </div><!-- /layout -->
+
+    <script>
+        var todosLosDatos = [];
+        var filtroPuntaje = "all";
+        var STAR_COLORS = { 5:"#22c55e", 4:"#eab308", 3:"#f97316", 2:"#ef4444", 1:"#dc2626" };
+
+        async function cargarDatos() {
+            try {
+                var resp = await fetch("/api/calificaciones");
+                if (!resp.ok) throw new Error("Error " + resp.status);
+                var data = await resp.json();
+                todosLosDatos = data.calificaciones || [];
+
+                document.getElementById("metricPromedio").textContent   = data.puntajePromedio.toFixed(1);
+                document.getElementById("metricEstrellas").innerHTML    = renderStarsHtml(Math.round(data.puntajePromedio), 20)
+                                                                          + "<br>Últimas " + data.totalCalificaciones + " valoraciones";
+                document.getElementById("metricTotal").textContent      = data.totalCalificaciones;
+                document.getElementById("metricCrecimiento").textContent= "+15% vs. mes anterior";
+                document.getElementById("metricNps").textContent        = data.nps;
+                document.getElementById("metricNpsLabel").textContent   = "Clasificación: " + data.clasificacionNps;
+
+                renderBarChart(data.distribucionEstrellas);
+                renderTabla();
+            } catch(err) {
+                document.getElementById("tablaBody").innerHTML =
+                    '<tr><td colspan="5"><div class="estado-error"><strong>Error:</strong> ' + err.message + '</div></td></tr>';
+            }
+        }
+
+        function setFiltro(valor, btn) {
+            filtroPuntaje = valor;
+            document.querySelectorAll("#filterPuntaje .btn-filter").forEach(function(b){ b.classList.remove("active"); });
+            btn.classList.add("active");
+            renderTabla();
+        }
+
+        function renderTabla() {
+            var busqueda = document.getElementById("searchInput").value.toLowerCase();
+            var filtrados = todosLosDatos.filter(function(c) {
+                var okPuntaje = filtroPuntaje === "all" || c.calificacion === parseInt(filtroPuntaje);
+                var nombre    = (c.nombreCliente + " " + c.apellidoCliente).toLowerCase();
+                var okBusq    = busqueda === "" || nombre.includes(busqueda) || c.comentario.toLowerCase().includes(busqueda);
+                return okPuntaje && okBusq;
+            });
+
+            if (filtrados.length === 0) {
+                document.getElementById("tablaBody").innerHTML = '<tr><td colspan="5" class="estado-msg">No hay calificaciones que coincidan.</td></tr>';
+                document.getElementById("tableFooter").textContent = "";
+                return;
+            }
+
+            var filas = filtrados.map(function(c) {
+                return '<tr>'
+                    + '<td><span class="badge-stars badge-' + c.calificacion + '">' + renderStarsHtml(c.calificacion, 14) + '</span></td>'
+                    + '<td style="max-width:320px">' + escHtml(c.comentario) + '</td>'
+        + '<td>'
+        +     '<strong>' + escHtml(c.nombreCliente) + ' ' + escHtml(c.apellidoCliente) + '</strong>'
+        + '</td>'
+                           + '<td class="fecha-td">' + formatFecha(c.fechaComentario) + '</td>'
+        + '<td><span class="analista-badge">' + c.analista + '</span></td>'
+                    + '</tr>';
+            }).join("");
+
+            document.getElementById("tablaBody").innerHTML = filas;
+            document.getElementById("tableFooter").textContent = "Mostrando " + filtrados.length + " de " + todosLosDatos.length + " calificaciones";
+        }
+
+        function renderBarChart(dist) {
+            if (!dist) return;
+            var vals = [dist[5]||0, dist[4]||0, dist[3]||0, dist[2]||0, dist[1]||0];
+            var maxV = Math.max.apply(null, vals.concat([1]));
+            var html = [5,4,3,2,1].map(function(s) {
+                var count  = dist[s] || 0;
+                var height = Math.round((count / maxV) * 95);
+                return '<div class="bar-group">'
+                    + '<span class="bar-count" style="color:' + STAR_COLORS[s] + '">' + count + '</span>'
+                    + '<div class="bar-fill" style="height:' + height + 'px;background:' + STAR_COLORS[s] + '"></div>'
+                    + '<span class="bar-label">' + s + ' ★</span>'
+                    + '</div>';
+            }).join("");
+            document.getElementById("barChart").innerHTML = html;
+        }
+
+        function renderStarsHtml(puntaje, size) {
+            return [1,2,3,4,5].map(function(s) {
+                var color = s <= puntaje ? STAR_COLORS[puntaje] : "#d1d5db";
+                return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 20 20" fill="' + color + '" style="display:inline-block">'
+                    + '<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>'
+                    + '</svg>';
+            }).join("");
+        }
+
+        function formatFecha(fechaStr) {
+            var date = new Date(fechaStr);
+            var now  = new Date();
+            var diff = (now - date) / 1000;
+            if (diff < 60)    return "Ahora";
+            if (diff < 3600)  return "Hace " + Math.floor(diff/60) + " min";
+            if (diff < 86400) return "Hace " + Math.floor(diff/3600) + " horas";
+            var ayer = new Date(now); ayer.setDate(ayer.getDate()-1);
+            if (date.toDateString() === ayer.toDateString())
+                return "Ayer " + date.toLocaleTimeString("es-PE", {hour:"2-digit",minute:"2-digit"});
+            return date.toLocaleDateString("es-PE",{day:"2-digit",month:"2-digit",year:"2-digit"})
+                 + " " + date.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
+        }
+
+        function escHtml(str) {
+            return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+        }
+
+        document.addEventListener("DOMContentLoaded", cargarDatos);
+    </script>
+@* </body>
+</html> *@

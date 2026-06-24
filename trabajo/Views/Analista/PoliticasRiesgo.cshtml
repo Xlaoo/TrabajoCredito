@@ -1,0 +1,883 @@
+﻿@{
+	Layout = null;
+
+	Layout = "~/Views/Shared/_LayoutAnalista.cshtml";
+	ViewData["Title"] = "Politicas de Riesgo";
+	ViewData["ActivePage"] = "PoliticasRiesgo";
+
+}
+@* <!DOCTYPE html>
+<html>
+
+<head> *@
+
+	<style>
+
+		body {
+			margin: 0;
+			font-family: 'Segoe UI';
+			background: #faf8ff;
+		}
+
+		.contenedor {
+			background: white;
+			border-radius: 25px;
+			padding: 25px;
+			box-shadow: 0 10px 25px rgba(124,58,237,.08);
+		}
+
+		h1 {
+			color: #4c1d95;
+			font-size: 40px;
+			font-weight: 800;
+			margin-bottom: 25px;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+		}
+
+		th {
+			background: #f3e8ff;
+			color: #5b21b6;
+			padding: 15px;
+			text-align: left;
+		}
+
+		td {
+			padding: 10px 15px;
+			border-bottom: 1px solid #eee;
+		}
+
+		.btn-ver {
+			background: #6d28d9;
+			color: white;
+			text-decoration: none;
+			padding: 10px 15px;
+			border-radius: 10px;
+		}
+
+		/* .layout {
+			display: flex;
+			min-height: 100vh;
+		}
+
+		.sidebar {
+			width: 240px;
+			background: linear-gradient( 180deg, #240046, #3c096c, #5a189a );
+			color: white;
+			padding: 20px;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.content {
+			flex: 1;
+			padding: 35px;
+		}
+
+		.logo {
+			font-size: 28px;
+			font-weight: 800;
+			margin-bottom: 10px;
+		}
+
+		.role {
+			color: #d8b4fe;
+			margin-bottom: 40px;
+			font-size: 14px;
+		}
+
+		.menu {
+			margin-top: 15px;
+		}
+
+			.menu a {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				color: white;
+				text-decoration: none;
+				padding: 10px 18px;
+				border-radius: 14px;
+				margin-bottom: 8px;
+				transition: .3s;
+			}
+
+				.menu a:hover,
+				.menu a.active {
+					background: rgba(255,255,255,.12);
+				}
+
+		.section-title {
+			margin-top: 25px;
+			margin-bottom: 15px;
+			color: #c4b5fd;
+			font-size: 12px;
+			font-weight: bold;
+			text-transform: uppercase;
+		}
+
+		.help-card {
+			margin-top: auto;
+			background: rgba(255,255,255,.08);
+			border: 1px solid rgba(255,255,255,.10);
+			border-radius: 18px;
+			padding: 20px;
+		}
+
+			.help-card h4 {
+				font-size: 18px;
+				font-weight: 700;
+				margin-bottom: 10px;
+			}
+
+			.help-card p {
+				color: #d8b4fe;
+				font-size: 14px;
+				margin-bottom: 15px;
+				line-height: 1.5;
+			}
+
+		.btn-help {
+			width: 100%;
+			box-sizing: border-box;
+			border: 1px solid rgba(255,255,255,.15);
+			background: rgba(255,255,255,.05);
+			color: white;
+			border-radius: 12px;
+			padding: 12px;
+			text-decoration: none;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+		}
+
+			.btn-help:hover {
+				background: rgba(255,255,255,.12);
+				color: white;
+			} */
+
+		.top-politicas {
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			margin-bottom: 25px;
+		}
+
+			.top-politicas p {
+				color: #6b7280;
+				font-size: 15px;
+			}
+
+		.perfil-analista {
+			background: white;
+			border-radius: 20px;
+			padding: 16px 22px;
+			display: flex;
+			align-items: center;
+			gap: 14px;
+			box-shadow: 0 12px 30px rgba(124,58,237,.10);
+		}
+
+		.perfil-avatar {
+			width: 58px;
+			height: 58px;
+			border-radius: 50%;
+			background: #7c3aed;
+			color: white;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 26px;
+		}
+
+		.perfil-analista strong {
+			color: #241041;
+			font-size: 15px;
+		}
+
+		.perfil-analista span {
+			color: #6b7280;
+			font-size: 13px;
+		}
+
+		.panel-principal,
+		.politica-card,
+		.mini-politica,
+		.version-politica {
+			background: white;
+			border-radius: 24px;
+			padding: 24px;
+			box-shadow: 0 14px 34px rgba(124,58,237,.08);
+		}
+
+			.panel-principal h2,
+			.politica-card h2,
+			.mini-politica h2 {
+				color: #4c1d95;
+				font-size: 20px;
+				font-weight: 900;
+				margin-bottom: 18px;
+			}
+
+		.riesgo-grid {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr) 1.6fr;
+			gap: 18px;
+		}
+
+		.riesgo-card {
+			border-radius: 18px;
+			padding: 20px;
+			border: 1px solid #eee;
+		}
+
+			.riesgo-card .riesgo-icon {
+				width: 48px;
+				height: 48px;
+				border-radius: 14px;
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 22px;
+				margin-bottom: 12px;
+			}
+
+			.riesgo-card h3 {
+				font-size: 15px;
+				font-weight: 900;
+				margin-bottom: 8px;
+			}
+
+			.riesgo-card p {
+				color: #374151;
+				font-size: 13px;
+				min-height: 48px;
+			}
+
+			.riesgo-card button {
+				margin-top: 15px;
+				width: 100%;
+				border-radius: 10px;
+				padding: 10px;
+				font-weight: 900;
+				border: none;
+			}
+
+			.riesgo-card.bajo {
+				background: #f0fdf4;
+				border-color: #86efac;
+			}
+
+				.riesgo-card.bajo .riesgo-icon,
+				.riesgo-card.bajo button {
+					background: #22c55e;
+					color: white;
+				}
+
+				.riesgo-card.bajo h3 {
+					color: #15803d;
+				}
+
+			.riesgo-card.medio {
+				background: #fffbeb;
+				border-color: #fde68a;
+			}
+
+				.riesgo-card.medio .riesgo-icon,
+				.riesgo-card.medio button {
+					background: #f59e0b;
+					color: white;
+				}
+
+				.riesgo-card.medio h3 {
+					color: #b45309;
+				}
+
+			.riesgo-card.alto {
+				background: #fff7ed;
+				border-color: #fdba74;
+			}
+
+				.riesgo-card.alto .riesgo-icon,
+				.riesgo-card.alto button {
+					background: #f97316;
+					color: white;
+				}
+
+				.riesgo-card.alto h3 {
+					color: #c2410c;
+				}
+
+			.riesgo-card.critico {
+				background: #fef2f2;
+				border-color: #fca5a5;
+			}
+
+				.riesgo-card.critico .riesgo-icon,
+				.riesgo-card.critico button {
+					background: #ef4444;
+					color: white;
+				}
+
+				.riesgo-card.critico h3 {
+					color: #dc2626;
+				}
+
+		.objetivo-card {
+			background: linear-gradient(135deg, #eff6ff, #ffffff);
+			border: 1px solid #bfdbfe;
+			border-radius: 18px;
+			padding: 22px;
+			position: relative;
+			overflow: hidden;
+		}
+
+			.objetivo-card h3 {
+				color: #4c1d95;
+				font-size: 22px;
+				font-weight: 900;
+			}
+
+			.objetivo-card p {
+				color: #1e3a8a;
+				font-size: 14px;
+				line-height: 1.6;
+				max-width: 70%;
+			}
+
+		.objetivo-dibujo {
+			position: absolute;
+			right: 20px;
+			bottom: 18px;
+			color: #2563eb;
+			font-size: 78px;
+		}
+
+			.objetivo-dibujo span {
+				position: absolute;
+				right: -8px;
+				bottom: 0;
+				font-size: 42px;
+				color: #7c3aed;
+			}
+
+		.politicas-grid {
+			display: grid;
+			grid-template-columns: 1.4fr 1fr;
+			gap: 22px;
+			margin-top: 24px;
+		}
+
+		.tabla-politicas th {
+			background: #f8fafc;
+			color: #4c1d95;
+			font-size: 13px;
+		}
+
+		.tabla-politicas td {
+			font-size: 13px;
+		}
+
+		.tag {
+			padding: 5px 10px;
+			border-radius: 999px;
+			font-weight: 900;
+			font-size: 12px;
+		}
+
+			.tag.alto {
+				background: #fee2e2;
+				color: #dc2626;
+			}
+
+			.tag.medio {
+				background: #fef3c7;
+				color: #b45309;
+			}
+
+		.nota-politica {
+			margin-top: 18px;
+			background: #f5f3ff;
+			color: #4c1d95;
+			border: 1px solid #ddd6fe;
+			padding: 14px;
+			border-radius: 14px;
+			font-weight: 700;
+		}
+
+		.pasos {
+			display: flex;
+			flex-direction: column;
+			gap: 18px;
+			position: relative;
+		}
+
+			.pasos::before {
+				content: "";
+				position: absolute;
+				left: 15px;
+				top: 20px;
+				bottom: 20px;
+				width: 3px;
+				background: linear-gradient(#7c3aed, #22c55e);
+				border-radius: 10px;
+			}
+
+			.pasos div {
+				display: grid;
+				grid-template-columns: 34px 58px 1fr;
+				align-items: center;
+				gap: 14px;
+				position: relative;
+			}
+
+			.pasos b {
+				width: 32px;
+				height: 32px;
+				background: #6d28d9;
+				color: white;
+				border-radius: 50%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+
+			.pasos i {
+				width: 52px;
+				height: 52px;
+				background: #ede9fe;
+				color: #4c1d95;
+				border-radius: 14px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 24px;
+			}
+
+			.pasos strong {
+				color: #241041;
+				font-size: 15px;
+			}
+
+			.pasos small {
+				color: #6b7280;
+				display: block;
+				margin-top: 4px;
+			}
+
+		.bottom-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr 1.1fr;
+			gap: 22px;
+			margin-top: 24px;
+		}
+
+		.mini-politica {
+			position: relative;
+			overflow: hidden;
+			min-height: 210px;
+		}
+
+			.mini-politica ul {
+				padding-left: 18px;
+				line-height: 1.9;
+				color: #374151;
+				font-weight: 600;
+			}
+
+		.alerta {
+			background: linear-gradient(135deg, #fffbeb, #fff);
+		}
+
+		.recomendacion {
+			background: linear-gradient(135deg, #eff6ff, #fff);
+		}
+
+		.limites {
+			background: linear-gradient(135deg, #ecfdf5, #fff);
+		}
+
+		.dibujo-alerta {
+			position: absolute;
+			right: 28px;
+			bottom: 28px;
+			color: #ef4444;
+			font-size: 80px;
+			opacity: .9;
+		}
+
+		.dibujo-reco {
+			position: absolute;
+			right: 28px;
+			bottom: 25px;
+			color: #7c3aed;
+			font-size: 75px;
+			opacity: .85;
+		}
+
+		.limites table {
+			width: 100%;
+			border-collapse: collapse;
+		}
+
+		.limites th {
+			background: #d1fae5;
+			color: #047857;
+		}
+
+		.limites td {
+			font-size: 13px;
+		}
+
+		.version-politica {
+			margin-top: 22px;
+			display: flex;
+			justify-content: space-between;
+			color: #4c1d95;
+			font-weight: 700;
+			font-size: 13px;
+		}
+
+	.perfil-link {
+		text-decoration: none;
+		cursor: pointer;
+		transition: .25s;
+	}
+
+		.perfil-link:hover {
+			transform: translateY(-3px);
+			box-shadow: 0 16px 35px rgba(124,58,237,.18);
+		}
+
+		.perfil-link small {
+			display: block;
+			margin-top: 5px;
+			color: #6d28d9;
+			font-size: 12px;
+			font-weight: 800;
+		}
+	</style>
+
+	@* <link rel="stylesheet"
+		  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+	<body> *@
+		<div class="layout">
+
+			@* <div class="sidebar">
+
+				<div class="logo">🛡 CrediPlus</div>
+				<div class="role">Analista de Riesgo</div>
+
+
+				<div class="menu">
+
+					<div class="section-title">Principal</div>
+
+					<a href="@Url.Action("ProgramaAnalista", "Analista")">
+						🏠 Inicio
+					</a>
+
+					<div class="section-title">Evaluaciones</div>
+
+					<a href="@Url.Action("SolicitudesPendientes", "Analista")">
+						📄 Solicitudes Pendientes
+					</a>
+
+					<a href="@Url.Action("HistorialEvaluaciones", "Analista")">
+						🕘 Historial Evaluaciones
+					</a>
+
+					<div class="section-title">Seguimiento</div>
+
+
+					<a href="@Url.Action("CalendarioRevisiones", "Analista")">
+						📅 Calendario Revisiones
+					</a>
+
+
+					<a href="@Url.Action("AlertasNotificaciones", "Analista")"
+					   style="display:flex; justify-content:space-between; align-items:center;">
+						<span>🔔 Alertas y Notificaciones</span>
+						@{
+							int totalNoLeidos = ViewBag.TotalNoLeidos ?? 0;
+							string colorBadge = ViewBag.ColorNotificacion ?? "#ef4444";
+						}
+
+						@if (totalNoLeidos > 0)
+						{
+							<span style="background:@colorBadge; color:white; border-radius:50%;
+		                        width:22px; height:22px; font-size:12px; font-weight:700;
+		                        display:flex; align-items:center; justify-content:center;">
+								@totalNoLeidos
+							</span>
+						}
+					</a>
+					<a href="@Url.Action("GestionDePago", "Analista")">
+						💰 Gestión de Pagos
+					</a>
+
+					<div class="section-title">Retroalimentación</div>
+
+					<a href="@Url.Action("CalificacionesServicio", "Analista")">
+						⭐ Calificaciones del Servicio
+					</a>
+
+					<div class="section-title">Herramientas</div>
+
+					<a href="@Url.Action("PoliticasRiesgo", "Analista")"
+				   class="active">
+						🛡️ Políticas de Riesgo
+					</a>
+
+					<div class="section-title">Mi Cuenta</div>
+
+					<a href="@Url.Action("PerfilAnalista", "Analista")">
+						👤 Perfil
+					</a>
+
+					<a href="@Url.Action("CerrarSesion", "Login")">
+						🚪 Cerrar Sesión
+					</a>
+
+				</div>
+				<div class="help-card">
+
+					<h4>¿Necesitas ayuda?</h4>
+
+					<p>
+						Comunícate con el administrador
+						del sistema
+					</p>
+
+				<a href="@Url.Action("ContactarSoporte", "Analista")" class="btn-help">
+						<i class="fas fa-headset"></i>
+						Contactar Soporte
+					</a>
+
+				</div>
+
+			</div> *@
+		<main class="content">
+
+			<div class="top-politicas">
+				<div>
+					<h1>Políticas de Riesgo</h1>
+					<p>Lineamientos y criterios que el analista debe seguir para evaluar, aprobar u observar solicitudes de crédito.</p>
+				</div>
+
+			<a href="@Url.Action("PerfilAnalista", "Analista")" class="perfil-analista perfil-link">
+				<div class="perfil-avatar">
+					<i class="fas fa-user"></i>
+				</div>
+				<div>
+					<strong>@ViewBag.NombreAnalista</strong><br />
+					<span>@ViewBag.CorreoAnalista</span>
+					<small>Ver perfil completo</small>
+				</div>
+			</a>
+			</div>
+
+			<section class="panel-principal">
+
+				<h2>1. Niveles de Riesgo y Acciones Recomendadas</h2>
+
+				<div class="riesgo-grid">
+					<div class="riesgo-card bajo">
+						<div class="riesgo-icon"><i class="fas fa-check"></i></div>
+						<h3>RIESGO BAJO</h3>
+						<p>Cliente con buen comportamiento financiero.</p>
+						<button>ACCIÓN: APROBAR</button>
+					</div>
+
+					<div class="riesgo-card medio">
+						<div class="riesgo-icon"><i class="fas fa-exclamation"></i></div>
+						<h3>RIESGO MEDIO</h3>
+						<p>Existen factores moderados que requieren revisión.</p>
+						<button>ACCIÓN: REVISAR</button>
+					</div>
+
+					<div class="riesgo-card alto">
+						<div class="riesgo-icon"><i class="fas fa-triangle-exclamation"></i></div>
+						<h3>RIESGO ALTO</h3>
+						<p>Alta probabilidad de incumplimiento.</p>
+						<button>ACCIÓN: OBSERVAR</button>
+					</div>
+
+					<div class="riesgo-card critico">
+						<div class="riesgo-icon"><i class="fas fa-xmark"></i></div>
+						<h3>RIESGO CRÍTICO</h3>
+						<p>Muy alto riesgo de impago.</p>
+						<button>ACCIÓN: RECHAZAR</button>
+					</div>
+
+					<div class="objetivo-card">
+						<h3><i class="fas fa-bullseye"></i> Objetivo</h3>
+						<p>
+							Minimizar el riesgo crediticio garantizando decisiones justas,
+							responsables y alineadas a la política de CrediPlus.
+						</p>
+						<div class="objetivo-dibujo">
+							<i class="fas fa-clipboard-check"></i>
+							<span><i class="fas fa-shield-alt"></i></span>
+						</div>
+					</div>
+				</div>
+
+			</section>
+
+			<div class="politicas-grid">
+
+				<section class="politica-card grande">
+					<h2>2. Criterios de Evaluación</h2>
+
+					<table class="tabla-politicas">
+						<thead>
+							<tr>
+								<th>Criterio</th>
+								<th>Descripción</th>
+								<th>Condición</th>
+								<th>Impacto</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>💵 Ingresos Mensuales</td>
+								<td>Evalúa la capacidad de pago del cliente.</td>
+								<td>Ingreso menor a S/ 1,200</td>
+								<td><span class="tag alto">Alto</span></td>
+							</tr>
+							<tr>
+								<td>📊 Relación Deuda / Ingreso</td>
+								<td>Cuánto compromete el cliente de sus ingresos.</td>
+								<td>Mayor a 50%</td>
+								<td><span class="tag alto">Alto</span></td>
+							</tr>
+							<tr>
+								<td>📈 Historial Crediticio</td>
+								<td>Revisa pagos anteriores, atrasos o vencidos.</td>
+								<td>Pagos vencidos</td>
+								<td><span class="tag alto">Alto</span></td>
+							</tr>
+							<tr>
+								<td>💳 Otros Créditos Activos</td>
+								<td>Cantidad de créditos vigentes del cliente.</td>
+								<td>3 o más créditos</td>
+								<td><span class="tag medio">Medio</span></td>
+							</tr>
+							<tr>
+								<td>🏢 Antigüedad Laboral</td>
+								<td>Estabilidad del ingreso del cliente.</td>
+								<td>Menor a 6 meses</td>
+								<td><span class="tag medio">Medio</span></td>
+							</tr>
+							<tr>
+								<td>📁 Documentación</td>
+								<td>Verifica documentos completos y válidos.</td>
+								<td>Documentos faltantes</td>
+								<td><span class="tag medio">Medio</span></td>
+							</tr>
+							<tr>
+								<td>🔎 Consultas de Riesgo</td>
+								<td>Historial en centrales de riesgo.</td>
+								<td>Reporte negativo</td>
+								<td><span class="tag alto">Alto</span></td>
+							</tr>
+						</tbody>
+					</table>
+
+					<div class="nota-politica">
+						<i class="fas fa-circle-info"></i>
+						La evaluación es integral. Ningún criterio por sí solo determina la decisión final.
+					</div>
+				</section>
+
+				<section class="politica-card">
+					<h2>3. Proceso de Evaluación</h2>
+
+					<div class="pasos">
+						<div><b>1</b><i class="fas fa-envelope-open-text"></i><span><strong>Recibir solicitud</strong><small>Verifica que la información esté completa.</small></span></div>
+						<div><b>2</b><i class="fas fa-id-card"></i><span><strong>Validar datos</strong><small>Revisa identidad, ingresos y referencias.</small></span></div>
+						<div><b>3</b><i class="fas fa-chart-line"></i><span><strong>Revisar perfil financiero</strong><small>Analiza historial y comportamiento de pagos.</small></span></div>
+						<div><b>4</b><i class="fas fa-list-check"></i><span><strong>Aplicar criterios</strong><small>Clasifica el nivel de riesgo.</small></span></div>
+						<div><b>5</b><i class="fas fa-gauge-high"></i><span><strong>Determinar riesgo</strong><small>Bajo, Medio, Alto o Crítico.</small></span></div>
+						<div><b>6</b><i class="fas fa-gavel"></i><span><strong>Tomar decisión</strong><small>Aprobar, revisar, observar o rechazar.</small></span></div>
+						<div><b>7</b><i class="fas fa-clipboard-check"></i><span><strong>Registrar evaluación</strong><small>Guarda observaciones y decisión final.</small></span></div>
+					</div>
+				</section>
+
+			</div>
+
+			<div class="bottom-grid">
+
+				<div class="mini-politica alerta">
+					<h2>4. Alertas Automáticas</h2>
+					<ul>
+						<li>Cliente con muchas deudas vigentes.</li>
+						<li>DNI con múltiples solicitudes en corto tiempo.</li>
+						<li>Ingresos declarados inconsistentes.</li>
+						<li>Datos incompletos o documentos inválidos.</li>
+						<li>Monto solicitado muy alto frente a ingresos.</li>
+					</ul>
+					<i class="fas fa-triangle-exclamation dibujo-alerta"></i>
+				</div>
+
+				<div class="mini-politica recomendacion">
+					<h2>5. Recomendaciones Generales</h2>
+					<ul>
+						<li>Siempre verifica la información antes de aprobar.</li>
+						<li>No te bases en un solo criterio.</li>
+						<li>Documenta tus observaciones.</li>
+						<li>Respeta los límites de aprobación.</li>
+						<li>Si tienes dudas, escala al supervisor.</li>
+					</ul>
+					<i class="fas fa-user-check dibujo-reco"></i>
+				</div>
+
+				<div class="mini-politica limites">
+					<h2>6. Límites de Aprobación</h2>
+
+					<table>
+						<tr>
+							<th>Nivel de Analista</th>
+							<th>Monto Máximo</th>
+						</tr>
+						<tr>
+							<td>Analista Junior</td>
+							<td>Hasta S/ 10,000</td>
+						</tr>
+						<tr>
+							<td>Analista Senior</td>
+							<td>Hasta S/ 25,000</td>
+						</tr>
+						<tr>
+							<td>Coordinador de Riesgos</td>
+							<td>Hasta S/ 50,000</td>
+						</tr>
+						<tr>
+							<td>Gerente de Riesgos</td>
+							<td>Sin límite</td>
+						</tr>
+					</table>
+				</div>
+
+			</div>
+
+			<div class="version-politica">
+				<span><i class="fas fa-circle-info"></i> Estas políticas pueden actualizarse. Consulta siempre la versión vigente.</span>
+				<span>Versión actual: 1.0</span>
+				<span>Última actualización: 15/06/2026</span>
+			</div>
+
+		</main>
+
+	</div>
+@* 
+</body>
+</html> *@

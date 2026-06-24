@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - CrediPlus Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/panel-roles.css" />
+    <link rel="stylesheet" href="~/css/panel-administrador.css" />
+    @RenderSection("Styles", required: false)
+</head>
+<body>
+    <div class="layout">
+
+        <!-- SIDEBAR ADMINISTRADOR -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🛡</div>
+                <div>
+                    <div class="brand-name">CrediPlus</div>
+                    <div class="brand-role">Administrador</div>
+                </div>
+            </div>
+
+            <nav class="menu">
+                <div class="section-title">Menú Principal</div>
+
+                <a href="@Url.Action("ProgramaAdministrador", "Administrador")"
+                   class="@(ViewData["ActivePage"]?.ToString() == "Inicio" ? "active" : "")">
+                    <i class="fas fa-home"></i> Inicio
+                </a>
+                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Clientes" ? "active" : "")">
+                    <i class="fas fa-users"></i> Clientes
+                </a>
+                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Creditos" ? "active" : "")">
+                    <i class="fas fa-file-alt"></i> Créditos
+                </a>
+                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Pagos" ? "active" : "")">
+                    <i class="fas fa-dollar-sign"></i> Pagos
+                </a>
+                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Reportes" ? "active" : "")">
+                    <i class="fas fa-chart-bar"></i> Reportes
+                </a>
+                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Exportaciones" ? "active" : "")">
+                    <i class="fas fa-chart-line"></i> Exportaciones
+                </a>
+                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Analistas" ? "active" : "")">
+                    <i class="fa-solid fa-users-gear"></i>Analistas
+                </a>
+
+                <div class="section-title">Herramientas</div>
+
+                <a href="#"><i class="fas fa-file-export"></i> Generar Reportes</a>
+                <a href="#"><i class="fas fa-download"></i> Exportar Datos</a>
+
+                <div class="section-title">Mi Cuenta</div>
+
+                <a href="#"><i class="fas fa-user"></i> Perfil</a>
+                <a href="@Url.Action("CerrarSesion", "Login")" class="logout-link">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </a>
+            </nav>
+
+            <div class="sidebar-info-box">
+                <strong>CrediPlus</strong>
+                <p>Sistema de Gestión de Préstamos y Créditos</p>
+                <span class="copyright">© 2025 Todos los derechos reservados.</span>
+            </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="content">
+            @RenderBody()
+        </main>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

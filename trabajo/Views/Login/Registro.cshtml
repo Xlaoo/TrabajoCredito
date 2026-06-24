@@ -1,0 +1,347 @@
+﻿@model trabajo.Models.Usuario
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Registrarse</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #240046, #3c096c, #4361ee, #00b4d8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+        }
+
+        .main-box {
+            width: 1250px;
+            min-height: 760px;
+            display: flex;
+            background: linear-gradient(135deg, #f3e8ff, #e0f2fe);
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0,0,0,.35);
+        }
+
+        .left-panel {
+            width: 42%;
+            background: linear-gradient(160deg, #4cc9f0, #4361ee, #7209b7);
+            color: white;
+            padding: 55px 45px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .left-panel::before {
+            content: "";
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.18);
+            bottom: -90px;
+            left: -90px;
+        }
+
+        .left-panel::after {
+            content: "";
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.12);
+            top: 70px;
+            right: -80px;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 22px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .welcome {
+            margin-top: 120px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .password-rules {
+            font-size: 15px;
+            color: #64748b;
+            padding-left: 22px;
+        }
+
+            .password-rules li {
+                margin-bottom: 3px;
+            }
+
+        .welcome h1 {
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        .welcome p {
+            font-size: 18px;
+            opacity: .95;
+            line-height: 1.6;
+        }
+
+        .credit-icon {
+            font-size: 110px;
+            margin-top: 45px;
+        }
+
+        .right-panel {
+            width: 58%;
+            padding: 50px 70px;
+            background: linear-gradient(180deg, #c7d2fe, #a5b4fc, #bfdbfe);
+        }
+
+        .right-panel h2 {
+                text-align: center;
+                color: #3c096c;
+                font-weight: bold;
+                margin-bottom: 10px;
+                font-size: 42px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #6c757d;
+            margin-bottom: 28px;
+            font-size: 18px;
+        }
+
+        .form-control {
+            height: 52px;
+            border: none;
+            background: #f1f5f9;
+            border-radius: 12px;
+            font-size: 17px;
+            padding-left: 18px;
+        }
+
+        .form-control:focus {
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, .25);
+            background: #fff;
+        }
+
+        .btn-code {
+            background: linear-gradient(135deg, #ffd60a, #ff9f1c);
+            border: none;
+            color: #111;
+            font-weight: bold;
+            height: 52px;
+            border-radius: 18px;
+            font-size: 17px;
+        }
+
+        .btn-register {
+            background: linear-gradient(135deg, #4361ee, #7209b7);
+            border: none;
+            color: white;
+            font-weight: bold;
+            height: 56px;
+            border-radius: 18px;
+            font-size: 18px;
+        }
+
+        .btn-register:hover,
+        .btn-code:hover {
+            opacity: .9;
+        }
+
+        .rules small {
+            color: #475569;
+            font-size: 12px;
+        }
+
+        .login-link {
+            text-align: center;
+            font-size: 18px;
+        }
+
+        @@media (max-width: 900px) {
+            .main-box {
+                width: 95%;
+                flex-direction: column;
+            }
+
+            .left-panel, .right-panel {
+                width: 100%;
+            }
+
+            .welcome {
+                margin-top: 40px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-box">
+
+        <div class="left-panel">
+            <div class="logo">💳 CréditoPlus</div>
+
+            <div class="welcome">
+                <h1>Gestiona tus créditos</h1>
+                <p>
+                    Registra tu cuenta para administrar solicitudes,
+                    verificar datos y acceder a tu panel de créditos.
+                </p>
+
+                <div class="credit-icon">💰</div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <h2>Crear Cuenta</h2>
+            <p class="subtitle">Completa tus datos para registrarte</p>
+
+            <form asp-controller="Login" asp-action="Registro" method="post">
+
+                <input class="form-control mb-2" type="text" placeholder="Nombre" asp-for="Nombre" required />
+
+                <input class="form-control mb-2" type="text" placeholder="Apellido" asp-for="Apellido" required />
+                <select class="form-control mb-2"
+                        asp-for="Genero"
+                        required>
+
+                    <option value="">Seleccione género</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Femenino">Femenino</option>
+
+                </select>
+
+                <input class="form-control mb-2" type="text" placeholder="DNI" asp-for="Dni"
+                       maxlength="8" required
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+
+                <input class="form-control mb-2" type="text" placeholder="Celular" asp-for="Celular"
+                       maxlength="9" required
+                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+
+                <input class="form-control mb-2" type="text" placeholder="Correo Gmail" asp-for="Correo" required />
+
+                <div class="d-grid gap-2 mb-2">
+                    <button class="btn btn-code" type="button" onclick="enviarCodigo()">
+                        Obtener código de verificación
+                    </button>
+                </div>
+
+                <input class="form-control mb-2" type="text" placeholder="Código de verificación" name="codigoVerificacion" required />
+
+                <input id="clave" class="form-control mb-2" type="password" placeholder="Contraseña" asp-for="clave" required />
+
+                <ul class="password-rules mb-3">
+                    <li id="mayus"> Una letra mayúscula</li>
+                    <li id="minus"> Una letra minúscula</li>
+                    <li id="numero"> Un número</li>
+                    <li id="minimo"> Mínimo 6 caracteres</li>
+                </ul>
+
+                <input class="form-control mb-3" type="password" placeholder="Confirmar contraseña" name="confirmarClave" required />
+
+                <div class="d-grid gap-2 mb-3">
+                    <button class="btn btn-register" type="submit">Registrate</button>
+                </div>
+
+                @if (ViewData["mensaje"] != null)
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @ViewData["mensaje"]
+                    </div>
+                }
+
+                <div class="login-link">
+                    ¿Ya tienes una cuenta?
+                    <a href="@Url.Action("IniciarSeccion", "Login")">Iniciar Sesión</a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <script>
+
+        function enviarCodigo() {
+            let correo = document.querySelector('[name="Correo"]').value;
+
+            if (correo.trim() === "") {
+                alert("Primero escribe tu correo Gmail");
+                return;
+            }
+
+            fetch('/Login/EnviarCodigo', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'correo=' + encodeURIComponent(correo)
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.mensaje);
+            })
+            .catch(error => {
+                alert("No se pudo enviar el código");
+            });
+        }
+    </script>
+    <script>
+        const clave = document.getElementById("clave");
+
+        const mayus = document.getElementById("mayus");
+        const minus = document.getElementById("minus");
+        const numero = document.getElementById("numero");
+        const minimo = document.getElementById("minimo");
+
+        clave.addEventListener("input", function () {
+            let valor = clave.value;
+
+            if (/[A-Z]/.test(valor)) {
+                mayus.innerHTML = "✔ Una letra mayúscula";
+                mayus.style.color = "green";
+            } else {
+                mayus.innerHTML = "❌ Una letra mayúscula";
+                mayus.style.color = "#64748b";
+            }
+
+            if (/[a-z]/.test(valor)) {
+                minus.innerHTML = "✔ Una letra minúscula";
+                minus.style.color = "green";
+            } else {
+                minus.innerHTML = "❌ Una letra minúscula";
+                minus.style.color = "#64748b";
+            }
+
+            if (/[0-9]/.test(valor)) {
+                numero.innerHTML = "✔ Un número";
+                numero.style.color = "green";
+            } else {
+                numero.innerHTML = "❌ Un número";
+                numero.style.color = "#64748b";
+            }
+
+            if (valor.length >= 6) {
+                minimo.innerHTML = "✔ Mínimo 6 caracteres";
+                minimo.style.color = "green";
+            } else {
+                minimo.innerHTML = "❌ Mínimo 6 caracteres";
+                minimo.style.color = "#64748b";
+            }
+        });
+    </script>
+</body>
+</html>

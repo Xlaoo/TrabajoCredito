@@ -1,0 +1,96 @@
+﻿/* ===== COLORES OFICIALES CREDIPLUS ===== */
+
+:root {
+    --sidebar-1: #240046;
+    --sidebar-2: #3c096c;
+    --sidebar-3: #5a189a;
+    --primary: #6d28d9;
+    --primary-2: #7c3aed;
+    --primary-3: #9333ea;
+    --texto-blanco: #ffffff;
+    --texto-secundario: #ddd6fe;
+}
+
+/* ===== SIDEBAR ===== */
+
+.sidebar {
+    width: 300px;
+    background: linear-gradient( 180deg, var(--sidebar-1), var(--sidebar-2), var(--sidebar-3) );
+    color: white;
+    padding: 28px 22px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 45px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.menu a {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 18px 22px;
+    border-radius: 16px;
+    margin-bottom: 22px;
+    font-size: 18px;
+    font-weight: 500;
+    transition: .3s;
+}
+
+    .menu a:hover,
+    .menu a.active {
+        background: rgba(255,255,255,.18);
+    }
+
+/* ===== PREGUNTAS FRECUENTES ===== */
+
+.faq-shortcut {
+    margin-top: auto;
+    margin-bottom: 25px;
+    width: 100%;
+    background: linear-gradient( 135deg, #6d28d9, #7c3aed );
+    border-radius: 24px;
+    padding: 28px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    text-decoration: none;
+    transition: .3s;
+    box-shadow: 0 10px 25px rgba(109,40,217,.25);
+}
+
+    .faq-shortcut:hover {
+        transform: translateY(-5px);
+    }
+
+.faq-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.18);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 34px;
+    font-weight: bold;
+}
+
+.faq-shortcut h4 {
+    color: white;
+    margin: 0;
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.faq-shortcut p {
+    color: #e9d5ff;
+    margin-top: 5px;
+}
