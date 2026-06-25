@@ -1317,7 +1317,7 @@ _context.HISTORIAL_CREDITO
 
             if (analista == null)
             {
-                return RedirectToAction("IniciarSeccion", "Login");
+                return RedirectToAction("IniciarSesion", "Login");
             }
 
             DateTime hoy = DateTime.Today;
@@ -1508,7 +1508,7 @@ _context.HISTORIAL_CREDITO
 
             if (analista == null)
             {
-                return RedirectToAction("IniciarSeccion", "Login");
+                return RedirectToAction("IniciarSesion", "Login");
             }
 
             return View(analista);
@@ -1524,7 +1524,7 @@ _context.HISTORIAL_CREDITO
 
             if (analista == null)
             {
-                return RedirectToAction("IniciarSeccion", "Login");
+                return RedirectToAction("IniciarSesion", "Login");
             }
 
             if (usuario.Correo != analista.Correo)

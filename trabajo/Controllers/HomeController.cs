@@ -45,7 +45,7 @@ namespace trabajo.Controllers
         public async Task<IActionResult> CerrarSeccion()
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return RedirectToAction("IniciarSeccion", "Login");
+            return RedirectToAction("IniciarSesion", "Login");
         }
     }
 }

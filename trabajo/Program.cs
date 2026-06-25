@@ -36,7 +36,7 @@ builder.Services.AddScoped<IusuarioServices, UsuariService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/Login/IniciarSeccion";
+        options.LoginPath = "/Login/IniciarSesion";
         options.ExpireTimeSpan = TimeSpan.FromMinutes(20);
     });
 builder.Services.AddControllersWithViews(options =>

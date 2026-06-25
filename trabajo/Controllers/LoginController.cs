@@ -132,7 +132,7 @@ namespace trabajo.Controllers
             if (usuarioCreado.Id > 0)
             {
                 TempData["Mensaje"] = "Usuario registrado exitosamente";
-                return RedirectToAction("IniciarSeccion", "Login");
+                return RedirectToAction("IniciarSesion", "Login");
             }
 
             ViewData["mensaje"] = "No se pudo crear el usuario.";
@@ -140,13 +140,13 @@ namespace trabajo.Controllers
         }
         [HttpGet]
         [AllowAnonymous]
-        public IActionResult IniciarSeccion()
+        public IActionResult IniciarSesion()
         {
             return View();
         }
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> IniciarSeccion(string dni, string clave)
+        public async Task<IActionResult> IniciarSesion(string dni, string clave)
         {
             if (string.IsNullOrWhiteSpace(dni) || !Regex.IsMatch(dni, @"^\d{8}$"))
             {
@@ -261,7 +261,7 @@ namespace trabajo.Controllers
             _Context.SaveChanges();
 
             TempData["Mensaje"] = "Contraseña actualizada correctamente";
-            return RedirectToAction("IniciarSeccion", "Login");
+            return RedirectToAction("IniciarSesion", "Login");
         }
 
         [HttpPost]
@@ -382,7 +382,7 @@ string titularCuenta
 
             if (usuario == null)
             {
-                return RedirectToAction("IniciarSeccion", "Login");
+                return RedirectToAction("IniciarSesion", "Login");
             }
 
             var existeSolicitudActiva = _Context.SOLICITUD_CREDITO
@@ -467,7 +467,7 @@ string titularCuenta
             var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
 
             if (usuario == null)
-                return RedirectToAction("IniciarSeccion", "Login");
+                return RedirectToAction("IniciarSesion", "Login");
 
             var solicitudes = _Context.SOLICITUD_CREDITO
     .Where(x => x.Usuario_Id_Usuario == usuario.Id && x.Estado != "Cancelado")
@@ -724,7 +724,7 @@ string titularCuenta
 
             if (usuario == null)
             {
-                return RedirectToAction("IniciarSeccion", "Login");
+                return RedirectToAction("IniciarSesion", "Login");
             }
 
             return View(usuario);
@@ -769,7 +769,7 @@ string titularCuenta
 
             if (usuario == null)
             {
-                return RedirectToAction("IniciarSeccion", "Login");
+                return RedirectToAction("IniciarSesion", "Login");
             }
 
             if (usuarioEditado.Dni.Length != 8 || !usuarioEditado.Dni.All(char.IsDigit))
@@ -877,7 +877,7 @@ string titularCuenta
             var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
 
             if (usuario == null)
-                return RedirectToAction("IniciarSeccion", "Login");
+                return RedirectToAction("IniciarSesion", "Login");
 
             var cuotasAprobacion = _Context.CUOTA
                 .Include(c => c.SOLICITUD_CREDITO)
