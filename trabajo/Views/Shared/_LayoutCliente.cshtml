@@ -63,8 +63,8 @@
                    class="@(ViewData["ActivePage"]?.ToString() == "Perfil" ? "active" : "")">
                     <i class="fas fa-user"></i> Perfil
                 </a>
-                <a href="@Url.Action("IniciarSeccion", "Login")" 
-                    class="logout-link @(ViewData["ActivePage"]?.ToString() == "IniciarSeccion" ? "active" : "")">
+                <a href="@Url.Action("IniciarSesion", "Login")" 
+                    class="logout-link @(ViewData["ActivePage"]?.ToString() == "IniciarSesion" ? "active" : "")">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </a>
             </nav>
