@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
@@ -9,6 +10,7 @@ using trabajo.Models.DTOs;
 
 namespace trabajo.Controllers
 {
+    [Authorize]
     public class AnalistaController : Controller
     {
         private readonly UsuarioContext _context;

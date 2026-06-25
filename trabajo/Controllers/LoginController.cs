@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
@@ -12,7 +13,7 @@ using trabajo.Service;
 
 namespace trabajo.Controllers
 {
-
+    [Authorize]
     public class LoginController : Controller
     {
         private readonly IusuarioServices _UsuarioService;
@@ -25,6 +26,8 @@ namespace trabajo.Controllers
             _UsuarioService = usuarioService;
             _Context = context;
         }
+
+        [AllowAnonymous]
         public IActionResult PantallaPrincipal()
         {
             var comentarios = (
@@ -60,11 +63,13 @@ namespace trabajo.Controllers
             return RedirectToAction("PantallaPrincipal", "Login");
         }
 
+        [AllowAnonymous]
         public IActionResult Registro()
         {
             return View();
         }
         [HttpPost]
+        [AllowAnonymous]
         public async Task<IActionResult> Registro(Usuario usuario, string confirmarClave, string codigoVerificacion)
         {
             if (!Regex.IsMatch(usuario.Dni, @"^\d{8}$"))
@@ -134,11 +139,13 @@ namespace trabajo.Controllers
             return View(usuario);
         }
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult IniciarSeccion()
         {
             return View();
         }
         [HttpPost]
+        [AllowAnonymous]
         public async Task<IActionResult> IniciarSeccion(string dni, string clave)
         {
             if (string.IsNullOrWhiteSpace(dni) || !Regex.IsMatch(dni, @"^\d{8}$"))
@@ -204,17 +211,19 @@ namespace trabajo.Controllers
                 return RedirectToAction("ProgramaAdministrador", "Administrador");
             }
 
-            return RedirectToAction("SolicitarCredito", "Login");
+            return RedirectToAction("DashboardCliente", "Login");
 
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult OlvideContrasena()
         {
             return View();
         }
 
         [HttpPost]
+        [AllowAnonymous]
         public IActionResult OlvideContrasena(string dni, string nuevaClave, string confirmarClave)
         {
             if (string.IsNullOrWhiteSpace(dni) || !Regex.IsMatch(dni, @"^\d{8}$"))
@@ -256,6 +265,7 @@ namespace trabajo.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         public async Task<IActionResult> EnviarCodigo(string correo)
         {
             try
@@ -275,7 +285,7 @@ namespace trabajo.Controllers
                 return Json(new { ok = false, mensaje = ex.ToString() });
             }
         }
-        public IActionResult SolicitarCredito()
+        public IActionResult DashboardCliente()
         {
             string dni = User.FindFirst("Dni")?.Value;
 
@@ -326,7 +336,7 @@ namespace trabajo.Controllers
 
             return View(comentarios);
         }
-        public IActionResult FormularioPrestamo()
+        public IActionResult SolicitarCredito()
         {
             string dni = User.FindFirst("Dni")?.Value;
 
@@ -385,7 +395,7 @@ string titularCuenta
             if (existeSolicitudActiva)
             {
                 TempData["Mensaje"] = "Ya tienes una solicitud pendiente, aprobada o rechazada. Primero debes finalizarla o borrarla.";
-                return RedirectToAction("SolicitarCredito");
+                return RedirectToAction("DashboardCliente");
             }
 
             int cantidadSolicitudes = _Context.SOLICITUD_CREDITO.Count();
@@ -446,7 +456,7 @@ string titularCuenta
             _Context.SaveChanges();
 
             TempData["MostrarConfirmacion"] = "true";
-            return RedirectToAction("FormularioPrestamo");
+            return RedirectToAction("SolicitarCredito");
         }
 
         [HttpGet]
@@ -968,77 +978,77 @@ string titularCuenta
             }
         }
         [HttpPost]
-            public IActionResult EditarSolicitud(int idSolicitud, decimal nuevoMonto, int nuevoPlazo)
+        public IActionResult EditarSolicitud(int idSolicitud, decimal nuevoMonto, int nuevoPlazo)
+        {
+            try
             {
-                try
+                var solicitud = _Context.SOLICITUD_CREDITO
+                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+
+                if (solicitud == null)
                 {
-                    var solicitud = _Context.SOLICITUD_CREDITO
-                        .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
-
-                    if (solicitud == null)
-                    {
-                        return Json(new { ok = false, mensaje = "No se encontró la solicitud." });
-                    }
-
-                    string estadoActual = solicitud.Estado?.Trim().ToLower();
-
-                    if (estadoActual == "pendiente" ||
-                        estadoActual == "pendiente cancelación" ||
-                        estadoActual == "rechazado" ||
-                        estadoActual == "cancelado")
-                    {
-                        return Json(new { ok = false, mensaje = "No puedes editar esta solicitud." });
-                    }
-
-                    if (nuevoMonto < 1000 || nuevoMonto > 50000)
-                    {
-                        return Json(new { ok = false, mensaje = "El monto debe estar entre S/ 1,000 y S/ 50,000." });
-                    }
-
-                    solicitud.MontoSolicitado = nuevoMonto;
-                    solicitud.PlazoMeses = nuevoPlazo;
-
-                    string mensajeHistorial = "";
-
-                    if (estadoActual == "aprobado")
-                    {
-                        solicitud.Estado = "Pendiente";
-                        mensajeHistorial = "Cliente editó una solicitud aprobada. Regresa a Pendiente para nueva revisión.";
-                    }
-                    else if (estadoActual == "en evaluación")
-                    {
-                        solicitud.Estado = "En Evaluación";
-                        solicitud.NotificacionEdicionVista = false;
-                        mensajeHistorial = "Cliente editó monto y plazo mientras la solicitud estaba en evaluación.";
-                    }
-
-                    var subject = new SolicitudSubject();
-
-                    subject.AgregarObservador(
-                        new HistorialEstadoObserver(_Context)
-                    );
-
-                    subject.Notificar(
-                        solicitud,
-                        mensajeHistorial + " Nuevo monto: S/ " + nuevoMonto +
-                        ", nuevo plazo: " + nuevoPlazo + " meses."
-                    );
-
-                    _Context.SaveChanges();
-
-                    return Json(new
-                    {
-                        ok = true,
-                        mensaje = estadoActual == "aprobado"
-                            ? "Cambios guardados. La solicitud volvió a Pendiente."
-                            : "Cambios guardados. La solicitud sigue En Evaluación con el nuevo monto y plazo."
-                    });
+                    return Json(new { ok = false, mensaje = "No se encontró la solicitud." });
                 }
-                catch (Exception ex)
+
+                string estadoActual = solicitud.Estado?.Trim().ToLower();
+
+                if (estadoActual == "pendiente" ||
+                    estadoActual == "pendiente cancelación" ||
+                    estadoActual == "rechazado" ||
+                    estadoActual == "cancelado")
                 {
-                    return Json(new { ok = false, mensaje = "No se pudo editar la solicitud: " + ex.Message });
+                    return Json(new { ok = false, mensaje = "No puedes editar esta solicitud." });
                 }
+
+                if (nuevoMonto < 1000 || nuevoMonto > 50000)
+                {
+                    return Json(new { ok = false, mensaje = "El monto debe estar entre S/ 1,000 y S/ 50,000." });
+                }
+
+                solicitud.MontoSolicitado = nuevoMonto;
+                solicitud.PlazoMeses = nuevoPlazo;
+
+                string mensajeHistorial = "";
+
+                if (estadoActual == "aprobado")
+                {
+                    solicitud.Estado = "Pendiente";
+                    mensajeHistorial = "Cliente editó una solicitud aprobada. Regresa a Pendiente para nueva revisión.";
+                }
+                else if (estadoActual == "en evaluación")
+                {
+                    solicitud.Estado = "En Evaluación";
+                    solicitud.NotificacionEdicionVista = false;
+                    mensajeHistorial = "Cliente editó monto y plazo mientras la solicitud estaba en evaluación.";
+                }
+
+                var subject = new SolicitudSubject();
+
+                subject.AgregarObservador(
+                    new HistorialEstadoObserver(_Context)
+                );
+
+                subject.Notificar(
+                    solicitud,
+                    mensajeHistorial + " Nuevo monto: S/ " + nuevoMonto +
+                    ", nuevo plazo: " + nuevoPlazo + " meses."
+                );
+
+                _Context.SaveChanges();
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = estadoActual == "aprobado"
+                        ? "Cambios guardados. La solicitud volvió a Pendiente."
+                        : "Cambios guardados. La solicitud sigue En Evaluación con el nuevo monto y plazo."
+                });
             }
+            catch (Exception ex)
+            {
+                return Json(new { ok = false, mensaje = "No se pudo editar la solicitud: " + ex.Message });
+            }
+        }
         [HttpPost]
         public IActionResult RegistrarPagoCuota(
     int idCuota,

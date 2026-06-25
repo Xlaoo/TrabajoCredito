@@ -1,78 +1,11 @@
 ﻿@{
-    Layout = null;
+    Layout = "_LayoutCliente";
+    ViewData["Title"] = "Simulador de Crédito";
+    ViewData["ActivePage"] = "SimuladorCredito";
 }
 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width" />
-    <title>Simulador de Crédito - CrediPlus</title>
-
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
-
+@section Styles {
     <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #faf8ff;
-            color: #1f1235;
-        }
-
-        .layout {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 300px;
-            background: linear-gradient(180deg, #240046, #3c096c, #5a189a);
-            color: white;
-            padding: 28px 22px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .logo {
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 45px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .menu a {
-            display: block;
-            color: white;
-            text-decoration: none;
-            padding: 18px 22px;
-            border-radius: 16px;
-            margin-bottom: 22px;
-            font-size: 18px;
-            font-weight: 500;
-        }
-
-            .menu a:hover,
-            .menu .active {
-                background: rgba(255,255,255,.18);
-            }
-
-        .faq {
-            background: rgba(255,255,255,.12);
-            padding: 28px;
-            border-radius: 22px;
-            margin-top: auto;
-            margin-bottom: 15px;
-        }
-
-        .content {
-            flex: 1;
-            padding: 34px 42px;
-        }
-
         h1 {
             font-size: 48px;
             font-weight: 900;
@@ -236,177 +169,89 @@
             .detalle-row:last-child {
                 border-bottom: none;
             }
-
-        .faq-shortcut {
-            width: 100%;
-            background: linear-gradient(135deg,#6d28d9,#7c3aed);
-            border-radius: 24px;
-            padding: 28px;
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            text-decoration: none;
-            transition: .3s;
-            box-shadow: 0 10px 25px rgba(109,40,217,.25);
-        }
-
-            .faq-shortcut:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 18px 35px rgba(109,40,217,.35);
-            }
-
-        .faq-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 18px;
-            background: rgba(255,255,255,.18);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 34px;
-            color: white;
-            font-weight: 900;
-        }
-
-        .faq-shortcut h4 {
-            color: white;
-            margin: 0;
-            font-size: 25px;
-            font-weight: 800;
-        }
-
-        .faq-shortcut p {
-            margin-top: 6px;
-            color: #e9d5ff;
-            font-size: 15px;
-        }
-
-        .sidebar {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-
-        .faq-shortcut {
-            margin-top: auto;
-            margin-bottom: 25px;
-        }
     </style>
-</head>
+}
 
-<body>
-    <div class="layout">
+<h1>Simulador de Crédito</h1>
+<p class="subtitle">Calcula una cuota referencial según el monto y plazo seleccionado.</p>
 
-        <div class="sidebar">
-            <div class="logo">💳 CrediPlus</div>
+<div class="sim-card">
 
-            <div class="menu">
-                <a href="@Url.Action("SolicitarCredito", "Login")">🏠 Inicio</a>
-                <a href="@Url.Action("MisSolicitudes", "Login")">📄 Mis Solicitudes</a>
-                <a class="active" href="@Url.Action("SimuladorCredito", "Login")">🧮 Simulador de Crédito</a>
-                <a href="@Url.Action("PagosPendientes", "Login")">💳 Pagos Pendientes</a>
-                <a href="@Url.Action("PerfilPersonal", "Login")">👤 Perfil Personal</a>
-                <a href="@Url.Action("Configuracion", "Login")">⚙ Configuración</a>
-                <a href="@Url.Action("CerrarSesion", "Login")">↪ Cerrar Sesión</a>
-            </div>
-            <br />
-            <br />
-            <a href="@Url.Action("PreguntasFrecuentes", "Login")" class="faq-shortcut">
+    <div id="mensajeError" class="error"></div>
 
-                <div class="faq-icon">
-                    ?
-                </div>
-
-                <div>
-                    <h4>Preguntas frecuentes</h4>
-                    <p>Resolvemos tus dudas</p>
-                </div>
-
-            </a>
+    <div class="form-grid">
+        <div class="field-box">
+            <label>Monto del préstamo</label>
+            <p>Ingresa un monto entre S/ 1,000 y S/ 50,000.</p>
+            <input id="montoPrestamo"
+                   type="text"
+                   placeholder="Ingresa el monto a simular"
+                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
         </div>
 
-        <div class="content">
-            <h1>Simulador de Crédito</h1>
-            <p class="subtitle">Calcula una cuota referencial según el monto y plazo seleccionado.</p>
-
-            <div class="sim-card">
-
-                <div id="mensajeError" class="error"></div>
-
-                <div class="form-grid">
-                    <div class="field-box">
-                        <label>Monto del préstamo</label>
-                        <p>Ingresa un monto entre S/ 1,000 y S/ 50,000.</p>
-                        <input id="montoPrestamo"
-                               type="text"
-                               placeholder="Ingresa el monto a simular"
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                    </div>
-
-                    <div class="field-box">
-                        <label>Plazo flexible</label>
-                        <p>Selecciona en cuántos meses deseas pagar.</p>
-                        <select id="plazoMeses">
-                            <option value="12">12 meses</option>
-                            <option value="18">18 meses</option>
-                            <option value="24">24 meses</option>
-                            <option value="30">30 meses</option>
-                            <option value="36">36 meses</option>
-                            <option value="48">48 meses</option>
-                            <option value="60">60 meses</option>
-                            <option value="72">72 meses</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="actions">
-                    <button class="btn-simular" onclick="simularCredito()">
-                        <i class="fas fa-calculator"></i> Simular crédito
-                    </button>
-
-                    <a class="btn-back" href="@Url.Action("SolicitarCredito", "Login")">
-                        Regresar
-                    </a>
-                </div>
-
-                <div id="resultado" class="resultado">
-                    <h2>Resultado de la simulación</h2>
-
-                    <div class="result-grid">
-                        <div class="result-box">
-                            <label>Monto solicitado</label>
-                            <h3 id="resMonto">S/ 0.00</h3>
-                        </div>
-
-                        <div class="result-box">
-                            <label>Plazo</label>
-                            <h3 id="resPlazo">0 meses</h3>
-                        </div>
-
-
-                        <div class="result-box">
-                            <label>Cuota mensual</label>
-                            <h3 id="resCuota">S/ 0.00</h3>
-                        </div>
-                    </div>
-
-                    <div class="detalle">
-                        <div class="detalle-row">
-                            <span>Fecha aproximada del primer pago</span>
-                            <strong id="resFecha">--/--/----</strong>
-                        </div>
-                        <div class="detalle-row">
-                            <span>Tasa de interés fija</span>
-                            <strong>10% anual</strong>
-                        </div>
-                    </div>
-                   
-                </div>
-
-            </div>
+        <div class="field-box">
+            <label>Plazo flexible</label>
+            <p>Selecciona en cuántos meses deseas pagar.</p>
+            <select id="plazoMeses">
+                <option value="12">12 meses</option>
+                <option value="18">18 meses</option>
+                <option value="24">24 meses</option>
+                <option value="30">30 meses</option>
+                <option value="36">36 meses</option>
+                <option value="48">48 meses</option>
+                <option value="60">60 meses</option>
+                <option value="72">72 meses</option>
+            </select>
         </div>
     </div>
 
+    <div class="actions">
+        <button class="btn-simular" onclick="simularCredito()">
+            <i class="fas fa-calculator"></i> Simular crédito
+        </button>
+
+        <a class="btn-back" href="@Url.Action("SolicitarCredito", "Login")">
+            Regresar
+        </a>
+    </div>
+
+    <div id="resultado" class="resultado">
+        <h2>Resultado de la simulación</h2>
+
+        <div class="result-grid">
+            <div class="result-box">
+                <label>Monto solicitado</label>
+                <h3 id="resMonto">S/ 0.00</h3>
+            </div>
+
+            <div class="result-box">
+                <label>Plazo</label>
+                <h3 id="resPlazo">0 meses</h3>
+            </div>
+
+
+            <div class="result-box">
+                <label>Cuota mensual</label>
+                <h3 id="resCuota">S/ 0.00</h3>
+            </div>
+        </div>
+
+        <div class="detalle">
+            <div class="detalle-row">
+                <span>Fecha aproximada del primer pago</span>
+                <strong id="resFecha">--/--/----</strong>
+            </div>
+            <div class="detalle-row">
+                <span>Tasa de interés fija</span>
+                <strong>10% anual</strong>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
     <script>
         function simularCredito() {
             let monto = Number(document.getElementById("montoPrestamo").value);
@@ -475,7 +320,4 @@
             document.getElementById("resultado").style.display = "none";
         }
     </script>
-
-    <script src="~/js/config-global.js"></script>
-</body>
-</html>
+}

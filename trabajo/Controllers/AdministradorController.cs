@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using trabajo.Models;
@@ -8,6 +9,7 @@ using System.IO;
 
 namespace trabajo.Controllers
 {
+    [Authorize]
     public class AdministradorController : Controller
     {
         private readonly UsuarioContext _context;

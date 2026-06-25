@@ -87,7 +87,7 @@
                    class="@(ViewData["ActivePage"]?.ToString() == "PerfilAnalista" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
                     <i class="fas fa-user"></i> PerfilAnalista
                 </a>
-                <a href="@Url.Action("CerrarSesion", "Login")" class="logout-link">
+                <a href="@Url.Action("IniciarSeccion", "Login")" class="logout-link">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </a>
             </nav>
