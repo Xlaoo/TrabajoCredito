@@ -8,7 +8,9 @@
 <head>
     <meta name="viewport" content="width=device-width" />
     <title>Registrarse</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/utilidades-ui.css" />
 
     <style>
         body {
@@ -122,20 +124,6 @@
             font-size: 18px;
         }
 
-        .form-control {
-            height: 52px;
-            border: none;
-            background: #f1f5f9;
-            border-radius: 12px;
-            font-size: 17px;
-            padding-left: 18px;
-        }
-
-        .form-control:focus {
-            box-shadow: 0 0 0 2px rgba(67, 97, 238, .25);
-            background: #fff;
-        }
-
         .btn-code {
             background: linear-gradient(135deg, #ffd60a, #ff9f1c);
             border: none;
@@ -188,6 +176,8 @@
     </style>
 </head>
 
+<script src="~/js/utilidades-ui.js"></script>
+
 <body>
     <div class="main-box">
 
@@ -210,11 +200,17 @@
             <p class="subtitle">Completa tus datos para registrarte</p>
 
             <form asp-controller="Login" asp-action="Registro" method="post">
-
-                <input class="form-control mb-2" type="text" placeholder="Nombre" asp-for="Nombre" required />
-
-                <input class="form-control mb-2" type="text" placeholder="Apellido" asp-for="Apellido" required />
-                <select class="form-control mb-2"
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="nombreInput" class="form-control mb-2" type="text" placeholder="Nombre" asp-for="Nombre" required />
+                    <button type="button" class="btn-clear" onclick="clearInput('nombreInput')"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="apellidoInput" class="form-control mb-2" type="text" placeholder="Apellido" asp-for="Apellido" required />
+                    <button type="button" class="btn-clear" onclick="clearInput('apellidoInput')"><i class="fas fa-times"></i></button>
+                </div>
+                <select class="form-control mb-3"
                         asp-for="Genero"
                         required>
 
@@ -223,26 +219,42 @@
                     <option value="Femenino">Femenino</option>
 
                 </select>
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="dniInput" class="form-control mb-2" type="text" placeholder="DNI" asp-for="Dni"
+                           maxlength="8" required
+                           oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+                    <button type="button" class="btn-clear" onclick="clearInput('dniInput')"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="celularInput" class="form-control mb-2" type="text" placeholder="Celular" asp-for="Celular"
+                           maxlength="9" required
+                           oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+                    <button type="button" class="btn-clear" onclick="clearInput('celularInput')"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="correoInput" class="form-control mb-2" type="text" placeholder="Correo Gmail" asp-for="Correo" required />
+                    <button type="button" class="btn-clear" onclick="clearInput('correoInput')"><i class="fas fa-times"></i></button>
+                </div>
 
-                <input class="form-control mb-2" type="text" placeholder="DNI" asp-for="Dni"
-                       maxlength="8" required
-                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
-
-                <input class="form-control mb-2" type="text" placeholder="Celular" asp-for="Celular"
-                       maxlength="9" required
-                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
-
-                <input class="form-control mb-2" type="text" placeholder="Correo Gmail" asp-for="Correo" required />
-
-                <div class="d-grid gap-2 mb-2">
+                <div class="d-grid gap-2 mb-3">
                     <button class="btn btn-code" type="button" onclick="enviarCodigo()">
                         Obtener código de verificación
                     </button>
                 </div>
-
-                <input class="form-control mb-2" type="text" placeholder="Código de verificación" name="codigoVerificacion" required />
-
-                <input id="clave" class="form-control mb-2" type="password" placeholder="Contraseña" asp-for="clave" required />
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="codigoInput" class="form-control mb-2" type="text" placeholder="Código de verificación" name="codigoVerificacion" required />
+                    <button type="button" class="btn-clear" onclick="clearInput('codigoInput')"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="clave" class="form-control mb-2" type="password" placeholder="Contraseña" asp-for="clave" required />
+                    <button type="button" class="btn-clear" onclick="clearInput('clave')"><i class="fas fa-times"></i></button>
+                    <button type="button" class="btn-eye" onclick="togglePassword('clave', this)"><i class="fas fa-eye"></i></button>
+                </div>
 
                 <ul class="password-rules mb-3">
                     <li id="mayus"> Una letra mayúscula</li>
@@ -250,8 +262,12 @@
                     <li id="numero"> Un número</li>
                     <li id="minimo"> Mínimo 6 caracteres</li>
                 </ul>
-
-                <input class="form-control mb-3" type="password" placeholder="Confirmar contraseña" name="confirmarClave" required />
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="confirmarClave" class="form-control mb-3" type="password" placeholder="Confirmar contraseña" name="confirmarClave" required />
+                    <button type="button" class="btn-clear" onclick="clearInput('confirmarClave')"><i class="fas fa-times"></i></button>
+                    <button type="button" class="btn-eye" onclick="togglePassword('confirmarClave', this)"><i class="fas fa-eye"></i></button>
+                </div>
 
                 <div class="d-grid gap-2 mb-3">
                     <button class="btn btn-register" type="submit">Registrate</button>
@@ -342,6 +358,6 @@
                 minimo.style.color = "#64748b";
             }
         });
-    </script>
+    <script src="~/js/utilidades-ui.js"></script>
 </body>
 </html>

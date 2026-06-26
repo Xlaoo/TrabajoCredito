@@ -7,8 +7,9 @@
 <head>
     <meta name="viewport" content="width=device-width" />
     <title>Olvidé Contraseña</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-
+    <link rel="stylesheet" href="~/css/utilidades-ui.css" />
     <style>
         body {
             min-height: 100vh;
@@ -140,7 +141,7 @@
         }
     </style>
 </head>
-
+    <script src="~/js/utilidades-ui.js"></script>
 <body>
     <div class="main-box">
 
@@ -160,12 +161,19 @@
             <p class="subtitle">Actualiza tu contraseña usando tu DNI</p>
 
             <form asp-controller="Login" asp-action="OlvideContrasena" method="post">
-
-                <input class="form-control mb-3" type="text" placeholder="DNI" required name="dni"
-                       maxlength="8"
-                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
-
-                <input class="form-control mb-2" type="password" placeholder="Nueva contraseña" required name="nuevaClave" />
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="dniInput" class="form-control mb-3" type="text" placeholder="DNI" required name="dni"
+                           maxlength="8"
+                           oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+                    <button type="button" class="btn-clear" onclick="clearInput('dniInput')"><i class="fas fa-times"></i></button>
+                </div>
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="nuevaClave" class="form-control mb-2" type="password" placeholder="Nueva contraseña" required name="nuevaClave" />
+                    <button type="button" class="btn-clear" onclick="clearInput('nuevaClave')"><i class="fas fa-times"></i></button>
+                    <button type="button" class="btn-eye" onclick="togglePassword('nuevaClave', this)"><i class="fas fa-eye"></i></button>
+                </div>
 
                 <ul class="password-rules mb-3">
                     <li id="mayus"> Una letra mayúscula</li>
@@ -173,8 +181,12 @@
                     <li id="numero"> Un número</li>
                     <li id="longitud"> Mínimo 6 caracteres</li>
                 </ul>
-
-                <input class="form-control mb-3" type="password" placeholder="Confirmar contraseña" required name="confirmarClave" />
+                
+                <div class="input-util-wrap mb-3">
+                    <input id="confirmarClave" class="form-control mb-3" type="password" placeholder="Confirmar contraseña" required name="confirmarClave" />
+                    <button type="button" class="btn-clear" onclick="clearInput('confirmarClave')"><i class="fas fa-times"></i></button>
+                    <button type="button" class="btn-eye" onclick="togglePassword('confirmarClave', this)"><i class="fas fa-eye"></i></button>
+                </div>
 
                 <div class="d-grid gap-2 mb-3">
                     <button class="btn btn-login" type="submit">Cambiar contraseña</button>
