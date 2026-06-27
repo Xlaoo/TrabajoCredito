@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,8 +9,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="~/css/panel-roles.css" />
     <link rel="stylesheet" href="~/css/panel-administrador.css" />
+    <link rel="stylesheet" href="~/css/panel-administrador-reportes.css" />
     @RenderSection("Styles", required: false)
 </head>
+
 <body>
     <div class="layout">
 
@@ -39,9 +42,12 @@
                 <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Pagos" ? "active" : "")">
                     <i class="fas fa-dollar-sign"></i> Pagos
                 </a>
-                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Reportes" ? "active" : "")">
+
+                <a href="@Url.Action("reportesAdministrador", "Administrador")"
+                   class="@(ViewData["ActivePage"]?.ToString() == "Reportes" ? "active" : "")">
                     <i class="fas fa-chart-bar"></i> Reportes
                 </a>
+
                 <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Exportaciones" ? "active" : "")">
                     <i class="fas fa-chart-line"></i> Exportaciones
                 </a>
@@ -79,4 +85,5 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     @RenderSection("Scripts", required: false)
 </body>
+
 </html>

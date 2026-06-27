@@ -214,6 +214,106 @@ namespace trabajo.Controllers
 
             return View(modelo);
         }
+
+        //Reportes de Administración
+        public IActionResult reportesAdministrador(
+        DateTime? fechaInicio = null,
+        DateTime? fechaFin = null,
+        string tipoCreditoFiltro = "Todos",
+        string estadoFiltro = "Todos")
+        {
+            // Fechas por defecto: primer día del año hasta hoy
+            DateTime desde = fechaInicio ?? new DateTime(DateTime.Now.Year, 1, 1);
+            DateTime hasta = fechaFin ?? DateTime.Today;
+            DateTime primerDiaDelMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            DateTime primerDiaSiguienteMes = primerDiaDelMes.AddMonths(1);
+            DateTime hoy = DateTime.Today;
+
+            // ─── Consulta base filtrada — nunca trae todo a memoria ───────────────
+            var queryBase = _context.SOLICITUD_CREDITO
+                .Where(x => x.FechaSolicitud.Date >= desde && x.FechaSolicitud.Date <= hasta);
+
+            if (estadoFiltro != "Todos")
+                queryBase = queryBase.Where(x => x.Estado == estadoFiltro);
+
+            // ─── Stats principales — COUNT y SUM en la BD, no en C# ──────────────
+            int totalSolicitudes = queryBase.Count();
+            int totalAprobados = queryBase.Count(x => x.Estado == "Aprobado");
+            int totalRechazados = queryBase.Count(x => x.Estado == "Rechazado");
+            int totalEnEvaluacion = queryBase.Count(x => x.Estado == "Pendiente" || x.Estado == "En Evaluación");
+            int totalDesembolsados = queryBase.Count(x => x.Estado == "Cancelado");
+            decimal montoOtorgado = queryBase.Where(x => x.Estado == "Aprobado").Sum(x => (decimal?)x.MontoSolicitado) ?? 0;
+            decimal montoEnEvaluacion = queryBase.Where(x => x.Estado == "Pendiente" || x.Estado == "En Evaluación")
+                                                 .Sum(x => (decimal?)x.MontoSolicitado) ?? 0;
+
+            // ─── Clientes ─────────────────────────────────────────────────────────
+            int totalClientes = _context.Usuario.Count(x => x.Rol == "Cliente");
+            int clientesEstesMes = _context.Usuario.Count(x =>
+                x.Rol == "Cliente" &&
+                x.FechaRegistro >= primerDiaDelMes &&
+                x.FechaRegistro < primerDiaSiguienteMes);
+
+            // ─── Mora ─────────────────────────────────────────────────────────────
+            int totalCuotasEnMora = _context.CUOTA.Count(x =>
+                x.FechaLimitePago.Date < hoy && x.Estado == "Pendiente");
+
+            decimal montoEnMora = _context.CUOTA
+                .Where(x => x.FechaLimitePago.Date < hoy && x.Estado == "Pendiente")
+                .Sum(x => (decimal?)x.MontoCuota) ?? 0;
+
+            // ─── Resumen por mes — agrupado en BD ─────────────────────────────────
+            var resumenPorMes = queryBase
+                .GroupBy(x => new { x.FechaSolicitud.Year, x.FechaSolicitud.Month })
+                .Select(g => new ResumenMesViewModel
+                {
+                    Anio = g.Key.Year,
+                    Mes = g.Key.Month,
+                    Solicitudes = g.Count(),
+                    Aprobados = g.Count(x => x.Estado == "Aprobado"),
+                    Rechazados = g.Count(x => x.Estado == "Rechazado"),
+                    MontoDesembolsado = g.Where(x => x.Estado == "Aprobado")
+                                         .Sum(x => (decimal?)x.MontoSolicitado) ?? 0
+                })
+                .OrderBy(x => x.Anio).ThenBy(x => x.Mes)
+                .ToList(); // solo trae los totales agrupados, no registros individuales
+
+            // ─── Resumen total del modelo ──────────────────────────────────────────
+            var modelo = new AdminReportesViewModel
+            {
+                // Filtros activos (para mostrarlos en la vista)
+                FechaInicio = desde,
+                FechaFin = hasta,
+                TipoCreditoFiltro = tipoCreditoFiltro,
+                EstadoFiltro = estadoFiltro,
+
+                // Stats principales
+                TotalSolicitudes = totalSolicitudes,
+                TotalAprobados = totalAprobados,
+                TotalRechazados = totalRechazados,
+                MontoOtorgado = montoOtorgado,
+
+                // Para el resumen de créditos
+                TotalResumenCreditos = totalAprobados + totalEnEvaluacion + totalDesembolsados + totalRechazados,
+                CreditosAprobados = totalAprobados,
+                CreditosEnEvaluacion = totalEnEvaluacion,
+                CreditosDesembolsados = totalDesembolsados,
+                CreditosRechazados = totalRechazados,
+
+                // Mora y otros
+                TotalClientes = totalClientes,
+                ClientesEstesMes = clientesEstesMes,
+                TotalCuotasEnMora = totalCuotasEnMora,
+                MontoEnMora = montoEnMora,
+                TotalReportesGenerados = _context.REPORTE_GENERADO.Count(),
+
+                // Tabla resumen por mes
+                ResumenPorMes = resumenPorMes
+            };
+
+            return View(modelo);
+        }
+
+
         public IActionResult ReporteClientesExcel()
         {
             RegistrarReporteMensual("Clientes");

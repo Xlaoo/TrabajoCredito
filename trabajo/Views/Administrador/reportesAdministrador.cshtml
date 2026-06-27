@@ -1,0 +1,351 @@
+﻿@using trabajo.Models.ViewModels
+@model trabajo.Models.ViewModels.AdminReportesViewModel
+
+@{
+    Layout = "~/Views/Shared/_LayoutAdministrador.cshtml";
+    ViewData["Title"] = "Reportes de Administración";
+    ViewData["ActivePage"] = "Reportes";
+}
+
+<div class="top-navbar-view">
+
+    <div class="navbar-left">
+        <span class="navbar-welcome">Bienvenido, @User.Identity?.Name</span>
+    </div>
+
+    <div class="navbar-right">
+
+        <div class="navbar-notifications">
+            <i class="far fa-bell"></i>
+            <span class="badge-count">0</span>
+        </div>
+
+        <div class="navbar-user-box">
+
+            <!-- Textos apilados (Nombre y Correo) -->
+            <div class="profile-user-info">
+                <span class="user-name">@User.Identity?.Name @User.FindFirst("Apellido")?.Value</span>
+                <span class="user-email">@User.FindFirst("Correo")?.Value</span>
+            </div>
+
+            <!-- La flecha hacia abajo (Chevron) -->
+            <i class="fas fa-chevron-down profile-chevron"></i>
+
+        </div>
+    </div>
+</div>
+
+<!-- ── TÍTULO ── -->
+<div class="reportes-titulo">
+    <h1>Reportes</h1>
+    <p>Estadísticas y análisis detallados de la plataforma</p>
+</div>
+
+<!-- ── FILTROS ── -->
+<div class="filtros-card">
+    <form method="get" asp-action="reportesAdministrador" asp-controller="Administrador" class="filtros-form">
+        <div class="filtro-grupo">
+            <label>Fecha inicio</label>
+            <input type="date" name="fechaInicio" class="filtro-input"
+                   value="@Model.FechaInicio.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="filtro-grupo">
+            <label>Fecha fin</label>
+            <input type="date" name="fechaInicio" class="filtro-input"
+                   value="@Model.FechaInicio.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="filtro-grupo">
+            <label>Tipo de crédito</label>
+            <select name="tipoCreditoFiltro" class="filtro-input">
+                @foreach (var tipo in new[] { "Todos", "Personal", "Vehicular", "Hipotecario", "Empresarial" })
+                {
+                    <option value="@tipo" selected="@(Model.TipoCreditoFiltro == tipo)">@tipo</option>
+                }
+            </select>
+        </div>
+        <div class="filtro-grupo">
+            <label>Estado</label>
+            <select name="estadoFiltro" class="filtro-input">
+                @foreach (var estado in new[] { "Todos", "Aprobado", "En Evaluación", "Rechazado", "Pendiente" })
+                {
+                    <option value="@estado" selected="@(Model.EstadoFiltro == estado)">@estado</option>
+                }
+            </select>
+        </div>
+
+        <!-- Falta agregar los métodos de exportación-->
+        <div class="filtro-acciones">
+
+            <button type="submit" class="btn-buscar">
+                <i class="fas fa-search"></i> Buscar
+            </button>
+
+            <a href="@Url.Action("reportesAdministrador", "Administrador")" class="btn-exportar"
+               style="color:#6b7280; border-color:#d1d5db; background:#f9fafb;">
+                <i class="fas fa-undo"></i> Restablecer
+            </a>
+
+            <a href="@Url.Action("", "Administrador")" class="btn-exportar pdf">
+                <i class="fas fa-file-pdf"></i> Exportar PDF
+            </a>
+
+            <a href="@Url.Action("", "Administrador")" class="btn-exportar excel">
+                <i class="fas fa-file-excel"></i> Exportar Excel
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- ── STATS ── -->
+<section class="stats stats-4">
+    <!-- Solicitudes Totales -->
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon clientes-icon"><i class="fas fa-users"></i></div>
+            <div>
+                <div class="stat-title">Solicitudes Totales</div>
+                <div class="stat-label">Todas las solicitudes</div>
+            </div>
+        </div>
+        <div class="stat-value">@Model.TotalSolicitudes.ToString("N0")</div>
+        <div class="stat-subtitle">↑ <span class="positive">@Model.ClientesEstesMes</span> este mes</div>
+    </div>
+
+    <!-- Créditos Aprobados -->
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon creditos-icon"><i class="fas fa-check-circle"></i></div>
+            <div>
+                <div class="stat-title">Créditos Aprobados</div>
+                <div class="stat-label">Aprobados</div>
+            </div>
+        </div>
+        <div class="stat-value">@Model.TotalAprobados.ToString("N0")</div>
+        <div class="stat-subtitle">↑ <span class="positive">8%</span> este mes</div>
+        <div class="rpt-progress-wrap">
+            <div class="rpt-progress-fill green" style="width:@Model.PorcentajeAprobados%"></div>
+        </div>
+        <small class="rpt-pct">@Model.PorcentajeAprobados%</small>
+    </div>
+
+    <!-- Créditos Rechazados -->
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon mora-icon"><i class="fas fa-times-circle"></i></div>
+            <div>
+                <div class="stat-title">Créditos Rechazados</div>
+                <div class="stat-label">Rechazados</div>
+            </div>
+        </div>
+        <div class="stat-value">@Model.TotalRechazados.ToString("N0")</div>
+        <div class="stat-subtitle">↓ <span class="negative">5%</span> este mes</div>
+        <div class="rpt-progress-wrap">
+            <div class="rpt-progress-fill red" style="width:@Model.PorcentajeRechazados%"></div>
+        </div>
+        <small class="rpt-pct">@Model.PorcentajeRechazados%</small>
+    </div>
+
+    <!-- Monto Desembolsado -->
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon" style="background:linear-gradient(135deg,#1d8cf8,#0057d9);width:52px;height:52px;min-width:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:white;font-size:26px;">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <div>
+                <div class="stat-title">Monto Desembolsado</div>
+                <div class="stat-label">Total acumulado</div>
+            </div>
+        </div>
+        <div class="stat-value" style="font-size:26px;">S/ @Model.MontoOtorgado.ToString("N0")</div>
+        <div class="stat-subtitle">↑ <span class="positive">15%</span> este mes</div>
+    </div>
+</section>
+
+<!-- FILA 2: Gráfico de Lineas + Tabla resumen por mes -->
+<div class="rpt-grid-2">
+
+    <div class="admin-panel-card">
+        <div class="rpt-panel-header">
+            <h3><i class="fas fa-chart-line"></i> Solicitudes por Mes</h3>
+            <select class="rpt-select-mini">
+                <option>Este año</option>
+                <option>Año anterior</option>
+            </select>
+        </div>
+        <canvas id="chartSolicitudes" height="110"></canvas>
+    </div>
+
+    <div class="admin-panel-card">
+        <h3><i class="fas fa-table"></i> Resumen por Mes</h3>
+        <div class="rpt-tabla-scroll">
+            <table class="rpt-tabla">
+                <thead>
+                    <tr>
+                        <th>Mes</th>
+                        <th>Solicitudes</th>
+                        <th>Aprobados</th>
+                        <th>Rechazados</th>
+                        <th>Monto Desembolsado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var mes in Model.ResumenPorMes)
+                    {
+                        <tr>
+                            <td>@mes.NombreMes</td>
+                            <td>@mes.Solicitudes</td>
+                            <td class="positive">@mes.Aprobados</td>
+                            <td class="negative">@mes.Rechazados</td>
+                            <td>S/ @mes.MontoDesembolsado.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td><strong>Total</strong></td>
+                        <td><strong class="positive">@Model.TotalSolicitudes</strong></td>
+                        <td><strong class="positive">@Model.TotalAprobados</strong></td>
+                        <td><strong class="negative">@Model.TotalRechazados</strong></td>
+                        <td><strong class="positive">S/ @Model.MontoOtorgado.ToString("N0")</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- FILA 3: Gráfico de Dona + Analista + Indicadores -->
+<div class="rpt-grid-3">
+
+    <!-- Créditos por tipo -->
+    <div class="admin-panel-card">
+        <h3><i class="fas fa-chart-pie"></i> Créditos por Tipo</h3>
+        <div class="rpt-donut-wrap">
+            <div class="rpt-donut-chart-wrap">
+                <canvas id="chartTipo" width="160" height="160"></canvas>
+                <div class="rpt-donut-center">
+                    <strong>@Model.TotalResumenCreditos</strong>
+                    <span>Total</span>
+                </div>
+            </div>
+            <div class="rpt-tipo-legend">
+                <div><span class="legend purple"></span> Personal <strong>45%</strong></div>
+                <div><span class="legend blue"></span> Vehicular <strong>25%</strong></div>
+                <div><span class="legend green"></span> Hipotecario <strong>20%</strong></div>
+                <div><span class="legend orange"></span> Empresarial <strong>10%</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rendimiento del analista -->
+    <div class="admin-panel-card">
+        <h3><i class="fas fa-user-tie"></i> Rendimiento del Analista</h3>
+        <div class="rpt-analista-box">
+            <div class="rpt-analista-avatar"><i class="fas fa-user"></i></div>
+            <strong>Analista Principal</strong>
+        </div>
+        <div class="rpt-analista-stats">
+            <div class="rpt-analista-stat green">
+                <span>Aprobados</span>
+                <strong>@Model.TotalAprobados</strong>
+            </div>
+            <div class="rpt-analista-stat red">
+                <span>Rechazados</span>
+                <strong>@Model.TotalRechazados</strong>
+            </div>
+            <div class="rpt-analista-stat purple">
+                <span>Tasa de Aprobación</span>
+                <strong>@Model.PorcentajeAprobados%</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Indicadores clave -->
+    <div class="admin-panel-card">
+        <h3><i class="fas fa-tachometer-alt"></i> Indicadores Clave</h3>
+        <div class="rpt-indicadores">
+            <div class="rpt-indicador">
+                <div class="rpt-ind-icon green"><i class="fas fa-check-circle"></i></div>
+                <div class="rpt-ind-info">
+                    <span>Índice de Aprobación</span>
+                    <strong>@Model.PorcentajeAprobados%</strong>
+                </div>
+                <span class="rpt-trend up">↗</span>
+            </div>
+            <div class="rpt-indicador">
+                <div class="rpt-ind-icon red"><i class="fas fa-times-circle"></i></div>
+                <div class="rpt-ind-info">
+                    <span>Índice de Rechazo</span>
+                    <strong>@Model.PorcentajeRechazados%</strong>
+                </div>
+                <span class="rpt-trend down">↘</span>
+            </div>
+            <div class="rpt-indicador">
+                <div class="rpt-ind-icon blue"><i class="fas fa-dollar-sign"></i></div>
+                <div class="rpt-ind-info">
+                    <span>Ticket Promedio</span>
+                    <strong>S/ @(Model.TotalAprobados > 0 ? (Model.MontoOtorgado / Model.TotalAprobados).ToString("N0") : "0")</strong>
+                </div>
+                <span class="rpt-trend up">↗</span>
+            </div>
+            <div class="rpt-indicador">
+                <div class="rpt-ind-icon purple"><i class="fas fa-clock"></i></div>
+                <div class="rpt-ind-info">
+                    <span>Créditos Vigentes</span>
+                    <strong>@Model.CreditosAprobados</strong>
+                </div>
+                <span class="rpt-trend up">↗</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Datos desde el modelo para el gráfico de líneas
+        const meses  = [@Html.Raw(string.Join(",", Model.ResumenPorMes.Select(m => $"\"{m.NombreMes}\"")))];
+        const totales = [@Html.Raw(string.Join(",", Model.ResumenPorMes.Select(m => m.Solicitudes)))];
+
+        new Chart(document.getElementById('chartSolicitudes'), {
+        type: 'line',
+        data: {
+        labels: meses,
+        datasets: [{
+        data: totales,
+        borderColor: '#6d28d9',
+        backgroundColor: 'rgba(109,40,217,.08)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#6d28d9',
+        pointRadius: 5
+        }]
+        },
+        options: {
+        plugins: { legend: { display: false } },
+        scales: {
+        y: { beginAtZero: true, grid: { color: '#f3f4f6' } },
+        x: { grid: { display: false } }
+        }
+        }
+        });
+
+        new Chart(document.getElementById('chartTipo'), {
+        type: 'doughnut',
+        data: {
+        labels: ['Personal', 'Vehicular', 'Hipotecario', 'Empresarial'],
+        datasets: [{
+        data: [45, 25, 20, 10],
+        backgroundColor: ['#6d28d9', '#3b82f6', '#10b981', '#f59e0b'],
+        borderWidth: 0
+        }]
+        },
+        options: {
+        cutout: '70%',
+        plugins: { legend: { display: false } }
+        }
+        });
+    </script>
+}

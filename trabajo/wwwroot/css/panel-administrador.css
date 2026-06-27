@@ -203,11 +203,11 @@
 
 /* Modificadores de Alertas e Incrementos */
 .positive {
-    color: #10b981;
+    color: #45435a;
 }
 
 .negative {
-    color: #ef4444;
+    color: #5947c4;
 }
 .reportes-card {
     text-align: left !important;
