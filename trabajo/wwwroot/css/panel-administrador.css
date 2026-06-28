@@ -203,11 +203,11 @@
 
 /* Modificadores de Alertas e Incrementos */
 .positive {
-    color: #10b981;
+    color: #45435a;
 }
 
 .negative {
-    color: #ef4444;
+    color: #5947c4;
 }
 .reportes-card {
     text-align: left !important;
@@ -658,3 +658,22 @@
         background: #6d28d9;
         border-radius: 999px;
     }
+.quick-report-item.bloqueado {
+    opacity: .45;
+    pointer-events: none;
+    filter: grayscale(1);
+    cursor: not-allowed;
+}
+.profile-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #7c3aed;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-right: 12px;
+    flex-shrink: 0;
+}

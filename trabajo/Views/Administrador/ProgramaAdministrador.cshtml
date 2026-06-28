@@ -1,5 +1,7 @@
+
 @using trabajo.Models.ViewModels
 @model AdminDashboardViewModel
+
 
 @{
     Layout = "~/Views/Shared/_LayoutAdministrador.cshtml";
@@ -22,13 +24,15 @@
 
         <div class="navbar-user-box">
 
-            <!-- Textos apilados (Nombre y Correo) -->
-            <div class="profile-user-info">
-                <span class="user-name">Administrador</span>
-                <span class="user-email">admin@crediplus.com</span>
+            <div class="profile-avatar">
+                <i class="fas fa-user"></i>
             </div>
 
-            <!-- La flecha hacia abajo (Chevron) -->
+            <div class="profile-user-info">
+                <span class="user-name">@ViewBag.AdminNombre</span>
+                <span class="user-email">@ViewBag.AdminCorreo</span>
+            </div>
+
             <i class="fas fa-chevron-down profile-chevron"></i>
 
         </div>
@@ -184,29 +188,34 @@
         <h3><i class="fas fa-file-alt"></i> Reportes Rápidos</h3>
 
         <div class="quick-reports">
-            <a class="quick-report-item purple" href="@Url.Action("ReporteClientesExcel", "Administrador")">
+
+            <a class="quick-report-item purple @(ViewBag.ClientesPendiente ? "" : "bloqueado")"
+               href="@(ViewBag.ClientesPendiente? Url.Action("ReporteClientesExcel", "Administrador") : "#")">
                 <i class="fas fa-file-excel"></i>
                 <div>
                     <strong>Reporte de Clientes</strong>
-                    <span>Excel</span>
+                    <span>@(ViewBag.ClientesPendiente ? "Excel" : "Ya generado")</span>
                 </div>
             </a>
 
-            <a class="quick-report-item green" href="@Url.Action("ReporteCreditosExcel", "Administrador")">
+            <a class="quick-report-item green @(ViewBag.CreditosPendiente ? "" : "bloqueado")"
+               href="@(ViewBag.CreditosPendiente? Url.Action("ReporteCreditosExcel", "Administrador") : "#")">
                 <i class="fas fa-file-excel"></i>
                 <div>
                     <strong>Reporte de Créditos</strong>
-                    <span>Excel</span>
+                    <span>@(ViewBag.CreditosPendiente ? "Excel" : "Ya generado")</span>
                 </div>
             </a>
 
-            <a class="quick-report-item orange" href="@Url.Action("ReportePagosExcel", "Administrador")">
+            <a class="quick-report-item orange @(ViewBag.PagosPendiente ? "" : "bloqueado")"
+               href="@(ViewBag.PagosPendiente? Url.Action("ReportePagosExcel", "Administrador") : "#")">
                 <i class="fas fa-database"></i>
                 <div>
                     <strong>Reporte de Pagos</strong>
-                    <span>Excel</span>
+                    <span>@(ViewBag.PagosPendiente ? "Excel" : "Ya generado")</span>
                 </div>
             </a>
+
         </div>
     </div>
 

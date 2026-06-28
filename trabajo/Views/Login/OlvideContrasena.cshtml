@@ -8,6 +8,7 @@
     <meta name="viewport" content="width=device-width" />
     <title>Olvidé Contraseña</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/utilidades-ui.css" />
 
     <style>
         body {
@@ -161,11 +162,37 @@
 
             <form asp-controller="Login" asp-action="OlvideContrasena" method="post">
 
-                <input class="form-control mb-3" type="text" placeholder="DNI" required name="dni"
-                       maxlength="8"
-                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+                <div class="input-util-wrap mb-3">
+                    <input id="dniRecuperar"
+                           class="form-control"
+                           type="text"
+                           placeholder="DNI"
+                           required
+                           name="dni"
+                           maxlength="8"
+                           oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
 
-                <input class="form-control mb-2" type="password" placeholder="Nueva contraseña" required name="nuevaClave" />
+                    <button type="button" class="btn-clear" onclick="clearInput('dniRecuperar')">
+                        ✕
+                    </button>
+                </div>
+
+                <div class="input-util-wrap mb-2">
+                    <input id="nuevaClave"
+                           class="form-control"
+                           type="password"
+                           placeholder="Nueva contraseña"
+                           required
+                           name="nuevaClave" />
+
+                    <button type="button" class="btn-clear" onclick="clearInput('nuevaClave')">
+                        ✕
+                    </button>
+
+                    <button type="button" class="btn-eye" onclick="togglePassword('nuevaClave', this)">
+                        👁
+                    </button>
+                </div>
 
                 <ul class="password-rules mb-3">
                     <li id="mayus"> Una letra mayúscula</li>
@@ -174,7 +201,22 @@
                     <li id="longitud"> Mínimo 6 caracteres</li>
                 </ul>
 
-                <input class="form-control mb-3" type="password" placeholder="Confirmar contraseña" required name="confirmarClave" />
+                <div class="input-util-wrap mb-3">
+                    <input id="confirmarClave"
+                           class="form-control"
+                           type="password"
+                           placeholder="Confirmar contraseña"
+                           required
+                           name="confirmarClave" />
+
+                    <button type="button" class="btn-clear" onclick="clearInput('confirmarClave')">
+                        ✕
+                    </button>
+
+                    <button type="button" class="btn-eye" onclick="togglePassword('confirmarClave', this)">
+                        👁
+                    </button>
+                </div>
 
                 <div class="d-grid gap-2 mb-3">
                     <button class="btn btn-login" type="submit">Cambiar contraseña</button>
@@ -202,7 +244,7 @@
         </div>
     </div>
     <script>
-        const input = document.querySelector('input[name="nuevaClave"]');
+        const input = document.getElementById("nuevaClave");
 
         const mayus = document.getElementById("mayus");
         const minus = document.getElementById("minus");
@@ -249,5 +291,6 @@
             }
         });
     </script>
+    <script src="~/js/utilidades-ui.js"></script>
 </body>
 </html>

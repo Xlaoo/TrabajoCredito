@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="~/css/panel-roles.css" />
     <link rel="stylesheet" href="~/css/panel-administrador.css" />
+    <link rel="stylesheet" href="~/css/panel-administrador-reportes.css" />
     @RenderSection("Styles", required: false)
 </head>
 <body>
@@ -39,10 +40,12 @@
                 <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Pagos" ? "active" : "")">
                     <i class="fas fa-dollar-sign"></i> Pagos
                 </a>
-                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Reportes" ? "active" : "")">
+                <a href="@Url.Action("reportesAdministrador", "Administrador")"
+                   class="@(ViewData["ActivePage"]?.ToString() == "Reportes" ? "active" : "")">
                     <i class="fas fa-chart-bar"></i> Reportes
                 </a>
-                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Exportaciones" ? "active" : "")">
+                <a href="@Url.Action("Exportaciones", "Administrador")"
+                   class="@(ViewData["ActivePage"]?.ToString() == "Exportaciones" ? "active" : "")">
                     <i class="fas fa-chart-line"></i> Exportaciones
                 </a>
                 <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Analistas" ? "active" : "")">
@@ -51,7 +54,9 @@
 
                 <div class="section-title">Herramientas</div>
 
-                <a href="#"><i class="fas fa-file-export"></i> Generar Reportes</a>
+                <a href="@Url.Action("reportesAdministrador", "Administrador")">
+                    <i class="fas fa-file-export"></i> Generar Reportes
+                </a>
                 <a href="#"><i class="fas fa-download"></i> Exportar Datos</a>
 
                 <div class="section-title">Mi Cuenta</div>

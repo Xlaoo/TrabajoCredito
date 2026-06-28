@@ -15,7 +15,7 @@ namespace trabajo.Models
         public string Dni { get; set; } = null!;
 
         public string Celular { get; set; } = null!;
-
+        public DateTime? UltimaConexion { get; set; }
 
         public string Correo { get; set; } = null!;
 

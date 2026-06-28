@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width" />
     <title>Iniciar Sesión</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-
+    <link rel="stylesheet" href="~/css/utilidades-ui.css" />
     <style>
         body {
             min-height: 100vh;
@@ -234,11 +234,39 @@
 
             <form asp-controller="Login" asp-action="IniciarSesion" method="post">
 
-                <input class="form-control mb-3" type="text" placeholder="DNI" required name="dni"
-                       maxlength="8"
-                       oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+                <div class="input-util-wrap mb-3">
+                    <input id="dniInput"
+                           class="form-control"
+                           type="text"
+                           placeholder="DNI"
+                           required
+                           name="dni"
+                           maxlength="8"
+                           oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
 
-                <input class="form-control mb-3" type="password" placeholder="Contraseña" required name="clave" />
+                    <button type="button"
+                            class="btn-clear"
+                            onclick="clearInput('dniInput')">
+                        ✕
+                    </button>
+                </div>
+
+                <div class="input-util-wrap mb-3">
+                    <input id="claveInput"
+                           class="form-control"
+                           type="password"
+                           placeholder="Contraseña"
+                           required
+                           name="clave" />
+
+                    <button type="button" class="btn-clear" onclick="clearInput('claveInput')">
+                        ✕
+                    </button>
+
+                    <button type="button" class="btn-eye" onclick="togglePassword('claveInput', this)">
+                        👁
+                    </button>
+                </div>
 
                 <div class="d-grid gap-2 mb-3">
                     <button class="btn btn-login" type="submit">Iniciar Sesión</button>
@@ -272,5 +300,6 @@
             </form>
         </div>
     </div>
+    <script src="~/js/utilidades-ui.js"></script>
 </body>
 </html>

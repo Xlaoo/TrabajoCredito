@@ -54,6 +54,7 @@ namespace trabajo.Controllers
             if (usuario != null && usuario.Rol == "Cliente")
             {
                 usuario.EstadoActivo = false;
+                usuario.UltimaConexion = DateTime.Now;
                 _Context.SaveChanges();
             }
             await HttpContext.SignOutAsync(
@@ -199,9 +200,9 @@ namespace trabajo.Controllers
             if (usuarioEncontrado.Rol == "Cliente")
             {
                 usuarioEncontrado.EstadoActivo = true;
+                usuarioEncontrado.UltimaConexion = DateTime.Now;
                 _Context.SaveChanges();
             }
-
             if (usuarioEncontrado.Rol == "Analista")
             {
                 return RedirectToAction("ProgramaAnalista", "Analista");
@@ -290,6 +291,11 @@ namespace trabajo.Controllers
             string dni = User.FindFirst("Dni")?.Value;
 
             var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+            if (usuario != null)
+            {
+                usuario.UltimaConexion = DateTime.Now;
+                _Context.SaveChanges();
+            }
 
             if (usuario != null)
             {
@@ -1342,6 +1348,7 @@ string titularCuenta
             if (usuario != null && usuario.Rol == "Cliente")
             {
                 usuario.EstadoActivo = false;
+                usuario.UltimaConexion = DateTime.Now;
                 _Context.SaveChanges();
             }
 
