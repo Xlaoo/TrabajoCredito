@@ -1,0 +1,726 @@
+﻿@model trabajo.Models.ViewModels.AdminPagosViewModel
+
+@{
+	Layout = "_LayoutAdministrador";
+	ViewData["Title"] = "Pagos";
+	ViewData["ActivePage"] = "Pagos";
+}
+
+<div class="pagos-page">
+
+	<div class="pagos-topbar">
+		<div>
+			<strong>Bienvenido Administrador</strong>
+		</div>
+
+		<div class="admin-top-actions">
+			<div class="admin-avatar">
+				<i class="fa-solid fa-user"></i>
+			</div>
+
+			<div>
+				<strong>Administrador</strong><br />
+				<small>@ViewBag.AdminCorreo</small>
+			</div>
+		</div>
+	</div>
+
+	<div class="pagos-title">
+		<h1>Pagos</h1>
+		<p>Gestiona y consulta todos los pagos registrados</p>
+	</div>
+
+	<div class="pagos-cards">
+		<div class="pago-card">
+			<div class="pago-icon bg-purple"><i class="fa-solid fa-wallet"></i></div>
+			<small>Total Pagos Este Mes</small>
+			<h2>@Model.TotalPagosMes</h2>
+			<small>↑ este mes</small>
+		</div>
+
+		<div class="pago-card">
+			<div class="pago-icon bg-green"><i class="fa-solid fa-check"></i></div>
+			<small>Pagos Completados Este Mes</small>
+			<h2>@Model.PagosCompletadosMes</h2>
+			<small>@(Model.TotalPagosMes > 0 ? Math.Round((decimal)Model.PagosCompletadosMes * 100 / Model.TotalPagosMes, 1) : 0)% del total</small>
+		</div>
+
+		<div class="pago-card">
+			<div class="pago-icon bg-orange"><i class="fa-solid fa-clock"></i></div>
+			<small>Pagos Pendientes Este Mes</small>
+			<h2>@Model.PagosPendientesMes</h2>
+			<small>pendientes</small>
+		</div>
+
+		<div class="pago-card">
+			<div class="pago-icon bg-blue"><i class="fa-solid fa-dollar-sign"></i></div>
+			<small>Monto Total Recaudado</small>
+			<h2>S/ @Model.MontoTotalRecaudadoMes.ToString("N2")</h2>
+			<small>Este mes</small>
+		</div>
+	</div>
+
+	<div class="pagos-table-card">
+
+		<form method="get" asp-action="Pagos" asp-controller="Administrador" class="pagos-filtros">
+			<input type="text" name="busqueda" value="@Model.Busqueda"
+				   placeholder="Buscar pago por cliente, DNI o referencia..." />
+
+			<select name="estadoFiltro">
+				<option value="Todos" selected="@(Model.EstadoFiltro == "Todos")">Todos</option>
+				<option value="Aprobado" selected="@(Model.EstadoFiltro == "Aprobado")">Completado</option>
+				<option value="Pendiente" selected="@(Model.EstadoFiltro == "Pendiente")">Pendiente</option>
+			</select>
+
+			<select name="metodoFiltro">
+				<option value="Todos" selected="@(Model.MetodoFiltro == "Todos")">Todos</option>
+				<option value="Yape" selected="@(Model.MetodoFiltro == "Yape")">Yape</option>
+				<option value="Plin" selected="@(Model.MetodoFiltro == "Plin")">Plin</option>
+				<option value="Transferencia bancaria" selected="@(Model.MetodoFiltro == "Transferencia bancaria")">Transferencia</option>
+			</select>
+
+			<button class="btn-filtrar" type="submit">
+				<i class="fa-solid fa-filter"></i> Filtrar
+			</button>
+
+			<div class="export-dropdown">
+				<button class="btn-export"
+						type="button"
+						id="btnExportar"
+						onclick="toggleExportMenu()">
+
+					<i class="fa-solid fa-download"></i>
+
+					Exportar
+
+					<i class="fa-solid fa-chevron-down"></i>
+
+				</button>
+
+				<div id="exportMenu" class="export-menu">
+					<a target="_blank" href="@Url.Action("PagosPdf", "Administrador", new { busqueda = Model.Busqueda, estadoFiltro = Model.EstadoFiltro, metodoFiltro = Model.MetodoFiltro })">
+						<i class="fa-solid fa-file-pdf"></i> Exportar PDF
+					</a>
+
+					<a href="@Url.Action("PagosExcel", "Administrador", new { busqueda = Model.Busqueda, estadoFiltro = Model.EstadoFiltro, metodoFiltro = Model.MetodoFiltro })">
+						<i class="fa-solid fa-file-excel"></i> Exportar Excel
+					</a>
+				</div>
+			</div>
+		</form>
+
+		<table id="tablaPagos" class="tabla-pagos">
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Cliente</th>
+					<th>Crédito</th>
+					<th>Monto</th>
+					<th>Fecha de Pago</th>
+					<th>Método</th>
+					<th>Estado</th>
+					<th>Referencia</th>
+					<th>Acciones</th>
+				</tr>
+			</thead>
+
+			<tbody id="tablaPagosBody">
+				@{
+					int fila = 0;
+				}
+				@for (int i = 0; i < Model.Pagos.Count; i++)
+				{
+					var p = Model.Pagos[i];
+					fila++;
+
+					<tr class="fila-tabla-pago">
+						<td>#P@(p.IdPagoCuota.ToString("000"))</td>
+						<td>
+							<strong>@p.Cliente</strong><br />
+							<small>DNI: @p.Dni</small>
+						</td>
+						<td>@p.Credito</td>
+						<td>S/ @p.Monto.ToString("N2")</td>
+						<td>@p.FechaPago.ToString("dd/MM/yyyy HH:mm")</td>
+						<td>
+							@if (p.MetodoPago == "Yape")
+							{
+								<span class="metodo-pago metodo-yape">
+									<img src="~/img/yape.png" /> Yape
+								</span>
+							}
+							else if (p.MetodoPago == "Plin")
+							{
+								<span class="metodo-pago metodo-plin">
+									<img src="~/img/plin.webp" /> Plin
+								</span>
+							}
+							else
+							{
+								<span class="metodo-pago metodo-transferencia">
+									<i class="fa-solid fa-building-columns"></i> Transferencia
+								</span>
+							}
+						</td>
+						<td>
+							@if (p.Estado == "Aprobado" || p.Estado == "Completado")
+							{
+								<span class="estado-ok">Completado</span>
+							}
+							else if (p.Estado == "Mora")
+							{
+								<span class="estado-mora">Mora Pendiente</span>
+							}
+							else
+							{
+								<span class="estado-pendiente">Pendiente</span>
+							}
+						</td>
+						<td>@p.Referencia</td>
+						<td>
+							<button type="button"
+									class="accion-btn"
+									onclick="abrirDetallePago(
+	                '@p.Cliente',
+	                '@p.Dni',
+	                '@p.Monto.ToString("N2")',
+	                '@p.MetodoPago',
+	                '@p.Referencia',
+	                '@p.FechaPago.ToString("dd/MM/yyyy HH:mm")',
+	                '@p.Estado')">
+
+								<i class="fa-solid fa-eye"></i>
+							</button>
+
+							<a class="accion-btn"
+							   target="_blank"
+							   href="@Url.Action("CronogramaAdminPdf", "Administrador", new { idSolicitud = p.IdSolicitud })">
+
+								<i class="fa-solid fa-file-lines"></i>
+							</a>
+						</td>
+					</tr>
+				}
+				@foreach (var p in Model.CuotasPendientes)
+				{
+					fila++;
+
+					<tr class="fila-tabla-pago">
+
+						<td>#P---</td>
+
+						<td>
+							<strong>@p.Cliente</strong><br />
+							<small>DNI: @p.Dni</small>
+						</td>
+
+						<td>@p.Credito</td>
+
+						<td>S/ @p.Monto.ToString("N2")</td>
+
+						<td>@p.FechaPago.ToString("dd/MM/yyyy")</td>
+
+						<td>
+							<span class="metodo-pago metodo-pendiente">
+								<i class="fa-solid fa-hourglass-half"></i>
+								Sin pago
+							</span>
+						</td>
+
+						<td>
+							@if (p.Estado == "Mora")
+							{
+								<span class="estado-mora">
+									Mora
+								</span>
+							}
+							else
+							{
+								<span class="estado-pendiente">
+									Pendiente
+								</span>
+							}
+						</td>
+
+						<td>---</td>
+
+						<td>
+
+							<button type="button"
+									class="accion-btn"
+									onclick="abrirDetallePago(
+	                    '@p.Cliente',
+	                    '@p.Dni',
+	                    '@p.Monto.ToString("N2")',
+	                    'Sin pago',
+	                    'No existe referencia',
+	                    '@p.FechaPago.ToString("dd/MM/yyyy")',
+	                    'Pendiente')">
+
+								<i class="fa-solid fa-eye"></i>
+
+							</button>
+
+							<a class="accion-btn"
+							   target="_blank"
+							   href="@Url.Action("CronogramaAdminPdf", "Administrador", new { idSolicitud = p.IdSolicitud })">
+
+								<i class="fa-solid fa-file-lines"></i>
+
+							</a>
+
+						</td>
+
+					</tr>
+				}
+			</tbody>
+		</table>
+		<div class="tabla-paginacion">
+
+			<span id="textoPaginacion"></span>
+
+			<div id="botonesPaginacion" class="paginacion-botones">
+			</div>
+
+		</div>
+	</div>
+	<div class="pagos-bottom-grid">
+
+		@{
+			int completadosResumen = Model.PagosCompletadosMes;
+
+			var hoy = DateTime.Today;
+
+			int pendientesResumen = Model.CuotasPendientes.Count(x =>
+			x.Estado != "Mora" &&
+			x.FechaPago.Month == hoy.Month &&
+			x.FechaPago.Year == hoy.Year);
+
+			int moraResumen = Model.CuotasPendientes.Count(x =>
+			x.Estado == "Mora" &&
+			x.FechaPago.Month == hoy.Month &&
+			x.FechaPago.Year == hoy.Year);
+
+			int totalResumen = completadosResumen + pendientesResumen + moraResumen;
+
+			double porcentajeCompletado = totalResumen == 0 ? 0 : (double)completadosResumen * 100 / totalResumen;
+
+			double porcentajePendiente = totalResumen == 0 ? 0 : (double)pendientesResumen * 100 / totalResumen;
+
+			double porcentajeMora = totalResumen == 0 ? 0 : (double)moraResumen * 100 / totalResumen;
+
+			int finCompletado = (int)(porcentajeCompletado * 3.6);
+
+			int finPendiente = finCompletado + (int)(porcentajePendiente * 3.6);
+		}
+		<div class="mini-card">
+			<h3><i class="fa-solid fa-chart-pie"></i> Resumen por Estado</h3>
+
+			<div class="donut-resumen">
+				<div class="donut-circle estado-donut"
+					 style="background:conic-gradient(
+        #22c55e 0deg @(finCompletado)deg,
+        #f59e0b @(finCompletado)deg @(finPendiente)deg,
+        #ef4444 @(finPendiente)deg 360deg);">
+
+					<h2>@totalResumen</h2>
+					<small>Pagos</small>
+
+				</div>
+
+				<div class="leyenda">
+
+					<div class="estado-item">
+
+						<span class="dot green"></span>
+
+						<div>
+
+							<strong>Completados</strong>
+
+							<small>
+								@completadosResumen pagos
+								(@Math.Round(porcentajeCompletado, 1)%)
+							</small>
+
+						</div>
+
+					</div>
+
+					<div class="estado-item">
+
+						<span class="dot orange"></span>
+
+						<div>
+
+							<strong>Pendientes</strong>
+
+							<small>
+								@pendientesResumen pagos
+								(@Math.Round(porcentajePendiente, 1)%)
+							</small>
+
+						</div>
+
+					</div>
+
+					<div class="estado-item">
+
+						<span class="dot red"></span>
+
+						<div>
+
+							<strong>Mora</strong>
+
+							<small>
+								@moraResumen pagos
+								(@Math.Round(porcentajeMora, 1)%)
+							</small>
+
+						</div>
+
+					</div>
+
+				</div>
+			</div>
+		</div>
+
+		<div class="mini-card">
+			<h3><i class="fa-solid fa-money-bill-transfer"></i> Métodos de Pago</h3>
+			@{
+				int yape = Model.Pagos.Count(x => x.MetodoPago == "Yape");
+				int plin = Model.Pagos.Count(x => x.MetodoPago == "Plin");
+				int transferencia = Model.Pagos.Count(x => x.MetodoPago == "Transferencia bancaria");
+
+				int totalMetodos = yape + plin + transferencia;
+
+				double porYape = totalMetodos == 0 ? 0 : (double)yape * 100 / totalMetodos;
+				double porPlin = totalMetodos == 0 ? 0 : (double)plin * 100 / totalMetodos;
+				double porTransferencia = totalMetodos == 0 ? 0 : (double)transferencia * 100 / totalMetodos;
+
+				int finYape = (int)(porYape * 3.6);
+				int finPlin = finYape + (int)(porPlin * 3.6);
+			}
+			<div class="metodo-donut"
+				 style="background:conic-gradient(
+        #7c3aed 0deg @(finYape)deg,
+        #06b6d4 @(finYape)deg @(finPlin)deg,
+        #2563eb @(finPlin)deg 360deg);">
+
+				<h2>@totalMetodos</h2>
+				<small>Pagos</small>
+
+			</div>
+			<div class="metodos-lista">
+
+				<p>
+					<span class="dot purple"></span>
+					Yape
+					<b>@yape (@Math.Round(porYape, 1)%)</b>
+				</p>
+
+				<p>
+					<span class="dot cyan"></span>
+					Plin
+					<b>@plin (@Math.Round(porPlin, 1)%)</b>
+				</p>
+
+				<p>
+					<span class="dot blue"></span>
+					Transferencia
+					<b>@transferencia (@Math.Round(porTransferencia, 1)%)</b>
+				</p>
+
+			</div>
+		</div>
+
+		<div class="mini-card">
+			<h3>Últimos Pagos Registrados</h3>
+
+			@for (int i = 0; i < Model.Pagos.Count; i++)
+			{
+				var p = Model.Pagos[i];
+
+				<div class="ultimo-pago @(i >= 3 ? "ultimo-extra" : "")">
+
+					<div class="ultimo-pago-icon">
+
+						@if (p.MetodoPago == "Yape")
+						{
+							<img src="~/img/yape.png" alt="Yape" />
+						}
+						else if (p.MetodoPago == "Plin")
+						{
+							<img src="~/img/plin.webp" alt="Plin" />
+						}
+						else
+						{
+							<i class="fa-solid fa-building-columns"></i>
+						}
+
+					</div>
+
+					<div class="ultimo-pago-info">
+
+						<strong>@p.Cliente</strong>
+
+						<small>@p.FechaPago.ToString("dd/MM/yyyy")</small>
+
+					</div>
+
+					<div class="ultimo-pago-monto">
+
+						<strong>S/ @p.Monto.ToString("N2")</strong>
+
+						<span class="estado-ok">Completado</span>
+
+					</div>
+
+				</div>
+			}
+
+			<button type="button"
+					id="btnVerPagos"
+					class="ver-todos-pagos"
+					onclick="togglePagos()">
+
+				Ver todos los pagos →
+
+			</button>
+		</div>
+
+	</div>
+</div>
+<div id="modalPago" class="modal-pago">
+	<div class="modal-pago-content">
+		<div class="modal-header">
+			<h3>Detalle del método de pago</h3>
+			<button type="button" class="cerrar-modal" onclick="cerrarDetallePago()">
+				<i class="fa-solid fa-xmark"></i>
+			</button>
+		</div>
+
+		<div class="modal-body">
+			<div class="detalle-item">
+				<strong>Método usado</strong>
+				<span id="detalleMetodo"></span>
+			</div>
+
+			<div class="detalle-item">
+				<strong>Referencia / Código operación</strong>
+				<span id="detalleReferencia"></span>
+			</div>
+
+			<div class="detalle-item">
+				<strong>Monto pagado</strong>
+				<span>S/ <span id="detalleMonto"></span></span>
+			</div>
+
+			<div class="detalle-item">
+				<strong>Fecha de pago</strong>
+				<span id="detalleFecha"></span>
+			</div>
+
+			<div class="detalle-item">
+				<strong>Estado</strong>
+				<span id="detalleEstado"></span>
+			</div>
+
+			<hr />
+
+			<div class="detalle-item">
+				<strong>Cliente</strong>
+				<span id="detalleCliente"></span>
+			</div>
+
+			<div class="detalle-item">
+				<strong>DNI</strong>
+				<span id="detalleDni"></span>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+		const filas = document.querySelectorAll(".fila-tabla-pago");
+
+	const filasPorPagina = 5;
+
+	let paginaActual = 1;
+		function mostrarPagina(pagina) {
+
+		const totalPaginas = Math.ceil(filas.length / filasPorPagina);
+
+		if (pagina < 1) pagina = 1;
+
+		if (pagina > totalPaginas) pagina = totalPaginas;
+
+		paginaActual = pagina;
+
+		filas.forEach((fila, index) => {
+
+			const inicio = (paginaActual - 1) * filasPorPagina;
+
+			const fin = inicio + filasPorPagina;
+
+			if (index >= inicio && index < fin) {
+
+				fila.style.display = "table-row";
+
+			} else {
+
+				fila.style.display = "none";
+
+			}
+
+		});
+
+		const desde = filas.length == 0 ? 0 : ((paginaActual - 1) * filasPorPagina) + 1;
+
+		const hasta = Math.min(paginaActual * filasPorPagina, filas.length);
+
+		document.getElementById("textoPaginacion").innerHTML =
+			`Mostrando ${desde} a ${hasta} de ${filas.length} pagos`;
+
+		crearBotonesPaginacion(totalPaginas);
+
+	}
+		function crearBotonesPaginacion(totalPaginas) {
+
+		const contenedor = document.getElementById("botonesPaginacion");
+
+		contenedor.innerHTML = "";
+
+		const anterior = document.createElement("button");
+
+		anterior.type = "button";
+
+		anterior.innerHTML = "← Anterior";
+
+		anterior.disabled = paginaActual == 1;
+
+		anterior.onclick = () => mostrarPagina(paginaActual - 1);
+
+		contenedor.appendChild(anterior);
+
+		for (let i = 1; i <= totalPaginas; i++) {
+
+			const boton = document.createElement("button");
+
+			boton.type = "button";
+
+			boton.innerHTML = i;
+
+			if (i == paginaActual) {
+
+				boton.classList.add("activo");
+
+			}
+
+			boton.onclick = () => mostrarPagina(i);
+
+			contenedor.appendChild(boton);
+
+		}
+
+		const siguiente = document.createElement("button");
+
+		siguiente.type = "button";
+
+		siguiente.innerHTML = "Siguiente →";
+
+		siguiente.disabled = paginaActual == totalPaginas;
+
+		siguiente.onclick = () => mostrarPagina(paginaActual + 1);
+
+		contenedor.appendChild(siguiente);
+
+	}
+	function abrirDetallePago(cliente, dni, monto, metodo, referencia, fecha, estado) {
+
+		document.getElementById("detalleCliente").textContent = cliente;
+		document.getElementById("detalleDni").textContent = dni;
+		document.getElementById("detalleMonto").textContent = monto;
+		document.getElementById("detalleMetodo").textContent = metodo;
+		document.getElementById("detalleReferencia").textContent = referencia;
+		document.getElementById("detalleFecha").textContent = fecha;
+		document.getElementById("detalleEstado").textContent = estado;
+
+		document.getElementById("modalPago").style.display = "flex";
+	}
+
+	function cerrarDetallePago() {
+		document.getElementById("modalPago").style.display = "none";
+	}
+
+	function toggleExportMenu() {
+
+		const menu = document.getElementById("exportMenu");
+		const flecha = document.querySelector("#btnExportar .fa-chevron-down");
+
+		menu.classList.toggle("show");
+
+		flecha.classList.toggle("rotate");
+
+	}
+
+	window.onclick = function (e) {
+
+		if (e.target == document.getElementById("modalPago")) {
+			cerrarDetallePago();
+		}
+
+		if (!e.target.closest(".export-dropdown")) {
+
+			const menu = document.getElementById("exportMenu");
+
+			if (menu) {
+				menu.classList.remove("show");
+			}
+
+			const flecha = document.querySelector("#btnExportar .fa-chevron-down");
+
+			if (flecha) {
+				flecha.classList.remove("rotate");
+			}
+		}
+	};
+		let mostrandoTodos = false;
+
+	function togglePagos() {
+
+		mostrandoTodos = !mostrandoTodos;
+			document.querySelectorAll(".ultimo-extra").forEach(pago => {
+		pago.style.display = mostrandoTodos ? "flex" : "none";
+	});
+
+		const boton = document.getElementById("btnVerPagos");
+
+	if (mostrandoTodos) {
+
+		boton.innerHTML = 'Ver menos pagos <i class="fa-solid fa-angle-up"></i>';
+
+	} else {
+
+		boton.innerHTML = 'Ver todos los pagos <i class="fa-solid fa-angle-down"></i>';
+
+	}
+
+	}
+
+		window.addEventListener("load", () => {
+
+		document.querySelectorAll(".ultimo-extra").forEach(pago => {
+			pago.style.display = "none";
+		});
+
+		const btnVerPagos = document.getElementById("btnVerPagos");
+
+		if (btnVerPagos) {
+			btnVerPagos.innerHTML = "Ver todos los pagos ▼";
+		}
+
+		mostrarPagina(1);
+	});
+
+</script>

@@ -17,10 +17,6 @@
 
     <div class="navbar-right">
 
-        <div class="navbar-notifications">
-            <i class="far fa-bell"></i>
-            <span class="badge-count">0</span> 
-        </div>
 
         <div class="navbar-user-box">
 
@@ -312,6 +308,43 @@
 
 @section Scripts {
     <script>
+             if (localStorage.getItem("ultimoTotalInicioClientes") === null) {
+            localStorage.setItem("ultimoTotalInicioClientes", "@Model.TotalClientes");
+        }
+
+                detectarCambio(
+            "ultimoTotalInicioClientes",
+            "@Model.TotalClientes",
+            "notificacionesInicio",
+            "inicioVisto"
+        );
+
+        detectarCambio(
+            "ultimoTotalInicioCreditos",
+            "@Model.TotalCreditosAprobados",
+            "notificacionesInicio",
+            "inicioVisto"
+        );
+
+        detectarCambio(
+            "ultimoTotalInicioMora",
+            "@Model.TotalCuotasEnMora",
+            "notificacionesInicio",
+            "inicioVisto"
+        );
+                detectarCambio(
+            "ultimoTotalInicioReportes",
+            "@Model.TotalReportesGenerados",
+            "notificacionesInicio",
+            "inicioVisto"
+        );
+
+        detectarCambio(
+            "ultimoTotalInicioPagos",
+            "@Model.PagosCompletadosMes",
+            "notificacionesInicio",
+            "inicioVisto"
+        );
         const btnToggle = document.getElementById("btnToggleActividades");
         const hiddenActivities = document.querySelectorAll(".activity-hidden");
         const container = document.getElementById("contenedorActividades");
@@ -339,6 +372,42 @@
                     'Ver más historial →';
 
                 container.scrollTop = 0;
+            }
+        });
+                       window.addEventListener("load", function () {
+
+            const cantidad = parseInt(localStorage.getItem("notificacionesInicio") || "0");
+
+            const badgeSuperior = document.querySelector(".navbar-notifications .badge-count");
+
+            if (badgeSuperior) {
+                badgeSuperior.innerText = cantidad;
+
+                if (cantidad > 0) {
+                    badgeSuperior.style.display = "inline-flex";
+                } else {
+                    badgeSuperior.style.display = "none";
+                }
+            }
+
+            const campana = document.querySelector(".navbar-notifications");
+
+            if (campana) {
+                campana.addEventListener("click", function () {
+                    localStorage.setItem("notificacionesInicio", "0");
+                    localStorage.setItem("inicioVisto", "true");
+
+                    if (badgeSuperior) {
+                        badgeSuperior.innerText = "0";
+                        badgeSuperior.style.display = "none";
+                    }
+
+                    const badgeMenu = document.getElementById("badgeInicioMenu");
+                    if (badgeMenu) {
+                        badgeMenu.style.display = "none";
+                        badgeMenu.innerText = "";
+                    }
+                });
             }
         });
     </script>

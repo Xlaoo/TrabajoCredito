@@ -1,15 +1,16 @@
 using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Bibliography;
 using DocumentFormat.OpenXml.InkML;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 using System.IO;
 using System.Security.Claims;
 using trabajo.Models;
 using trabajo.Models.ViewModels;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
 
 namespace trabajo.Controllers
 {
@@ -224,31 +225,43 @@ namespace trabajo.Controllers
             int totalPagosActual = _context.PAGO_CUOTA.Count();
 
             var repClientes = _context.REPORTE_GENERADO
-                .Where(x => x.TipoReporte == "Clientes")
-                .OrderByDescending(x => x.FechaGeneracion)
-                .FirstOrDefault();
+    .Where(x => x.TipoReporte == "Clientes")
+    .OrderByDescending(x => x.Id)
+    .FirstOrDefault();
 
             var repCreditos = _context.REPORTE_GENERADO
-                .Where(x => x.TipoReporte == "Creditos")
-                .OrderByDescending(x => x.FechaGeneracion)
-                .FirstOrDefault();
+    .Where(x => x.TipoReporte == "Creditos")
+    .OrderByDescending(x => x.Id)
+    .FirstOrDefault();
 
             var repPagos = _context.REPORTE_GENERADO
-                .Where(x => x.TipoReporte == "Pagos")
-                .OrderByDescending(x => x.FechaGeneracion)
-                .FirstOrDefault();
+    .Where(x => x.TipoReporte == "Pagos")
+    .OrderByDescending(x => x.Id)
+    .FirstOrDefault();
+
+            DateTime ultimaFechaCliente = _context.Usuario
+                .Where(x => x.Rol == "Cliente")
+                .Max(x => x.FechaRegistro);
 
             ViewBag.ClientesPendiente = repClientes == null
-    || repClientes.Estado == "En Proceso"
-    || totalClientesActual > repClientes.CantidadDatos;
+                || repClientes.Estado == "En Proceso"
+                || ultimaFechaCliente > repClientes.FechaGeneracion;
+
+            DateTime ultimaFechaCredito = _context.SOLICITUD_CREDITO.Any()
+                ? _context.SOLICITUD_CREDITO.Max(x => x.FechaSolicitud)
+                : DateTime.MinValue;
+
+            DateTime ultimaFechaPago = _context.PAGO_CUOTA.Any()
+                ? _context.PAGO_CUOTA.Max(x => x.FechaPago)
+                : DateTime.MinValue;
 
             ViewBag.CreditosPendiente = repCreditos == null
                 || repCreditos.Estado == "En Proceso"
-                || totalCreditosActual > repCreditos.CantidadDatos;
+                || ultimaFechaCredito > repCreditos.FechaGeneracion;
 
             ViewBag.PagosPendiente = repPagos == null
                 || repPagos.Estado == "En Proceso"
-                || totalPagosActual > repPagos.CantidadDatos;
+                || ultimaFechaPago > repPagos.FechaGeneracion;
             return View(modelo);
         }
         private IActionResult GenerarClientesExcel()
@@ -513,20 +526,38 @@ namespace trabajo.Controllers
 
         private void RevisarReportePendiente(string tipoReporte)
         {
-            int cantidadActual = ObtenerCantidadDatosReporte(tipoReporte);
-
             var reporte = _context.REPORTE_GENERADO
                 .Where(x => x.TipoReporte == tipoReporte)
-                .OrderBy(x => x.Id)
+                .OrderByDescending(x => x.Id)
                 .FirstOrDefault();
 
             if (reporte == null) return;
 
-            if (cantidadActual > reporte.CantidadDatos)
+            DateTime ultimaFecha = DateTime.MinValue;
+
+            if (tipoReporte == "Clientes")
+            {
+                ultimaFecha = _context.Usuario
+                    .Where(x => x.Rol == "Cliente")
+                    .Max(x => x.FechaRegistro);
+            }
+            else if (tipoReporte == "Creditos")
+            {
+                ultimaFecha = _context.SOLICITUD_CREDITO.Any()
+                    ? _context.SOLICITUD_CREDITO.Max(x => x.FechaSolicitud)
+                    : DateTime.MinValue;
+            }
+            else if (tipoReporte == "Pagos")
+            {
+                ultimaFecha = _context.PAGO_CUOTA.Any()
+                    ? _context.PAGO_CUOTA.Max(x => x.FechaPago)
+                    : DateTime.MinValue;
+            }
+
+            if (ultimaFecha > reporte.FechaGeneracion)
             {
                 reporte.Estado = "En Proceso";
                 reporte.Descargado = false;
-                reporte.CantidadDatos = cantidadActual;
                 reporte.FechaSolicitud = DateTime.Now;
 
                 _context.SaveChanges();
@@ -1263,6 +1294,8 @@ namespace trabajo.Controllers
                                 table.Cell().Padding(5).Text(item.Solicitud.FechaSolicitud.ToString("dd/MM/yyyy"));
                             }
                         });
+                        
+
                     });
 
                     page.Footer().AlignCenter()
@@ -1273,6 +1306,671 @@ namespace trabajo.Controllers
             }).GeneratePdf();
 
             return File(pdf, "application/pdf", "Reporte_Administrador.pdf");
+        }
+        public IActionResult Pagos(string busqueda = "", string estadoFiltro = "Todos", string metodoFiltro = "Todos")
+        {
+            ViewData["ActivePage"] = "Pagos";
+            CargarDatosAdministrador();
+
+            var inicioMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var finMes = inicioMes.AddMonths(1);
+
+            var query =
+                from p in _context.PAGO_CUOTA
+                join c in _context.CUOTA on p.Id_Cuota equals c.Id_Cuota
+                join s in _context.SOLICITUD_CREDITO on c.SOLICITUD_CREDITO_Id_Solicitud equals s.Id_Solicitud
+                join u in _context.Usuario on s.Usuario_Id_Usuario equals u.Id
+                select new
+                {
+                    Pago = p,
+                    Cuota = c,
+                    Solicitud = s,
+                    Usuario = u
+                };
+
+            if (!string.IsNullOrWhiteSpace(busqueda))
+            {
+                query = query.Where(x =>
+                    x.Pago.CodigoOperacion.Contains(busqueda) ||
+                    x.Usuario.Nombre.Contains(busqueda) ||
+                    x.Usuario.Apellido.Contains(busqueda) ||
+                    x.Usuario.Dni.Contains(busqueda));
+            }
+
+            if (estadoFiltro != "Todos")
+                query = query.Where(x => x.Pago.Estado == estadoFiltro);
+
+            if (metodoFiltro != "Todos")
+                query = query.Where(x => x.Pago.MetodoPago == metodoFiltro);
+
+            var pagos = query
+                .OrderByDescending(x => x.Pago.FechaPago)
+                .Select(x => new PagoAdminItemViewModel
+                {
+                    IdPagoCuota = x.Pago.Id_PagoCuota,
+                    IdCuota = x.Pago.Id_Cuota,
+                    IdSolicitud = x.Solicitud.Id_Solicitud,
+                    Cliente = x.Usuario.Nombre + " " + x.Usuario.Apellido,
+                    Dni = x.Usuario.Dni,
+                    Credito = "#C" + x.Solicitud.Id_Solicitud.ToString("000"),
+                    Monto = x.Pago.MontoPagado,
+                    FechaPago = x.Pago.FechaPago,
+                    MetodoPago = x.Pago.MetodoPago,
+                    Estado = x.Pago.Estado,
+                    Referencia = x.Pago.CodigoOperacion,
+                    EntidadPago = x.Pago.EntidadPago
+                })
+                .ToList();
+
+            var pagosMes = pagos
+                .Where(x => x.FechaPago >= inicioMes && x.FechaPago < finMes)
+                .ToList();
+            var pagosCompletadosMes = pagosMes
+    .Where(x => x.Estado == "Aprobado" || x.Estado == "Completado")
+    .ToList();
+
+            var cuotasPendientesMes = _context.CUOTA
+    .Where(c =>
+        c.Estado == "Pendiente" &&
+        c.FechaLimitePago >= inicioMes &&
+        c.FechaLimitePago < finMes)
+    .ToList();
+
+            int totalPendientesMes = cuotasPendientesMes
+                .Select(x => x.SOLICITUD_CREDITO_Id_Solicitud)
+                .Distinct()
+                .Count();
+
+            decimal montoRecaudadoMes = pagosCompletadosMes.Sum(x => x.Monto);
+            var cuotasPendientes = (
+    from c in _context.CUOTA
+    join s in _context.SOLICITUD_CREDITO
+        on c.SOLICITUD_CREDITO_Id_Solicitud equals s.Id_Solicitud
+    join u in _context.Usuario
+        on s.Usuario_Id_Usuario equals u.Id
+    where c.Estado == "Pendiente"
+
+    group c by new
+    {
+        s.Id_Solicitud,
+        u.Nombre,
+        u.Apellido,
+        u.Dni
+    } into g
+
+    select new PagoAdminItemViewModel
+    {
+        IdPagoCuota = 0,
+        IdSolicitud = g.Key.Id_Solicitud,
+        Cliente = g.Key.Nombre + " " + g.Key.Apellido,
+        Dni = g.Key.Dni,
+        Credito = "#C" + g.Key.Id_Solicitud.ToString("000"),
+
+        Monto = g.Sum(x => x.MontoCuota ?? 0),
+
+        FechaPago = g.Min(x => x.FechaLimitePago),
+
+        MetodoPago = "Sin pago",
+
+        Estado = g.Min(x => x.FechaLimitePago.Date) < DateTime.Today
+    ? "Mora"
+    : "Pendiente",
+
+        Referencia = "",
+
+        EntidadPago = ""
+    }
+).ToList();
+
+            var modelo = new AdminPagosViewModel
+            {
+                Busqueda = busqueda,
+                EstadoFiltro = estadoFiltro,
+                MetodoFiltro = metodoFiltro,
+                Pagos = pagos,
+                CuotasPendientes = cuotasPendientes,
+                TotalPagosMes = pagosCompletadosMes.Count + totalPendientesMes,
+                PagosCompletadosMes = pagosCompletadosMes.Count,
+                PagosPendientesMes = totalPendientesMes,
+                MontoTotalRecaudadoMes = montoRecaudadoMes
+            };
+
+            return View(modelo);
+        }
+        public IActionResult PagosExcel(string busqueda = "", string estadoFiltro = "Todos", string metodoFiltro = "Todos")
+        {
+            var inicioMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var finMes = inicioMes.AddMonths(1);
+            var hoy = DateTime.Today;
+
+            var pagosCompletados = (
+                from p in _context.PAGO_CUOTA
+                join c in _context.CUOTA on p.Id_Cuota equals c.Id_Cuota
+                join s in _context.SOLICITUD_CREDITO on c.SOLICITUD_CREDITO_Id_Solicitud equals s.Id_Solicitud
+                join u in _context.Usuario on s.Usuario_Id_Usuario equals u.Id
+                select new PagoAdminItemViewModel
+                {
+                    IdPagoCuota = p.Id_PagoCuota,
+                    IdSolicitud = s.Id_Solicitud,
+                    Cliente = u.Nombre + " " + u.Apellido,
+                    Dni = u.Dni,
+                    Credito = "#C" + s.Id_Solicitud.ToString("000"),
+                    Monto = p.MontoPagado,
+                    FechaPago = p.FechaPago,
+                    MetodoPago = p.MetodoPago,
+                    Estado = p.Estado == "Aprobado" ? "Completado" : p.Estado,
+                    Referencia = p.CodigoOperacion ?? "---",
+                    EntidadPago = p.EntidadPago ?? ""
+                }
+            ).ToList();
+
+            var cuotasPendientes = (
+                from c in _context.CUOTA
+                join s in _context.SOLICITUD_CREDITO on c.SOLICITUD_CREDITO_Id_Solicitud equals s.Id_Solicitud
+                join u in _context.Usuario on s.Usuario_Id_Usuario equals u.Id
+                where c.Estado == "Pendiente"
+                group c by new
+                {
+                    s.Id_Solicitud,
+                    u.Nombre,
+                    u.Apellido,
+                    u.Dni
+                } into g
+                select new PagoAdminItemViewModel
+                {
+                    IdPagoCuota = 0,
+                    IdSolicitud = g.Key.Id_Solicitud,
+                    Cliente = g.Key.Nombre + " " + g.Key.Apellido,
+                    Dni = g.Key.Dni,
+                    Credito = "#C" + g.Key.Id_Solicitud.ToString("000"),
+                    Monto = g.Sum(x => x.MontoCuota ?? 0),
+                    FechaPago = g.Min(x => x.FechaLimitePago),
+                    MetodoPago = "Sin pago",
+                    Estado = g.Min(x => x.FechaLimitePago.Date) < hoy ? "Mora" : "Pendiente",
+                    Referencia = "---",
+                    EntidadPago = ""
+                }
+            ).ToList();
+
+            var reporte = new List<PagoAdminItemViewModel>();
+            reporte.AddRange(pagosCompletados);
+            reporte.AddRange(cuotasPendientes);
+
+            if (!string.IsNullOrWhiteSpace(busqueda))
+            {
+                reporte = reporte.Where(x =>
+                    x.Cliente.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
+                    x.Dni.Contains(busqueda, StringComparison.OrdinalIgnoreCase) ||
+                    x.Referencia.Contains(busqueda, StringComparison.OrdinalIgnoreCase)
+                ).ToList();
+            }
+
+            if (estadoFiltro != "Todos")
+            {
+                reporte = reporte.Where(x => x.Estado == estadoFiltro).ToList();
+            }
+
+            if (metodoFiltro != "Todos")
+            {
+                reporte = reporte.Where(x => x.MetodoPago == metodoFiltro).ToList();
+            }
+
+            var ordenado = reporte.OrderByDescending(x => x.FechaPago).ToList();
+            var resumenMes = ordenado
+    .Where(x => x.FechaPago >= inicioMes && x.FechaPago < finMes)
+    .ToList();
+
+
+            int completados = resumenMes.Count(x => x.Estado == "Completado");
+
+            int pendientes = resumenMes.Count(x =>
+    x.Estado.Contains("Pendiente"));
+
+            int mora = resumenMes.Count(x => x.Estado == "Mora");
+
+            int total = resumenMes.Count;
+
+            decimal recaudado = resumenMes
+                .Where(x => x.Estado == "Completado")
+                .Sum(x => x.Monto);
+            int yape = resumenMes.Count(x =>
+                x.MetodoPago.Contains("Yape"));
+
+            int plin = resumenMes.Count(x =>
+                x.MetodoPago.Contains("Plin"));
+
+            int transferencia = resumenMes.Count(x =>
+                x.MetodoPago.Contains("Transferencia"));
+
+            int sinPago = resumenMes.Count(x =>
+                x.MetodoPago.Contains("Sin pago"));
+
+            using var workbook = new XLWorkbook();
+            var hoja = workbook.Worksheets.Add("Reporte Pagos");
+
+            hoja.Cell("A1").Value = "CREDIPLUS - REPORTE DE PAGOS";
+            hoja.Range("A1:I1").Merge();
+            hoja.Range("A1:I1").Style.Font.Bold = true;
+            hoja.Range("A1:I1").Style.Font.FontSize = 18;
+            hoja.Range("A1:I1").Style.Font.FontColor = XLColor.White;
+            hoja.Range("A1:I1").Style.Fill.BackgroundColor = XLColor.FromHtml("#4c1d95");
+            hoja.Range("A1:I1").Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            hoja.Cell("A3").Value = "Generado:";
+            hoja.Cell("B3").Value = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+            hoja.Cell("A4").Value = "Reporte:";
+            hoja.Cell("B4").Value = $"Detalle general | Resumen del mes: {DateTime.Now:MMMM yyyy}";
+            hoja.Cell("A5").Value = "Filtros:";
+            hoja.Cell("B5").Value = $"Estado: {estadoFiltro} | Método: {metodoFiltro}";
+
+            hoja.Cell("A7").Value = "Total pagos";
+            hoja.Cell("C7").Value = "Completados";
+            hoja.Cell("E7").Value = "Pendientes";
+            hoja.Cell("G7").Value = "Mora";
+            hoja.Cell("I7").Value = "Monto recaudado";
+
+            hoja.Cell("A8").Value = total;
+            hoja.Cell("C8").Value = completados;
+            hoja.Cell("E8").Value = pendientes;
+            hoja.Cell("G8").Value = mora;
+            hoja.Cell("I8").Value = recaudado;
+            hoja.Cell("I8").Style.NumberFormat.Format = "\"S/\" #,##0.00";
+
+            hoja.Range("A7:I8").Style.Font.Bold = true;
+            hoja.Range("A7:I8").Style.Fill.BackgroundColor = XLColor.FromHtml("#ede9fe");
+            hoja.Range("A7:I8").Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            hoja.Range("A7:I8").Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            hoja.Cell("A11").Value = "ID";
+            hoja.Cell("B11").Value = "Cliente";
+            hoja.Cell("C11").Value = "DNI";
+            hoja.Cell("D11").Value = "Crédito";
+            hoja.Cell("E11").Value = "Monto";
+            hoja.Cell("F11").Value = "Fecha";
+            hoja.Cell("G11").Value = "Método";
+            hoja.Cell("H11").Value = "Estado";
+            hoja.Cell("I11").Value = "Referencia";
+
+            hoja.Range("A11:I11").Style.Font.Bold = true;
+            hoja.Range("A11:I11").Style.Font.FontColor = XLColor.White;
+            hoja.Range("A11:I11").Style.Fill.BackgroundColor = XLColor.FromHtml("#6d28d9");
+
+            int fila = 12;
+
+            foreach (var item in ordenado)
+            {
+                hoja.Cell(fila, 1).Value = item.IdPagoCuota == 0 ? "#P---" : "#P" + item.IdPagoCuota.ToString("000");
+                hoja.Cell(fila, 2).Value = item.Cliente;
+                hoja.Cell(fila, 3).Value = item.Dni;
+                hoja.Cell(fila, 4).Value = item.Credito;
+                hoja.Cell(fila, 5).Value = item.Monto;
+                hoja.Cell(fila, 6).Value = item.FechaPago.ToString("dd/MM/yyyy");
+                hoja.Cell(fila, 7).Value = item.MetodoPago;
+                hoja.Cell(fila, 8).Value = item.Estado;
+                hoja.Cell(fila, 9).Value = item.Referencia;
+
+                if (item.Estado == "Completado")
+                    hoja.Cell(fila, 8).Style.Fill.BackgroundColor = XLColor.FromHtml("#dcfce7");
+
+                if (item.Estado == "Pendiente")
+                    hoja.Cell(fila, 8).Style.Fill.BackgroundColor = XLColor.FromHtml("#fef3c7");
+
+                if (item.Estado == "Mora")
+                    hoja.Cell(fila, 8).Style.Fill.BackgroundColor = XLColor.FromHtml("#fee2e2");
+
+                fila++;
+            }
+
+            hoja.Column(5).Style.NumberFormat.Format = "\"S/\" #,##0.00";
+
+
+            int resumenFila = fila + 2;
+            // Las cantidades NO son dinero
+            hoja.Cell("E8").Style.NumberFormat.Format = "0";
+
+            hoja.Cell(resumenFila + 1, 5).Style.NumberFormat.Format = "0"; // Yape
+            hoja.Cell(resumenFila + 2, 5).Style.NumberFormat.Format = "0"; // Plin
+            hoja.Cell(resumenFila + 3, 5).Style.NumberFormat.Format = "0"; // Transferencia
+            hoja.Cell(resumenFila + 4, 5).Style.NumberFormat.Format = "0"; // Sin pago
+
+            hoja.Cell(resumenFila, 1).Value = "RESUMEN POR ESTADO";
+            hoja.Cell(resumenFila, 4).Value = "MÉTODOS DE PAGO";
+            hoja.Range(resumenFila, 1, resumenFila, 2).Merge();
+            hoja.Range(resumenFila, 4, resumenFila, 5).Merge();
+
+            hoja.Range(resumenFila, 1, resumenFila, 2).Style.Font.Bold = true;
+            hoja.Range(resumenFila, 4, resumenFila, 5).Style.Font.Bold = true;
+            hoja.Range(resumenFila, 1, resumenFila, 5).Style.Fill.BackgroundColor = XLColor.FromHtml("#ede9fe");
+
+            hoja.Cell(resumenFila + 1, 1).Value = "Completados";
+            hoja.Cell(resumenFila + 1, 2).Value = completados;
+
+            hoja.Cell(resumenFila + 2, 1).Value = "Pendientes";
+            hoja.Cell(resumenFila + 2, 2).Value = pendientes;
+
+            hoja.Cell(resumenFila + 3, 1).Value = "Mora";
+            hoja.Cell(resumenFila + 3, 2).Value = mora;
+
+            hoja.Cell(resumenFila + 4, 1).Value = "Total";
+            hoja.Cell(resumenFila + 4, 2).Value = total;
+
+            hoja.Cell(resumenFila + 1, 4).Value = "Yape";
+            hoja.Cell(resumenFila + 1, 5).Value = yape;
+            hoja.Cell(resumenFila + 1, 4).Value = "Yape";
+            hoja.Cell(resumenFila + 1, 5).Value = yape;
+
+            hoja.Cell(resumenFila + 2, 4).Value = "Plin";
+            hoja.Cell(resumenFila + 2, 5).Value = plin;
+
+            hoja.Cell(resumenFila + 3, 4).Value = "Transferencia";
+            hoja.Cell(resumenFila + 3, 5).Value = transferencia;
+
+            hoja.Cell(resumenFila + 4, 4).Value = "Sin pago";
+            hoja.Cell(resumenFila + 4, 5).Value = sinPago;
+
+            hoja.Cell(resumenFila + 2, 4).Value = "Plin";
+            hoja.Cell(resumenFila + 2, 5).Value = plin;
+
+            hoja.Cell(resumenFila + 3, 4).Value = "Transferencia";
+            hoja.Cell(resumenFila + 3, 5).Value = transferencia;
+
+            hoja.Cell(resumenFila + 4, 4).Value = "Sin pago";
+            hoja.Cell(resumenFila + 4, 5).Value = sinPago;
+
+            var rango = hoja.RangeUsed();
+
+            if (rango != null)
+            {
+                rango.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                rango.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+                rango.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            }
+
+            hoja.Columns().AdjustToContents();
+            hoja.Rows().AdjustToContents();
+            hoja.SheetView.FreezeRows(11);
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Reporte_Pagos_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"
+            );
+        }
+
+        public IActionResult PagosPdf(string busqueda = "", string estadoFiltro = "Todos", string metodoFiltro = "Todos")
+        {
+            QuestPDF.Settings.License = LicenseType.Community;
+
+            var inicioMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var finMes = inicioMes.AddMonths(1);
+
+            var datos = (
+                from p in _context.PAGO_CUOTA
+                join c in _context.CUOTA on p.Id_Cuota equals c.Id_Cuota
+                join s in _context.SOLICITUD_CREDITO on c.SOLICITUD_CREDITO_Id_Solicitud equals s.Id_Solicitud
+                join u in _context.Usuario on s.Usuario_Id_Usuario equals u.Id
+                select new PagoAdminItemViewModel
+                {
+                    IdPagoCuota = p.Id_PagoCuota,
+                    IdCuota = p.Id_Cuota,
+                    IdSolicitud = s.Id_Solicitud,
+                    Cliente = u.Nombre + " " + u.Apellido,
+                    Dni = u.Dni,
+                    Credito = "#C" + s.Id_Solicitud.ToString("000"),
+                    Monto = p.MontoPagado,
+                    FechaPago = p.FechaPago,
+                    MetodoPago = p.MetodoPago,
+                    Estado = p.Estado,
+                    Referencia = p.CodigoOperacion ?? "---",
+                    EntidadPago = p.EntidadPago ?? ""
+                }).ToList();
+
+            var pagosMes = datos.Where(x => x.FechaPago >= inicioMes && x.FechaPago < finMes).ToList();
+            var completadosMes = pagosMes.Where(x => x.Estado == "Aprobado" || x.Estado == "Completado").ToList();
+
+            var pendientes = (
+                from c in _context.CUOTA
+                join s in _context.SOLICITUD_CREDITO on c.SOLICITUD_CREDITO_Id_Solicitud equals s.Id_Solicitud
+                join u in _context.Usuario on s.Usuario_Id_Usuario equals u.Id
+                where c.Estado == "Pendiente"
+                      && c.FechaLimitePago >= inicioMes
+                      && c.FechaLimitePago < finMes
+                group c by new { s.Id_Solicitud, u.Nombre, u.Apellido, u.Dni } into g
+                select new PagoAdminItemViewModel
+                {
+                    IdPagoCuota = 0,
+                    IdSolicitud = g.Key.Id_Solicitud,
+                    Cliente = g.Key.Nombre + " " + g.Key.Apellido,
+                    Dni = g.Key.Dni,
+                    Credito = "#C" + g.Key.Id_Solicitud.ToString("000"),
+                    Monto = g.Sum(x => x.MontoCuota ?? 0),
+                    FechaPago = g.Min(x => x.FechaLimitePago),
+                    MetodoPago = "Sin pago",
+                    Estado = g.Min(x => x.FechaLimitePago) < DateTime.Today ? "Mora Pendiente" : "Pendiente",
+                    Referencia = "---"
+                }).ToList();
+
+            var reporte = new List<PagoAdminItemViewModel>();
+            reporte.AddRange(completadosMes);
+            reporte.AddRange(pendientes);
+
+            decimal montoRecaudado = completadosMes.Sum(x => x.Monto);
+
+            var pdf = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4.Landscape());
+                    page.Margin(25);
+
+                    page.Header().Text("CrediPlus - Reporte de Pagos")
+                        .FontSize(22).Bold().FontColor(Colors.Purple.Darken3);
+
+                    page.Content().Column(col =>
+                    {
+                        col.Item().Text($"Generado: {DateTime.Now:dd/MM/yyyy HH:mm}");
+                        col.Item().Text($"Reporte del mes: {DateTime.Now:MMMM yyyy}");
+
+                        col.Item().PaddingVertical(12).Row(row =>
+                        {
+                            row.RelativeItem().Border(1).Padding(8).Text($"Total pagos este mes\n{reporte.Count}").Bold();
+                            row.RelativeItem().Border(1).Padding(8).Text($"Completados\n{completadosMes.Count}").Bold();
+                            row.RelativeItem().Border(1).Padding(8).Text($"Pendientes / Mora\n{pendientes.Count}").Bold();
+                            row.RelativeItem().Border(1).Padding(8).Text($"Monto recaudado\nS/ {montoRecaudado:N2}").Bold();
+                        });
+
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(c =>
+                            {
+                                c.RelativeColumn(1);
+                                c.RelativeColumn(2);
+                                c.RelativeColumn(1);
+                                c.RelativeColumn(1);
+                                c.RelativeColumn(2);
+                                c.RelativeColumn(2);
+                                c.RelativeColumn(1);
+                                c.RelativeColumn(2);
+                            });
+
+                            string[] headers = { "ID", "Cliente", "Crédito", "Monto", "Fecha", "Método", "Estado", "Referencia" };
+
+                            table.Header(h =>
+                            {
+                                foreach (var x in headers)
+                                {
+                                    h.Cell().Background(Colors.Purple.Darken3).Padding(5)
+                                        .Text(x).FontColor(Colors.White).Bold().FontSize(8);
+                                }
+                            });
+
+                            foreach (var p in reporte.OrderByDescending(x => x.FechaPago))
+                            {
+                                table.Cell().Padding(5).Text(p.IdPagoCuota == 0 ? "#P---" : $"#P{p.IdPagoCuota:000}").FontSize(8);
+                                table.Cell().Padding(5).Text($"{p.Cliente}\nDNI: {p.Dni}").FontSize(8);
+                                table.Cell().Padding(5).Text(p.Credito).FontSize(8);
+                                table.Cell().Padding(5).Text($"S/ {p.Monto:N2}").FontSize(8);
+                                table.Cell().Padding(5).Text(p.FechaPago.ToString("dd/MM/yyyy")).FontSize(8);
+                                table.Cell().Padding(5).Text(p.MetodoPago).FontSize(8);
+                                table.Cell().Padding(5).Text(p.Estado == "Aprobado" ? "Completado" : p.Estado).FontSize(8);
+                                table.Cell().Padding(5).Text(p.Referencia).FontSize(8);
+                            }
+                        });
+                        col.Item().PaddingTop(18).Row(row =>
+                        {
+                            row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Column(c =>
+                            {
+                                c.Item().Text("Resumen por Estado").Bold().FontSize(13).FontColor(Colors.Purple.Darken3);
+                                c.Item().Text($"Completados: {completadosMes.Count}");
+                                c.Item().Text($"Pendientes / Mora: {pendientes.Count}");
+                                c.Item().Text($"Total: {reporte.Count}");
+                            });
+
+                            row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Column(c =>
+                            {
+                                c.Item().Text("Métodos de Pago").Bold().FontSize(13).FontColor(Colors.Purple.Darken3);
+                                c.Item().Text($"Yape: {reporte.Count(x => x.MetodoPago == "Yape")}");
+                                c.Item().Text($"Plin: {reporte.Count(x => x.MetodoPago == "Plin")}");
+                                c.Item().Text($"Transferencia: {reporte.Count(x => x.MetodoPago == "Transferencia bancaria")}");
+                                c.Item().Text($"Sin pago: {reporte.Count(x => x.MetodoPago == "Sin pago")}");
+                            });
+                        });
+
+                    });
+
+                    page.Footer().AlignCenter().Text("CrediPlus - Reporte generado automáticamente").FontSize(9);
+                });
+            }).GeneratePdf();
+
+            return File(pdf, "application/pdf", "Reporte_Pagos.pdf");
+        }
+        public IActionResult CronogramaAdminPdf(int idSolicitud)
+        {
+            QuestPDF.Settings.License = LicenseType.Community;
+
+            var solicitud = _context.SOLICITUD_CREDITO
+                .Include(x => x.USUARIO)
+                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+
+            if (solicitud == null)
+                return RedirectToAction("Pagos");
+
+            var cuotas = _context.CUOTA
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
+                .OrderBy(x => x.NumeroCuota)
+                .ToList();
+
+            var pagos = _context.PAGO_CUOTA.ToList();
+
+            // Aquí construiremos el PDF bonito en el siguiente paso.
+
+            var pdf = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(30);
+
+                    page.Header().Column(col =>
+                    {
+                        col.Item().Text("CrediPlus - Cronograma de Pago")
+                            .FontSize(22)
+                            .Bold()
+                            .FontColor(Colors.Purple.Darken3);
+
+                        col.Item().Text($"Generado: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                            .FontSize(9)
+                            .FontColor(Colors.Grey.Darken1);
+                    });
+
+                    page.Content().PaddingVertical(15).Column(col =>
+                    {
+                        col.Item().Border(1).BorderColor(Colors.Purple.Lighten3).Padding(12).Column(info =>
+                        {
+                            info.Item().Text("Información del Cliente").FontSize(14).Bold();
+
+                            info.Item().Text($"Cliente: {solicitud.USUARIO?.Nombre} {solicitud.USUARIO?.Apellido}");
+                            info.Item().Text($"DNI: {solicitud.USUARIO?.Dni}");
+                            info.Item().Text($"Crédito: #C{solicitud.Id_Solicitud:000}");
+                            info.Item().Text($"Monto solicitado: S/ {solicitud.MontoSolicitado:N2}");
+                            info.Item().Text($"Plazo: {solicitud.PlazoMeses} meses");
+                        });
+
+                        col.Item().PaddingTop(15).Text("Detalle de Cuotas")
+                            .FontSize(15)
+                            .Bold()
+                            .FontColor(Colors.Purple.Darken3);
+
+                        col.Item().Table(table =>
+                        {
+                            table.ColumnsDefinition(columns =>
+                            {
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                                columns.RelativeColumn();
+                            });
+
+                            table.Header(header =>
+                            {
+                                header.Cell().Background(Colors.Purple.Darken3).Padding(6).Text("N°").FontColor(Colors.White).Bold();
+                                header.Cell().Background(Colors.Purple.Darken3).Padding(6).Text("Monto").FontColor(Colors.White).Bold();
+                                header.Cell().Background(Colors.Purple.Darken3).Padding(6).Text("Vencimiento").FontColor(Colors.White).Bold();
+                                header.Cell().Background(Colors.Purple.Darken3).Padding(6).Text("Estado").FontColor(Colors.White).Bold();
+                                header.Cell().Background(Colors.Purple.Darken3).Padding(6).Text("Pago").FontColor(Colors.White).Bold();
+                            });
+
+                            foreach (var cuota in cuotas)
+                            {
+                                var pago = pagos.FirstOrDefault(x => x.Id_Cuota == cuota.Id_Cuota && x.Estado == "Aprobado");
+
+                                bool completado = pago != null;
+                                bool mora = !completado && cuota.FechaLimitePago.Date < DateTime.Today;
+
+                                string estado = completado ? "Completado" : mora ? "Mora" : "Pendiente";
+                                string fechaPago = completado ? pago.FechaPago.ToString("dd/MM/yyyy") : "---";
+
+                                string color = completado
+                                    ? Colors.Green.Lighten4
+                                    : mora
+                                        ? Colors.Red.Lighten4
+                                        : Colors.Yellow.Lighten4;
+
+                                table.Cell().Background(color).Padding(6).Text(cuota.NumeroCuota.ToString());
+                                table.Cell().Background(color).Padding(6).Text($"S/ {(cuota.MontoCuota ?? 0):N2}");
+                                table.Cell().Background(color).Padding(6).Text(cuota.FechaLimitePago.ToString("dd/MM/yyyy"));
+                                table.Cell().Background(color).Padding(6).Text(estado).Bold();
+                                table.Cell().Background(color).Padding(6).Text(fechaPago);
+                            }
+                        });
+                    });
+
+                    page.Footer().AlignCenter()
+                        .Text("CrediPlus - Cronograma generado automáticamente")
+                        .FontSize(9)
+                        .FontColor(Colors.Grey.Darken1);
+                });
+            }).GeneratePdf();
+
+            Response.Headers["Content-Disposition"] = "inline; filename=Cronograma_CrediPlus.pdf";
+            return File(pdf, "application/pdf");
+        }
+
+        public IActionResult CronogramaAdmin(int idSolicitud)
+        {
+            var solicitud = _context.SOLICITUD_CREDITO
+                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+
+            if (solicitud == null)
+            {
+                return RedirectToAction("Pagos");
+            }
+
+            return View(solicitud);
         }
 
     }

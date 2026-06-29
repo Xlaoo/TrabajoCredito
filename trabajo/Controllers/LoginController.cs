@@ -128,6 +128,10 @@ namespace trabajo.Controllers
 
             usuario.clave = utilidades.EncriptarClave(usuario.clave);
             usuario.Rol = "Cliente";
+            usuario.FechaRegistro = DateTime.Now;
+            usuario.EstadoActivo = false;
+            usuario.UltimaConexion = DateTime.Now;
+
             Usuario usuarioCreado = await _UsuarioService.SaveUsuario(usuario);
 
             if (usuarioCreado.Id > 0)

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="~/css/panel-roles.css" />
     <link rel="stylesheet" href="~/css/panel-administrador.css" />
     <link rel="stylesheet" href="~/css/panel-administrador-reportes.css" />
+    <link rel="stylesheet" href="~/css/panel-administrador-pagos.css" />
     @RenderSection("Styles", required: false)
 </head>
 <body>
@@ -29,7 +30,8 @@
 
                 <a href="@Url.Action("ProgramaAdministrador", "Administrador")"
                    class="@(ViewData["ActivePage"]?.ToString() == "Inicio" ? "active" : "")">
-                    <i class="fas fa-home"></i> Inicio
+                    <i class="fas fa-home"></i>
+                    Inicio
                 </a>
                 <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Clientes" ? "active" : "")">
                     <i class="fas fa-users"></i> Clientes
@@ -37,16 +39,20 @@
                 <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Creditos" ? "active" : "")">
                     <i class="fas fa-file-alt"></i> Créditos
                 </a>
-                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Pagos" ? "active" : "")">
-                    <i class="fas fa-dollar-sign"></i> Pagos
+                <a href="@Url.Action("Pagos", "Administrador")"
+                   class="@(ViewData["ActivePage"]?.ToString() == "Pagos" ? "active" : "")">
+                    <i class="fas fa-dollar-sign"></i>
+                    Pagos
                 </a>
                 <a href="@Url.Action("reportesAdministrador", "Administrador")"
                    class="@(ViewData["ActivePage"]?.ToString() == "Reportes" ? "active" : "")">
-                    <i class="fas fa-chart-bar"></i> Reportes
+                    <i class="fas fa-chart-bar"></i>
+                    Reportes
                 </a>
                 <a href="@Url.Action("Exportaciones", "Administrador")"
                    class="@(ViewData["ActivePage"]?.ToString() == "Exportaciones" ? "active" : "")">
-                    <i class="fas fa-chart-line"></i> Exportaciones
+                    <i class="fas fa-chart-line"></i>
+                    Exportaciones
                 </a>
                 <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Analistas" ? "active" : "")">
                     <i class="fa-solid fa-users-gear"></i>Analistas
@@ -57,7 +63,9 @@
                 <a href="@Url.Action("reportesAdministrador", "Administrador")">
                     <i class="fas fa-file-export"></i> Generar Reportes
                 </a>
-                <a href="#"><i class="fas fa-download"></i> Exportar Datos</a>
+                <a href="@Url.Action("Exportaciones", "Administrador")">
+                    <i class="fas fa-download"></i> Exportar Datos
+                </a>
 
                 <div class="section-title">Mi Cuenta</div>
 
@@ -82,6 +90,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+             
+
+       
+            
     @RenderSection("Scripts", required: false)
 </body>
 </html>

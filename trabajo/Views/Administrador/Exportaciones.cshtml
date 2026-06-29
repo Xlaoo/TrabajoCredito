@@ -24,10 +24,6 @@
 			<p>Genera y descarga reportes en diferentes formatos</p>
 		</div>
 		<div class="admin-user">
-			<div class="notification">
-				<i class="fa-regular fa-bell"></i>
-				<span class="badge">0</span>
-			</div>
 			<div class="avatar">
 				<i class="fa-solid fa-user"></i>
 			</div>
@@ -857,5 +853,21 @@
 		});
 
 		mostrarPagina(1);
+	});
+		window.addEventListener("load", function () {
+				detectarCambio(
+		"ultimoTotalExportacionesSistema",
+		"@Model.Count()",
+		"notificacionesExportaciones",
+		"exportacionesVistos"
+	);
+		localStorage.setItem("notificacionesExportaciones", "0");
+		localStorage.setItem("exportacionesVistos", "true");
+
+		const badge = document.getElementById("badgeExportacionesMenu");
+		if (badge) {
+			badge.style.display = "none";
+			badge.innerText = "";
+		}
 	});
 </script>

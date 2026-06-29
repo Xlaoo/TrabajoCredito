@@ -107,7 +107,7 @@ body {
     .menu a {
         display: flex;
         align-items: center;
-        gap: 11px;
+        gap: 10px;
         color: rgba(255,255,255,.75);
         text-decoration: none;
         padding: 10px 14px;
@@ -116,6 +116,7 @@ body {
         font-weight: 500;
         transition: background .2s, color .2s;
         position: relative;
+        justify-content: flex-start;
     }
 
         .menu a i {
@@ -358,3 +359,29 @@ body {
         padding: 20px 16px;
     }
 }
+.badge-menu-alerta {
+    display: none;
+    margin-left: auto;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 50px;
+    font-size: 11px;
+    font-weight: 700;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.15);
+}
+.alerta-notif-link {
+    margin-top: 10px;
+    background: rgba(139, 92, 246, .35) !important;
+    color: #fff !important;
+    font-weight: 800 !important;
+    border-radius: 14px !important;
+}
+
+    .alerta-notif-link i {
+        color: #fff;
+    }

@@ -15,10 +15,6 @@
 
     <div class="navbar-right">
 
-        <div class="navbar-notifications">
-            <i class="far fa-bell"></i>
-            <span class="badge-count">0</span>
-        </div>
 
         <div class="navbar-user-box">
 
@@ -276,15 +272,15 @@
             <strong>Analista Principal</strong>
         </div>
         <div class="rpt-analista-stats">
-            <div class="rpt-analista-stat green">
+            <div class="rpt-analista-stat analista-aprobado">
                 <span>Aprobados</span>
                 <strong>@Model.TotalAprobados</strong>
             </div>
-            <div class="rpt-analista-stat red">
+            <div class="rpt-analista-stat analista-rechazado">
                 <span>Rechazados</span>
                 <strong>@Model.TotalRechazados</strong>
             </div>
-            <div class="rpt-analista-stat purple">
+            <div class="rpt-analista-stat analista-tasa">
                 <span>Tasa de Aprobación</span>
                 <strong>@Model.PorcentajeAprobados%</strong>
             </div>

@@ -316,56 +316,86 @@
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    margin: 16px 0;
+    margin: 10px 0 18px;
 }
 
 .rpt-analista-avatar {
-    width: 70px;
-    height: 70px;
+    width: 74px;
+    height: 74px;
     border-radius: 50%;
     background: linear-gradient(135deg, #10b981, #34d399);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 30px;
+    font-size: 32px;
+    box-shadow: 0 12px 25px rgba(16, 185, 129, .25);
+}
+
+.rpt-analista-box strong {
+    font-size: 17px;
+    font-weight: 900;
+    color: #1a0035;
 }
 
 .rpt-analista-stats {
-    display: flex;
-    justify-content: space-around;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
     width: 100%;
-    margin-top: 8px;
+    margin-top: 12px;
 }
 
 .rpt-analista-stat {
+    min-height: 88px;
+    border-radius: 16px;
+    padding: 14px 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+    border: 1px solid #f1e8ff;
+    background: #fff;
 }
 
     .rpt-analista-stat span {
         font-size: 12px;
-        color: #9ca3af;
+        font-weight: 700;
     }
 
     .rpt-analista-stat strong {
-        font-size: 22px;
-        font-weight: 800;
+        font-size: 24px;
+        font-weight: 900;
     }
 
-    .rpt-analista-stat.green strong {
-        color: #10b981;
+    .rpt-analista-stat.green {
+        background: #ecfdf5;
     }
 
-    .rpt-analista-stat.red strong {
-        color: #ef4444;
+        .rpt-analista-stat.green span,
+        .rpt-analista-stat.green strong {
+            color: #10b981;
+        }
+
+    .rpt-analista-stat.red {
+        background: #fef2f2;
     }
 
-    .rpt-analista-stat.purple strong {
-        color: #6d28d9;
+        .rpt-analista-stat.red span,
+        .rpt-analista-stat.red strong {
+            color: #ef4444;
+        }
+
+    .rpt-analista-stat.purple {
+        background: #f5f3ff;
     }
+
+        .rpt-analista-stat.purple span,
+        .rpt-analista-stat.purple strong {
+            color: #6d28d9;
+        }
 
 /* ── Indicadores clave ── */
 .rpt-indicadores {
@@ -466,3 +496,62 @@
 .legend.violet {
     background: #8b5cf6;
 }
+/* CORRECCIÓN FINAL - Rendimiento del Analista */
+.rpt-analista-stats {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+    width: 100% !important;
+    margin-top: 18px !important;
+}
+
+.rpt-analista-stat {
+    width: 100% !important;
+    min-height: 82px !important;
+    border-radius: 16px !important;
+    padding: 14px !important;
+    background: #ffffff !important;
+    border: 1px solid #eee7ff !important;
+    box-shadow: 0 6px 16px rgba(124, 58, 237, .08) !important;
+}
+
+    .rpt-analista-stat.green,
+    .rpt-analista-stat.red,
+    .rpt-analista-stat.purple {
+        background: #ffffff !important;
+    }
+
+        .rpt-analista-stat.green span,
+        .rpt-analista-stat.green strong {
+            color: #10b981 !important;
+        }
+
+        .rpt-analista-stat.red span,
+        .rpt-analista-stat.red strong {
+            color: #ef4444 !important;
+        }
+
+        .rpt-analista-stat.purple span,
+        .rpt-analista-stat.purple strong {
+            color: #6d28d9 !important;
+        }
+.rpt-analista-stat {
+    background: #ffffff !important;
+    border: 1px solid #eee7ff !important;
+    box-shadow: 0 6px 16px rgba(124, 58, 237, .08) !important;
+}
+
+    .rpt-analista-stat.analista-aprobado span,
+    .rpt-analista-stat.analista-aprobado strong {
+        color: #10b981 !important;
+    }
+
+    .rpt-analista-stat.analista-rechazado span,
+    .rpt-analista-stat.analista-rechazado strong {
+        color: #ef4444 !important;
+    }
+
+    .rpt-analista-stat.analista-tasa span,
+    .rpt-analista-stat.analista-tasa strong {
+        color: #6d28d9 !important;
+    }
