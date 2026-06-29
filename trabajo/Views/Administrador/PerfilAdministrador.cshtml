@@ -7,6 +7,8 @@
 }
 @section Styles {
     <style>
+
+        /*CSS Grid*/
         /* El contenedor padre que organiza el tablero general */
         .perfil-base-grid {
             display: grid;
@@ -22,7 +24,7 @@
             background: #ffffff;
             border-radius: 14px;
             padding: 24px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02); /* Sombra muy sutil */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02); /* Sombra sutil */
             width: 100%;
         }
 
@@ -291,7 +293,7 @@
             padding-right: 44px;
         }
 
-        //Contenedor 2
+        /*Contenedor 2*/
         /* Configuración Flexbox del contenedor general izquierdo */
         .info-personal-flex {
             display: flex;
@@ -421,9 +423,9 @@
 <!-- ==========================================================================
      EL TABLERO CENTRAL (Contenedor Grid que agrupa los bloques 2, 3, 4 y 5)
      ========================================================================== -->
-<div class="perfil-base-grid" style="margin-top: 24px;">
 
-    <!-- CONTENEDOR 2: Información Personal (Fila 1, Izquierda) -->
+<div class="perfil-base-grid" style="margin-top: 24px;">
+    <!-- CONTENEDOR 1: Información Personal (Fila 1, Izquierda) -->
     <div class="perfil-tarjeta info-personal-flex">
 
         <!-- Sección del Avatar Centrado -->
@@ -488,7 +490,7 @@
         </div>
 
     </div>
-    <!-- CONTENEDOR 3: Editar Información (Fila 1, Derecha) -->
+    <!-- CONTENEDOR 2: Editar Información (Fila 1, Derecha) -->
     <div class="perfil-tarjeta">
         <h3 style="font-size: 18px; font-weight: 800; color: #1a0035; margin-bottom: 24px;">Editar Información</h3>
 
@@ -597,7 +599,7 @@
 
         </form>
     </div>
-    <!-- CONTENEDOR 4: Preferencias de Notificaciones (Fila 2, Izquierda) -->
+    <!-- CONTENEDOR 3: Preferencias de Notificaciones (Fila 2, Izquierda) -->
     <div class="perfil-tarjeta">
         <h3 style="font-size: 18px; font-weight: 800; color: #1a0035; margin-bottom: 6px;">Preferencias de Notificaciones</h3>
         <p style="font-size: 13px; color: #6b7280; margin-bottom: 24px;">Elige cómo y cuándo deseas recibir notificaciones del sistema.</p>
@@ -649,8 +651,7 @@
             </label>
         </div>
     </div>
-
-    <!-- CONTENEDOR 5: Actividad de la Cuenta (Fila 2, Derecha) -->
+    <!-- CONTENEDOR 4: Actividad de la Cuenta (Fila 2, Derecha) -->
     <div class="perfil-tarjeta">
         <h3 style="font-size: 18px; font-weight: 800; color: #1a0035; margin-bottom: 6px;">Actividad de la Cuenta</h3>
         <p style="font-size: 13px; color: #6b7280; margin-bottom: 24px;">Resumen de la actividad reciente en tu cuenta.</p>
@@ -701,8 +702,7 @@
             </button>
         </div>
     </div>
-
-    <!-- CONTENEDOR ROJO 6: Seguridad de la Cuenta (Fila 3, Ancho Completo) -->
+    <!-- CONTENEDOR 5: Seguridad de la Cuenta (Fila 3, Ancho Completo) -->
     <div class="perfil-tarjeta tarjeta-ancho-completo" style="display:flex; align-items:center; gap:16px; padding: 20px 28px;">
         <div style="width:40px; height:40px; border-radius:10px; background:#fef9c3; color:#ca8a04; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">
             <i class="fas fa-shield-alt"></i>
@@ -713,7 +713,6 @@
         </div>
     </div>
 </div>
-
 
 @section Scripts {
     <script>
