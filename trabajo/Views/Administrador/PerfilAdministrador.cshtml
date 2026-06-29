@@ -1,0 +1,758 @@
+@model trabajo.Models.Usuario
+
+@{
+    Layout = "~/Views/Shared/_LayoutAdministrador.cshtml";
+    ViewData["Title"] = "Perfil del Administrador";
+    ViewData["ActivePage"] = "Perfil";
+}
+@section Styles {
+    <style>
+        /* El contenedor padre que organiza el tablero general */
+        .perfil-base-grid {
+            display: grid;
+            /* Define la proporción de las columnas: la izquierda es más angosta (1 parte) y la derecha más ancha (2 partes) */
+            grid-template-columns: 1fr 2fr;
+            /* Separación uniforme de 24px entre todas las cajas grises */
+            gap: 24px;
+            width: 100%;
+        }
+
+        /* Estilo base idéntico para los bloques 1, 2, 3 y 4 */
+        .perfil-tarjeta {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02); /* Sombra muy sutil */
+            width: 100%;
+        }
+
+        .columna-sticky {
+            position: sticky;
+            top: 20px;
+        }
+
+        /* Modificador clave para el Bloque 5 (Seguridad de la Cuenta) */
+        .tarjeta-ancho-completo {
+            /* Le ordena a esta tarjeta expandirse y cubrir las 2 columnas del Grid */
+            grid-column: span 2;
+            background: #fffdf5; /* Fondo ligeramente cálido/amarillento como en la imagen */
+            border: 1px solid #fef08a; /* Borde suave */
+        }
+        /* Ajuste de paddings para que el texto de los inputs no pise los botones de utilidades */
+        .input-util-wrap .form-perfil-input {
+            padding-right: 76px;
+        }
+
+        .input-util-wrap:not(:has(.btn-eye)) .form-perfil-input {
+            padding-right: 44px;
+        }
+
+        /* Forzar visualización correcta en el DOM */
+        .btn-clear, .btn-eye {
+            display: none; /* El script utilidades-ui.js los activa dinámicamente */
+            align-items: center;
+            justify-content: center;
+        }
+        /* Estructura interna de los campos */
+        .form-perfil-fila-doble {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            width: 100%;
+        }
+
+        .form-perfil-grupo {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+            .form-perfil-grupo label {
+                font-size: 13px;
+                font-weight: 700;
+                color: #4b5563;
+            }
+
+        /* El diseño limpio de la caja de texto para igualar la imagen */
+        .form-perfil-input {
+            height: 44px;
+            width: 100%;
+            background: #f8f9fa; /* Fondo gris claro suave idéntico a la imagen */
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding-left: 14px;
+            font-size: 14px;
+            color: #1f2937;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+            .form-perfil-input:focus {
+                background: #ffffff;
+                border-color: #7c3aed;
+                box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.08);
+            }
+
+        /* Botón Morado de Envío */
+        .btn-guardar-perfil {
+            background: #7c3aed;
+            color: #ffffff;
+            border: none;
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+            .btn-guardar-perfil:hover {
+                background: #6d28d9;
+            }
+
+        .form-perfil-acciones {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 16px;
+            width: 100%;
+        }
+
+        /* ── Preferencias de Notificaciones ── */
+        .notif-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px solid #f1f3f5;
+        }
+
+            .notif-item:last-child {
+                border-bottom: none;
+            }
+
+        .notif-icono {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .notif-textos {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .notif-titulo {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .notif-desc {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+            .toggle-switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: #d1d5db;
+            border-radius: 999px;
+            transition: background 0.2s;
+        }
+
+            .toggle-slider::before {
+                content: "";
+                position: absolute;
+                width: 18px;
+                height: 18px;
+                left: 3px;
+                top: 3px;
+                background: #fff;
+                border-radius: 50%;
+                transition: transform 0.2s;
+                box-shadow: 0 1px 3px rgba(0,0,0,.2);
+            }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: #7c3aed;
+        }
+
+            .toggle-switch input:checked + .toggle-slider::before {
+                transform: translateX(20px);
+            }
+
+        /* ── Actividad de la Cuenta ── */
+        .actividad-lista {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .actividad-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f3f5;
+        }
+
+            .actividad-item:last-child {
+                border-bottom: none;
+            }
+
+        .actividad-icono {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .actividad-textos {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .actividad-titulo {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .actividad-fecha {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .actividad-badge {
+            font-size: 11px;
+            font-weight: 700;
+            background: #d1fae5;
+            color: #065f46;
+            padding: 3px 10px;
+            border-radius: 999px;
+        }
+
+        .btn-ver-actividad {
+            background: none;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            color: #4b5563;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            transition: background 0.15s;
+        }
+
+            .btn-ver-actividad:hover {
+                background: #f9fafb;
+            }
+
+        /* Forzar que los inputs con utilidades apliquen el espaciado correcto para los botones */
+        .input-util-wrap .form-perfil-input {
+            padding-right: 76px;
+        }
+
+        .input-util-wrap:not(:has(.btn-eye)) .form-perfil-input {
+            padding-right: 44px;
+        }
+
+        //Contenedor 2
+        /* Configuración Flexbox del contenedor general izquierdo */
+        .info-personal-flex {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 24px;
+        }
+
+        /* Bloque Superior: Avatar y Nombre */
+        .avatar-seccion {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+        }
+
+        .avatar-contenedor {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #f3e8ff; /* Fondo sutil lila si la imagen tiene transparencias */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 16px;
+            border: 3px solid #f1f3f5;
+        }
+
+        .avatar-imagen {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .perfil-nombre-primario {
+            font-size: 20px;
+            font-weight: 800;
+            color: #1a0035;
+            margin: 0 0 6px 0;
+        }
+
+        .perfil-rol-etiqueta {
+            font-size: 12px;
+            font-weight: 700;
+            color: #7c3aed; /* Color morado distintivo para el badge de rol */
+            background: #f3e8ff;
+            padding: 4px 12px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Divisor horizontal */
+        .perfil-divisor {
+            width: 100%;
+            border: 0;
+            border-top: 1px solid #f1f3f5;
+            margin: 24px 0;
+        }
+
+        /* Bloque Inferior: Lista de Detalles Estáticos */
+        .info-detalles-lista {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            width: 100%;
+        }
+
+        .info-detalle-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+        }
+
+        .info-detalle-icono {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            color: #7c3aed; /* Iconos morados alineados al tema */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .info-detalles-textos {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .info-detalle-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #9ca3af;
+        }
+
+        .info-detalle-valor {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            word-break: break-all;
+        }
+    </style>
+}
+
+<!-- Título de la Vista (Fuera de los contenedores de cuadrícula) -->
+<div class="reportes-titulo" style="margin-top: 32px;">
+    <h1>Mi Perfil</h1>
+    <p>Administra tu información personal y preferencias de cuenta.</p>
+
+    @if (TempData["MensajeOk"] != null)
+    {
+        <div class="alert alert-success mt-2">@TempData["MensajeOk"]</div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger mt-2">@TempData["MensajeError"]</div>
+    }
+</div>
+
+<!-- ==========================================================================
+     EL TABLERO CENTRAL (Contenedor Grid que agrupa los bloques 2, 3, 4 y 5)
+     ========================================================================== -->
+<div class="perfil-base-grid" style="margin-top: 24px;">
+
+    <!-- CONTENEDOR 2: Información Personal (Fila 1, Izquierda) -->
+    <div class="perfil-tarjeta info-personal-flex">
+
+        <!-- Sección del Avatar Centrado -->
+        <div class="avatar-seccion">
+            <div class="avatar-contenedor">
+                <img src="~/img/iconProfile.png" alt="Perfil" class="avatar-imagen" />
+            </div>
+            <h2 class="perfil-nombre-primario">@Model.Nombre @Model.Apellido</h2>
+            <span class="perfil-rol-etiqueta">Administrador</span>
+        </div>
+
+        <!-- Separador sutil intermedio -->
+        <hr class="perfil-divisor" />
+
+        <!-- Sección de Información y Fechas de Acceso -->
+        <div class="info-detalles-lista">
+
+            <div class="info-detalle-item">
+                <div class="info-detalle-icono"><i class="far fa-envelope"></i></div>
+                <div class="info-detalle-textos">
+                    <span class="info-detalle-label">Correo electrónico: </span>
+                    <span class="info-detalle-valor">@Model.Correo</span>
+                </div>
+            </div>
+
+            <div class="info-detalle-item">
+                <div class="info-detalle-icono"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-detalle-textos">
+                    <span class="info-detalle-label">Teléfono: </span>
+                    <span class="info-detalle-valor">@(string.IsNullOrEmpty(Model.Celular) ? "No registrado" : Model.Celular)</span>
+                </div>
+            </div>
+
+            <div class="info-detalle-item">
+                <div class="info-detalle-icono"><i class="fas fa-id-card"></i></div>
+                <div class="info-detalle-textos">
+                    <span class="info-detalle-label">DNI: </span>
+                    <span class="info-detalle-valor">@(string.IsNullOrEmpty(Model.Dni) ? "No registrado" : Model.Dni)</span>
+                </div>
+            </div>
+
+            <div class="info-detalle-item">
+                <div class="info-detalle-icono"><i class="far fa-calendar-alt"></i></div>
+                <div class="info-detalle-textos">
+                    <span class="info-detalle-label">Fecha de registro: </span>
+                    <span class="info-detalle-valor">@Model.FechaRegistro.ToString("dd/MM/yyyy hh:mm tt")</span>
+                </div>
+            </div>
+
+            <div class="info-detalle-item">
+                <div class="info-detalle-icono"><i class="far fa-clock"></i></div>
+                <div class="info-detalle-textos">
+                    <span class="info-detalle-label">Último acceso: </span>
+                    <span class="info-detalle-valor">
+                        @(Model.UltimaConexion.HasValue
+                            ? Model.UltimaConexion.Value.ToString("dd/MM/yyyy hh:mm tt")
+                            : DateTime.Now)
+                    </span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+    <!-- CONTENEDOR 3: Editar Información (Fila 1, Derecha) -->
+    <div class="perfil-tarjeta">
+        <h3 style="font-size: 18px; font-weight: 800; color: #1a0035; margin-bottom: 24px;">Editar Información</h3>
+
+        <form asp-action="ActualizarPerfil" method="post" style="width: 100%;">
+
+            <!-- FILA DE DOS COLUMNAS: Nombres y Apellidos -->
+            <div class="form-perfil-fila-doble">
+                <div class="form-perfil-grupo">
+                    <label>Nombres</label>
+                    <div class="input-util-wrap">
+                        <input type="text" id="nombreInput" name="Nombre" class="form-perfil-input" value="@Model.Nombre" required />
+                        <button type="button" class="btn-clear" onclick="clearInput('nombreInput')"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="form-perfil-grupo">
+                    <label>Apellidos</label>
+                    <div class="input-util-wrap">
+                        <input type="text" id="apellidoInput" name="Apellido" class="form-perfil-input" value="@Model.Apellido" required />
+                        <button type="button" class="btn-clear" onclick="clearInput('apellidoInput')"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FILA DE ANCHO COMPLETO: Correo electrónico -->
+            <div class="form-perfil-grupo">
+                <label>Correo electrónico</label>
+                <div class="input-util-wrap">
+                    <input type="email" id="correoInput" name="Correo" class="form-perfil-input" value="@Model.Correo" required oninput="onCorreoCambia()" />
+                    <button type="button" class="btn-clear" onclick="clearInput('correoInput')"><i class="fas fa-times"></i></button>
+                </div>
+
+                <!-- Caja de verificación por si cambia el correo -->
+                <div id="codigoBox" style="display: none; gap: 10px; margin-top: 10px;">
+                    <input type="text" name="CodigoVerificacion" class="form-perfil-input" placeholder="Código de verificación" style="flex: 1;" />
+                    <button type="button" class="btn-guardar-perfil" style="background: #4b5563; height: 44px;" onclick="enviarCodigo()">Enviar Código</button>
+                </div>
+            </div>
+
+            <!-- FILA DE ANCHO COMPLETO: Teléfono -->
+            <div class="form-perfil-grupo">
+                <label>Teléfono</label>
+                <div class="input-util-wrap">
+                    <input type="text" id="celularInput" name="Celular" class="form-perfil-input" value="@Model.Celular" maxlength="9" oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+                    <button type="button" class="btn-clear" onclick="clearInput('celularInput')"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+
+            <!-- FILA DE DOS COLUMNAS: DNI y Género -->
+            <div class="form-perfil-fila-doble">
+                <div class="form-perfil-grupo">
+                    <label>DNI</label>
+                    <div class="input-util-wrap">
+                        <input type="text" id="dniInput" name="Dni" class="form-perfil-input"
+                               value="@Model.Dni" maxlength="8"
+                               oninput="this.value=this.value.replace(/[^0-9]/g,'')" readonly
+                               style="background:#f1f3f5; cursor:not-allowed; color:#9ca3af;" />
+                    </div>
+                </div>
+                <div class="form-perfil-grupo">
+                    <label>Género</label>
+                    <select asp-for="Genero" class="form-perfil-input" style="cursor:pointer; appearance:auto;">
+                        <option value="Masculino">Masculino</option>
+                        <option value="Femenino">Femenino</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- FILA DE DOS COLUMNAS: Nueva Contraseña y Confirmación -->
+            <div class="form-perfil-fila-doble" style="margin-bottom: 10px;">
+                <div class="form-perfil-grupo">
+                    <label>Nueva Contraseña</label>
+                    <div class="input-util-wrap">
+                        <input type="password" id="claveInput" name="Clave" class="form-perfil-input" placeholder="Dejar en blanco para mantener la actual" oninput="validarClave()" />
+                        <button type="button" class="btn-clear" onclick="clearInput('claveInput')"><i class="fas fa-times"></i></button>
+                        <button type="button" class="btn-eye" onclick="togglePassword('claveInput', this)"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                <div class="form-perfil-grupo">
+                    <label>Confirmar Contraseña</label>
+                    <div class="input-util-wrap">
+                        <input type="password" id="confirmarClaveInput" name="ConfirmarClave" class="form-perfil-input" placeholder="Confirmar nueva contraseña" />
+                        <button type="button" class="btn-clear" onclick="clearInput('confirmarClaveInput')"><i class="fas fa-times"></i></button>
+                        <button type="button" class="btn-eye" onclick="togglePassword('confirmarClaveInput', this)"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de validación de reglas de contraseña -->
+            <div id="reglasClave" style="display: none; flex-direction: column; gap: 4px; font-size: 12px; margin-bottom: 24px; padding-left: 4px;">
+                <span id="r-mayus" class="regla-bad">✖ Una letra mayúscula</span>
+                <span id="r-minus" class="regla-bad">✖ Una letra minúscula</span>
+                <span id="r-num" class="regla-bad">✖ Un número</span>
+                <span id="r-min" class="regla-bad">✖ Mínimo 6 caracteres</span>
+            </div>
+
+            <!-- Botones de acción alineados a la derecha -->
+            <div class="form-perfil-acciones">
+                <!-- Restablece todos los campos al valor original del modelo -->
+                <button type="reset" class="btn-guardar-perfil" style="background:#6b7280; margin-right:10px;">
+                    <i class="fas fa-undo"></i> Restablecer
+                </button>
+                <button type="submit" class="btn-guardar-perfil">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+            </div>
+
+        </form>
+    </div>
+    <!-- CONTENEDOR 4: Preferencias de Notificaciones (Fila 2, Izquierda) -->
+    <div class="perfil-tarjeta">
+        <h3 style="font-size: 18px; font-weight: 800; color: #1a0035; margin-bottom: 6px;">Preferencias de Notificaciones</h3>
+        <p style="font-size: 13px; color: #6b7280; margin-bottom: 24px;">Elige cómo y cuándo deseas recibir notificaciones del sistema.</p>
+
+        <!-- Notificaciones por Correo -->
+        <!-- TODO: conectar con el método del controlador encargado de guardar preferencias,
+             p.ej. POST /Administrador/ActualizarNotificaciones { notifCorreo, notifSistema, notifRecordatorios } -->
+        <div class="notif-item">
+            <div class="notif-icono" style="background:#f3e8ff; color:#7c3aed;">
+                <i class="far fa-envelope"></i>
+            </div>
+            <div class="notif-textos">
+                <span class="notif-titulo">Notificaciones por Correo</span>
+                <span class="notif-desc">Recibe notificaciones importantes en tu correo electrónico.</span>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="notifCorreo" checked />
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <!-- Notificaciones del Sistema -->
+        <div class="notif-item">
+            <div class="notif-icono" style="background:#eff6ff; color:#3b82f6;">
+                <i class="fas fa-bell"></i>
+            </div>
+            <div class="notif-textos">
+                <span class="notif-titulo">Notificaciones del Sistema</span>
+                <span class="notif-desc">Muestra alertas y mensajes dentro del sistema.</span>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="notifSistema" checked />
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+
+        <!-- Recordatorios -->
+        <div class="notif-item">
+            <div class="notif-icono" style="background:#f0fdf4; color:#22c55e;">
+                <i class="far fa-clock"></i>
+            </div>
+            <div class="notif-textos">
+                <span class="notif-titulo">Recordatorios</span>
+                <span class="notif-desc">Recibe recordatorios sobre tareas y pendientes.</span>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="notifRecordatorios" />
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR 5: Actividad de la Cuenta (Fila 2, Derecha) -->
+    <div class="perfil-tarjeta">
+        <h3 style="font-size: 18px; font-weight: 800; color: #1a0035; margin-bottom: 6px;">Actividad de la Cuenta</h3>
+        <p style="font-size: 13px; color: #6b7280; margin-bottom: 24px;">Resumen de la actividad reciente en tu cuenta.</p>
+
+        <div class="actividad-lista">
+
+            <!-- Ítem 1: Inicio de sesión -->
+            <div class="actividad-item">
+                <div class="actividad-icono" style="background:#f0fdf4; color:#22c55e;">
+                    <i class="fas fa-sign-in-alt"></i>
+                </div>
+                <div class="actividad-textos">
+                    <span class="actividad-titulo">Inicio de sesión exitoso</span>
+                    <span class="actividad-fecha">@Model.UltimaConexion?.ToString("dd/MM/yyyy hh:mm tt")</span>
+                </div>
+                <span class="actividad-badge">Actual</span>
+            </div>
+
+            <!-- Ítem 2: Actualización de perfil -->
+            <div class="actividad-item">
+                <div class="actividad-icono" style="background:#eff6ff; color:#3b82f6;">
+                    <i class="fas fa-user-edit"></i>
+                </div>
+                <div class="actividad-textos">
+                    <span class="actividad-titulo">Actualización de perfil</span>
+                    <!-- TODO: reemplazar con la fecha real cuando exista un campo FechaUltimaActualizacion en el modelo -->
+                    <span class="actividad-fecha">Información personal actualizada</span>
+                </div>
+            </div>
+
+            <!-- Ítem 3: Cambio de contraseña -->
+            <div class="actividad-item">
+                <div class="actividad-icono" style="background:#fef9c3; color:#ca8a04;">
+                    <i class="fas fa-key"></i>
+                </div>
+                <div class="actividad-textos">
+                    <span class="actividad-titulo">Cambio de contraseña</span>
+                    <!-- TODO: reemplazar con la fecha real cuando exista un campo FechaUltimoCambioClave en el modelo -->
+                    <span class="actividad-fecha">Contraseña actualizada correctamente</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div style="margin-top: 20px; text-align: right;">
+            <button type="button" class="btn-ver-actividad">
+                <i class="fas fa-eye" style="margin-right:6px;"></i>Ver toda la actividad
+            </button>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR ROJO 6: Seguridad de la Cuenta (Fila 3, Ancho Completo) -->
+    <div class="perfil-tarjeta tarjeta-ancho-completo" style="display:flex; align-items:center; gap:16px; padding: 20px 28px;">
+        <div style="width:40px; height:40px; border-radius:10px; background:#fef9c3; color:#ca8a04; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">
+            <i class="fas fa-shield-alt"></i>
+        </div>
+        <div style="flex:1;">
+            <span style="font-size:15px; font-weight:700; color:#1a0035;">Seguridad de la Cuenta</span>
+            <p style="font-size:13px; color:#6b7280; margin:2px 0 0 0;">Mantén tu cuenta segura. Se recomienda cambiar tu contraseña periódicamente.</p>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        const correoOriginal = "@Model.Correo";
+
+        // Muestra el cuadro de verificación si el correo fue modificado
+        function onCorreoCambia() {
+            const nuevo = document.getElementById("correoInput").value;
+            document.getElementById("codigoBox").style.display =
+                nuevo !== correoOriginal ? "flex" : "none";
+        }
+
+        function enviarCodigo() {
+            const correo = document.getElementById("correoInput").value;
+            fetch('@Url.Action("EnviarCodigoPerfilAdministrador", "Administrador")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'correo=' + encodeURIComponent(correo)
+            })
+            .then(r => r.json())
+            .then(d => alert(d.mensaje))
+            .catch(() => alert("No se pudo enviar el código."));
+        }
+
+        function validarClave() {
+            const v = document.getElementById("claveInput").value;
+            setRegla("r-mayus", /[A-Z]/.test(v), "Una letra mayúscula");
+            setRegla("r-minus", /[a-z]/.test(v), "Una letra minúscula");
+            setRegla("r-num",   /[0-9]/.test(v), "Un número");
+            setRegla("r-min",   v.length >= 6,   "Mínimo 6 caracteres");
+        }
+
+        function setRegla(id, ok, texto) {
+            const el = document.getElementById(id);
+            el.className   = ok ? "regla-ok" : "regla-bad";
+            el.textContent = (ok ? "✔ " : "✖ ") + texto;
+        }
+
+    </script>
+
+    <script src="~/js/utilidades-ui.js"></script>
+}

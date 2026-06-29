@@ -79,21 +79,3 @@
 .input-util-wrap:not(:has(.btn-eye)) .btn-clear {
     right: 12px;
 }
-/* Ocultar el ojo nativo de Edge */
-input[type="password"]::-ms-reveal,
-input[type="password"]::-ms-clear {
-    display: none;
-}
-
-/* Ocultar el ojo nativo de navegadores Chromium */
-input[type="password"]::-webkit-credentials-auto-fill-button,
-input[type="password"]::-webkit-textfield-decoration-container {
-    display: none !important;
-}
-
-input[type="password"]::-webkit-contacts-auto-fill-button,
-input[type="password"]::-webkit-caps-lock-indicator,
-input[type="password"]::-webkit-credentials-auto-fill-button {
-    visibility: hidden;
-    display: none !important;
-}

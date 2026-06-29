@@ -3,13 +3,15 @@ using DocumentFormat.OpenXml.InkML;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 using System.IO;
 using System.Security.Claims;
 using trabajo.Models;
 using trabajo.Models.ViewModels;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
+using trabajo.Service;
+using static QuestPDF.Helpers.Colors;
 
 namespace trabajo.Controllers
 {
@@ -17,9 +19,15 @@ namespace trabajo.Controllers
     public class AdministradorController : Controller
     {
         private readonly UsuarioContext _context;
-        public AdministradorController(UsuarioContext context)
+        private static readonly Random rnd = new Random();
+        private readonly IConfiguration _configuration;
+        private readonly EmailService _emailService = new EmailService();
+        private static string codigoPerfilAdmin = "";
+
+        public AdministradorController(UsuarioContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
         public IActionResult ProgramaAdministrador()
         {
@@ -1275,7 +1283,94 @@ namespace trabajo.Controllers
             return File(pdf, "application/pdf", "Reporte_Administrador.pdf");
         }
 
+
+
+        public IActionResult PerfilAdministrador()
+        {
+            CargarDatosAdministrador();
+            ViewData["ActivePage"] = "Perfil";
+
+            var correoAdmin =
+                User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ??
+
+                User.FindFirst("Correo")?.Value ??
+                User.FindFirst("correo")?.Value ??
+                User.Identity?.Name;
+
+            var admin = _context.Usuario.FirstOrDefault(x => x.Correo == correoAdmin && x.Rol == "Administrador");
+            if (admin == null)
+            {
+                return NotFound();
+            }
+            return View(admin);
+        }
+
+        [HttpPost]
+        public IActionResult PerfilAdministrador(Usuario usuario, string codigoCorreo)
+        {
+            CargarDatosAdministrador();
+
+            var correoActual =
+                User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value ??
+                User.FindFirst("Correo")?.Value ??
+                User.FindFirst("correo")?.Value ??
+                User.Identity?.Name;
+
+            var admin = _context.Usuario
+                .FirstOrDefault(x => x.Correo == correoActual && x.Rol == "Administrador");
+
+            if (admin == null)
+                return RedirectToAction("IniciarSesion", "Login");
+
+            // Verificación de correo si fue modificado
+            if (string.IsNullOrWhiteSpace(codigoCorreo) || codigoCorreo != codigoPerfilAdmin)
+            {
+                TempData["MensajeError"] = "El código de verificación del correo es incorrecto.";
+                return RedirectToAction("PerfilAdministrador");
+            }
+
+            // Actualizar campos
+            admin.Nombre = usuario.Nombre;
+            admin.Apellido = usuario.Apellido;
+            admin.Genero = usuario.Genero;
+            admin.Dni = usuario.Dni;
+            admin.Celular = usuario.Celular;
+            admin.Correo = usuario.Correo;
+
+            if (!string.IsNullOrWhiteSpace(usuario.clave))
+                admin.clave = utilidades.EncriptarClave(usuario.clave);
+
+            _context.Usuario.Update(admin);
+            _context.SaveChanges();
+
+            TempData["MensajeOk"] = "Perfil actualizado correctamente.";
+            return RedirectToAction("PerfilAdministrador");
+        }
+
+
+        [HttpPost]
+        public async Task<JsonResult> EnviarCodigoPerfilAdministrador(string correo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(correo))
+                    return Json(new { ok = false, mensaje = "Ingrese un correo Gmail válido." });
+
+                codigoPerfilAdmin = rnd.Next(100000, 999999).ToString();
+
+                HttpContext.Session.SetString("CodigoPerfil", codigoPerfilAdmin);
+                HttpContext.Session.SetString("CorreoPerfil", correo);
+
+                await _emailService.EnviarCodigoAsync(correo, codigoPerfilAdmin);
+
+                return Json(new { ok = true, mensaje = "Código enviado correctamente al correo." });
+            }
+
+            catch
+            {
+                return Json(new { ok = false, mensaje = "No se pudo enviar el código de verificación." });
+            }
+        }
+
     }
 }
-    
-

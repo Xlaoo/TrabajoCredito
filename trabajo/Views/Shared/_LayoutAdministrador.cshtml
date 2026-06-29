@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="~/css/panel-roles.css" />
     <link rel="stylesheet" href="~/css/panel-administrador.css" />
     <link rel="stylesheet" href="~/css/panel-administrador-reportes.css" />
+    <link rel="stylesheet" href="~/css/utilidades-ui.css" />
     @RenderSection("Styles", required: false)
 </head>
 <body>
@@ -61,7 +62,11 @@
 
                 <div class="section-title">Mi Cuenta</div>
 
-                <a href="#"><i class="fas fa-user"></i> Perfil</a>
+                <a href="@Url.Action("PerfilAdministrador", "Administrador")"
+                   class="@(ViewData["ActivePage"]?.ToString() == "Perfil" ? "active" : "")">
+                    <i class="fas fa-chart-line"></i> Perfil
+                </a>
+
                 <a href="@Url.Action("IniciarSesion", "Login")" class="logout-link">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </a>
