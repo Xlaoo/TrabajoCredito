@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="~/css/panel-administrador.css" />
     <link rel="stylesheet" href="~/css/panel-administrador-reportes.css" />
     <link rel="stylesheet" href="~/css/panel-administrador-pagos.css" />
+    <link rel="stylesheet" href="~/css/panel-administrador-creditos.css" />
     @RenderSection("Styles", required: false)
 </head>
 <body>
@@ -33,11 +34,15 @@
                     <i class="fas fa-home"></i>
                     Inicio
                 </a>
-                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Clientes" ? "active" : "")">
-                    <i class="fas fa-users"></i> Clientes
+                <a href="@Url.Action("Clientes", "Administrador")"
+                   class="@(ViewData["ActivePage"]?.ToString() == "Clientes" ? "active" : "")">
+                    <i class="fas fa-users"></i>
+                    Clientes
                 </a>
-                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Creditos" ? "active" : "")">
-                    <i class="fas fa-file-alt"></i> Créditos
+                <a href="@Url.Action("Creditos", "Administrador")"
+                   class="@(ViewData["ActivePage"]?.ToString() == "Creditos" ? "active" : "")">
+                    <i class="fas fa-file-alt"></i>
+                    Créditos
                 </a>
                 <a href="@Url.Action("Pagos", "Administrador")"
                    class="@(ViewData["ActivePage"]?.ToString() == "Pagos" ? "active" : "")">

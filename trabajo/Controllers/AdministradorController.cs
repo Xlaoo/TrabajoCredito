@@ -1972,7 +1972,685 @@ namespace trabajo.Controllers
 
             return View(solicitud);
         }
+        public async Task<IActionResult> Clientes(string? buscar, string estado = "Todos", int pagina = 1)
+        {
+            const int cantidadPorPagina = 8;
 
+            DateTime primerDiaDelMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            DateTime primerDiaSiguienteMes = primerDiaDelMes.AddMonths(1);
+
+            var clientesBase = _context.Usuario
+                .AsNoTracking()
+                .Where(u => u.Rol == "Cliente");
+
+            int totalClientes = await clientesBase.CountAsync();
+
+            int nuevosClientesEsteMes = await clientesBase.CountAsync(u =>
+                u.FechaRegistro >= primerDiaDelMes &&
+                u.FechaRegistro < primerDiaSiguienteMes);
+
+            DateTime limiteActivo = DateTime.Now.AddMinutes(-2);
+
+            int clientesActivos = await clientesBase.CountAsync(u =>
+                u.EstadoActivo == true &&
+                u.UltimaConexion != null &&
+                u.UltimaConexion >= limiteActivo);
+
+            decimal montoTotalOtorgado = await _context.SOLICITUD_CREDITO
+                .AsNoTracking()
+                .Where(s => s.Estado == "Aprobado" &&
+                            s.USUARIO != null &&
+                            s.USUARIO.Rol == "Cliente")
+                .SumAsync(s => (decimal?)s.MontoSolicitado) ?? 0;
+
+            var consulta = ObtenerClientesFiltrados(buscar, estado);
+
+            int totalFiltrado = await consulta.CountAsync();
+            int totalPaginas = (int)Math.Ceiling(totalFiltrado / (double)cantidadPorPagina);
+
+            if (pagina < 1) pagina = 1;
+            if (totalPaginas > 0 && pagina > totalPaginas) pagina = totalPaginas;
+
+            var clientesData = await consulta
+                .OrderByDescending(u => u.Id)
+                .Skip((pagina - 1) * cantidadPorPagina)
+                .Take(cantidadPorPagina)
+                .ToListAsync();
+
+            var clientes = clientesData.Select((u, index) => new ClienteAdminItemViewModel
+            {
+                Id = u.Id,
+                NumeroFila = ((pagina - 1) * cantidadPorPagina) + index + 1,
+                Nombre = u.Nombre,
+                Apellido = u.Apellido,
+                NombreCompleto = $"{u.Nombre} {u.Apellido}",
+                Iniciales = ObtenerIniciales(u.Nombre, u.Apellido),
+                Dni = u.Dni,
+                Celular = u.Celular,
+                Correo = u.Correo,
+                Genero = u.Genero ?? "",
+                EstadoActivo = u.EstadoActivo == true &&
+               u.UltimaConexion != null &&
+               u.UltimaConexion >= limiteActivo,
+                FechaRegistro = u.FechaRegistro
+            }).ToList();
+
+            var modelo = new AdminClientesViewModel
+            {
+                TotalClientes = totalClientes,
+                ClientesActivos = clientesActivos,
+                NuevosClientesEsteMes = nuevosClientesEsteMes,
+                MontoTotalOtorgado = montoTotalOtorgado,
+                PorcentajeActivos = totalClientes == 0 ? 0 : clientesActivos * 100.0 / totalClientes,
+                Buscar = buscar,
+                Estado = estado,
+                PaginaActual = pagina,
+                TotalPaginas = totalPaginas,
+                TotalFiltrado = totalFiltrado,
+                InicioRegistro = totalFiltrado == 0 ? 0 : ((pagina - 1) * cantidadPorPagina) + 1,
+                FinRegistro = Math.Min(pagina * cantidadPorPagina, totalFiltrado),
+                Clientes = clientes
+            };
+
+            return View(modelo);
+        }
+        private IQueryable<Usuario> ObtenerClientesFiltrados(string? buscar, string estado)
+        {
+            DateTime limiteActivo = DateTime.Now.AddMinutes(-2);
+
+            var consulta = _context.Usuario
+                .AsNoTracking()
+                .Where(u => u.Rol == "Cliente");
+
+            if (!string.IsNullOrWhiteSpace(buscar))
+            {
+                string texto = buscar.Trim().ToLower();
+
+                consulta = consulta.Where(u =>
+                    (u.Nombre + " " + u.Apellido).ToLower().Contains(texto) ||
+                    u.Dni.Contains(texto) ||
+                    u.Celular.Contains(texto) ||
+                    u.Correo.ToLower().Contains(texto)
+                );
+            }
+
+            if (estado == "Activo")
+            {
+                consulta = consulta.Where(u =>
+                    u.EstadoActivo == true &&
+                    u.UltimaConexion != null &&
+                    u.UltimaConexion >= limiteActivo);
+            }
+            else if (estado == "Inactivo")
+            {
+                consulta = consulta.Where(u =>
+                    u.UltimaConexion == null ||
+                    u.UltimaConexion < limiteActivo ||
+                    u.EstadoActivo == false);
+            }
+
+            return consulta;
+        }
+
+        private static string ObtenerIniciales(string? nombre, string? apellido)
+        {
+            string inicialNombre = string.IsNullOrWhiteSpace(nombre)
+                ? ""
+                : nombre.Trim()[0].ToString().ToUpper();
+
+            string inicialApellido = string.IsNullOrWhiteSpace(apellido)
+                ? ""
+                : apellido.Trim()[0].ToString().ToUpper();
+
+            return inicialNombre + inicialApellido;
+        }
+        private static IContainer HeaderCellStyle(IContainer container)
+        {
+            return container
+                .Background("#6D28D9")
+                .PaddingVertical(6)
+                .PaddingHorizontal(5);
+        }
+
+        private static IContainer BodyCellStyle(IContainer container)
+        {
+            return container
+                .BorderBottom(1)
+                .BorderColor(Colors.Grey.Lighten2)
+                .PaddingVertical(6)
+                .PaddingHorizontal(5);
+        }
+        public async Task<IActionResult> ExportarClientesExcel(string? buscar, string estado = "Todos")
+        {
+            var clientes = await ObtenerClientesFiltrados(buscar, estado)
+                .OrderBy(x => x.Id)
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var hoja = workbook.Worksheets.Add("Clientes");
+
+            hoja.Cell(1, 1).Value = "ID";
+            hoja.Cell(1, 2).Value = "Cliente";
+            hoja.Cell(1, 3).Value = "DNI";
+            hoja.Cell(1, 4).Value = "Celular";
+            hoja.Cell(1, 5).Value = "Correo";
+            hoja.Cell(1, 6).Value = "Estado";
+            hoja.Cell(1, 7).Value = "Última Conexión";
+
+            var header = hoja.Range(1, 1, 1, 7);
+            header.Style.Font.Bold = true;
+            header.Style.Fill.BackgroundColor = XLColor.FromHtml("#6D28D9");
+            header.Style.Font.FontColor = XLColor.White;
+
+            int fila = 2;
+
+            foreach (var c in clientes)
+            {
+                hoja.Cell(fila, 1).Value = $"#{c.Id:000}";
+                hoja.Cell(fila, 2).Value = $"{c.Nombre} {c.Apellido}";
+                hoja.Cell(fila, 3).Value = c.Dni;
+                hoja.Cell(fila, 4).Value = c.Celular;
+                hoja.Cell(fila, 5).Value = c.Correo;
+                hoja.Cell(fila, 6).Value = c.UltimaConexion != null ? "Activo" : "Inactivo";
+                hoja.Cell(fila, 7).Value = c.UltimaConexion?.ToString("dd/MM/yyyy HH:mm") ?? "Sin conexión";
+                fila++;
+            }
+
+            hoja.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Clientes_CrediPlus.xlsx"
+            );
+        }
+        public async Task<IActionResult> ExportarClientesPdf(string? buscar, string estado = "Todos")
+        {
+            QuestPDF.Settings.License = LicenseType.Community;
+
+            var clientes = await ObtenerClientesFiltrados(buscar, estado)
+                .OrderBy(x => x.Id)
+                .ToListAsync();
+
+            using var stream = new MemoryStream();
+
+            Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4.Landscape());
+                    page.Margin(30);
+
+                    page.Header().Column(col =>
+                    {
+                        col.Item().Text("Reporte de Clientes - CrediPlus")
+                            .FontSize(20)
+                            .Bold()
+                            .FontColor("#6D28D9");
+
+                        col.Item().Text($"Fecha: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                            .FontSize(10)
+                            .FontColor(Colors.Grey.Darken2);
+                    });
+
+                    page.Content().Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(0.8f);
+                            columns.RelativeColumn(2.2f);
+                            columns.RelativeColumn(1.2f);
+                            columns.RelativeColumn(1.4f);
+                            columns.RelativeColumn(2.8f);
+                            columns.RelativeColumn(1.2f);
+                            columns.RelativeColumn(1.8f);
+                        });
+
+                        table.Header(header =>
+                        {
+                            header.Cell().Element(HeaderCellStyle).Text("ID").FontColor(Colors.White).Bold();
+                            header.Cell().Element(HeaderCellStyle).Text("Cliente").FontColor(Colors.White).Bold();
+                            header.Cell().Element(HeaderCellStyle).Text("DNI").FontColor(Colors.White).Bold();
+                            header.Cell().Element(HeaderCellStyle).Text("Celular").FontColor(Colors.White).Bold();
+                            header.Cell().Element(HeaderCellStyle).Text("Correo").FontColor(Colors.White).Bold();
+                            header.Cell().Element(HeaderCellStyle).Text("Estado").FontColor(Colors.White).Bold();
+                            header.Cell().Element(HeaderCellStyle).Text("Última Conexión").FontColor(Colors.White).Bold();
+                        });
+
+                        foreach (var c in clientes)
+                        {
+                            table.Cell().Element(BodyCellStyle).Text($"#{c.Id:000}");
+                            table.Cell().Element(BodyCellStyle).Text($"{c.Nombre} {c.Apellido}");
+                            table.Cell().Element(BodyCellStyle).Text(c.Dni);
+                            table.Cell().Element(BodyCellStyle).Text(c.Celular);
+                            table.Cell().Element(BodyCellStyle).Text(c.Correo);
+                            table.Cell().Element(BodyCellStyle).Text(c.UltimaConexion != null ? "Activo" : "Inactivo");
+                            table.Cell().Element(BodyCellStyle).Text(c.UltimaConexion?.ToString("dd/MM/yyyy HH:mm") ?? "Sin conexión");
+                        }
+                    });
+                });
+            }).GeneratePdf(stream);
+
+            return File(stream.ToArray(), "application/pdf", "Clientes_CrediPlus.pdf");
+        }
+        public async Task<IActionResult> Creditos(string? buscar, string estado = "Todos", int pagina = 1)
+        {
+            CargarDatosAdministrador();
+            ViewData["ActivePage"] = "Creditos";
+
+            const int cantidadPorPagina = 8;
+
+            var baseCreditos = _context.SOLICITUD_CREDITO
+                .AsNoTracking()
+                .Include(s => s.USUARIO)
+                .AsQueryable();
+
+            int totalCreditos = await baseCreditos.CountAsync();
+            int creditosAprobados = await baseCreditos.CountAsync(s => s.Estado == "Aprobado");
+            int creditosEvaluacion = await baseCreditos.CountAsync(s => s.Estado == "Pendiente" || s.Estado == "En Evaluación");
+            int creditosRechazados = await baseCreditos.CountAsync(s => s.Estado == "Rechazado");
+
+            decimal montoTotalSolicitado = await baseCreditos
+                .SumAsync(s => (decimal?)s.MontoSolicitado) ?? 0;
+
+            var consulta = baseCreditos;
+
+            if (!string.IsNullOrWhiteSpace(buscar))
+            {
+                string texto = buscar.Trim().ToLower();
+
+                consulta = consulta.Where(s =>
+                    s.NumeroSolicitud.ToLower().Contains(texto) ||
+                    s.USUARIO.Nombre.ToLower().Contains(texto) ||
+                    s.USUARIO.Apellido.ToLower().Contains(texto) ||
+                    s.USUARIO.Dni.Contains(texto)
+                );
+            }
+
+            if (estado != "Todos")
+            {
+                consulta = consulta.Where(s => s.Estado == estado);
+            }
+
+            int totalFiltrado = await consulta.CountAsync();
+            int totalPaginas = (int)Math.Ceiling(totalFiltrado / (double)cantidadPorPagina);
+
+            if (pagina < 1) pagina = 1;
+            if (totalPaginas > 0 && pagina > totalPaginas) pagina = totalPaginas;
+
+            var creditosData = await consulta
+                .OrderByDescending(s => s.FechaSolicitud)
+                .Skip((pagina - 1) * cantidadPorPagina)
+                .Take(cantidadPorPagina)
+                .ToListAsync();
+
+            var creditos = creditosData.Select((s, index) => new CreditoAdminItemViewModel
+            {
+                IdSolicitud = s.Id_Solicitud,
+                NumeroFila = ((pagina - 1) * cantidadPorPagina) + index + 1,
+                NumeroSolicitud = s.NumeroSolicitud ?? $"SOL-{s.Id_Solicitud:000}",
+                Cliente = $"{s.USUARIO?.Nombre} {s.USUARIO?.Apellido}",
+                Iniciales = ObtenerIniciales(s.USUARIO?.Nombre, s.USUARIO?.Apellido),
+                Dni = s.USUARIO?.Dni ?? "",
+                MontoSolicitado = s.MontoSolicitado,
+                PlazoMeses = s.PlazoMeses,
+                InteresEstimado = s.InteresEstimado,
+                Estado = s.Estado,
+                FechaSolicitud = s.FechaSolicitud,
+                TipoCredito = "",
+                MotivoPrestamo = ""
+            }).ToList();
+            DateTime primerDiaDelMesCreditos = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            DateTime primerDiaSiguienteMesCreditos = primerDiaDelMesCreditos.AddMonths(1);
+
+            int creditosPendientesDistribucion = await baseCreditos.CountAsync(s => s.Estado == "Pendiente");
+            int creditosEvaluacionDistribucion = await baseCreditos.CountAsync(s => s.Estado == "En Evaluación");
+            int creditosRechazadosDistribucion = await baseCreditos.CountAsync(s => s.Estado == "Rechazado");
+
+            var coloresTipo = new[] { "#22c55e", "#2563eb", "#f97316", "#8b5cf6", "#ef4444", "#14b8a6", "#eab308" };
+
+            var tiposCreditoGrafico = await (
+                from s in _context.SOLICITUD_CREDITO
+                join p in _context.PERFIL_FINANCIERO
+                    on s.Id_Solicitud equals p.SOLICITUD_CREDITO_Id_Solicitud into perfilJoin
+                from p in perfilJoin.DefaultIfEmpty()
+                group s by (p == null || string.IsNullOrEmpty(p.MotivoPrestamo)
+                    ? "Sin motivo"
+                    : p.MotivoPrestamo) into g
+                select new
+                {
+                    Tipo = g.Key,
+                    Cantidad = g.Count()
+                }
+            ).ToListAsync();
+
+            int totalTipos = tiposCreditoGrafico.Sum(x => x.Cantidad);
+
+            var tiposGraficoFinal = tiposCreditoGrafico
+                .Select((x, index) => new TipoCreditoGraficoViewModel
+                {
+                    Tipo = x.Tipo,
+                    Cantidad = x.Cantidad,
+                    Porcentaje = totalTipos > 0 ? Math.Round((decimal)x.Cantidad * 100 / totalTipos, 1) : 0,
+                    Color = coloresTipo[index % coloresTipo.Length]
+                })
+                .ToList();
+
+            int nuevosCreditosMes = await baseCreditos.CountAsync(s =>
+                s.FechaSolicitud >= primerDiaDelMesCreditos &&
+                s.FechaSolicitud < primerDiaSiguienteMesCreditos);
+
+            decimal montoOtorgadoMes = await baseCreditos
+                .Where(s => s.Estado == "Aprobado" &&
+                            s.FechaSolicitud >= primerDiaDelMesCreditos &&
+                            s.FechaSolicitud < primerDiaSiguienteMesCreditos)
+                .SumAsync(s => (decimal?)s.MontoSolicitado) ?? 0;
+
+            int creditosDesembolsadosMes = await baseCreditos.CountAsync(s =>
+                s.Estado == "Aprobado" &&
+                s.FechaSolicitud >= primerDiaDelMesCreditos &&
+                s.FechaSolicitud < primerDiaSiguienteMesCreditos);
+            var modelo = new AdminCreditosViewModel
+            {
+                TotalCreditos = totalCreditos,
+                CreditosAprobados = creditosAprobados,
+                CreditosEvaluacion = creditosEvaluacion,
+                CreditosRechazados = creditosRechazados,
+                MontoTotalSolicitado = montoTotalSolicitado,
+                Buscar = buscar,
+                Estado = estado,
+                PaginaActual = pagina,
+                TotalPaginas = totalPaginas,
+                TotalFiltrado = totalFiltrado,
+                InicioRegistro = totalFiltrado == 0 ? 0 : ((pagina - 1) * cantidadPorPagina) + 1,
+                FinRegistro = Math.Min(pagina * cantidadPorPagina, totalFiltrado),
+                Creditos = creditos,
+
+                TotalDistribucionEstado = totalCreditos,
+                CreditosActivosDistribucion = creditosAprobados,
+                CreditosCursoDistribucion = creditosEvaluacionDistribucion,
+                CreditosPendientesDistribucion = creditosPendientesDistribucion,
+                CreditosCanceladosDistribucion = creditosRechazadosDistribucion,
+
+                TotalDistribucionTipo = totalCreditos,
+                TiposCreditoGrafico = tiposGraficoFinal,
+
+                NuevosCreditosMes = nuevosCreditosMes,
+                MontoOtorgadoMes = montoOtorgadoMes,
+                CreditosDesembolsadosMes = creditosDesembolsadosMes
+            };
+
+            return View(modelo);
+        }
+        public IActionResult ExportarCreditosExcel(string? buscar, string estado = "Todos")
+        {
+            var query =
+                from s in _context.SOLICITUD_CREDITO.Include(x => x.USUARIO)
+                join p in _context.PERFIL_FINANCIERO
+                    on s.Id_Solicitud equals p.SOLICITUD_CREDITO_Id_Solicitud into perfilJoin
+                from p in perfilJoin.DefaultIfEmpty()
+                select new { Solicitud = s, Perfil = p };
+
+            if (!string.IsNullOrWhiteSpace(buscar))
+            {
+                string texto = buscar.Trim().ToLower();
+
+                query = query.Where(x =>
+                    x.Solicitud.NumeroSolicitud.ToLower().Contains(texto) ||
+                    x.Solicitud.USUARIO.Nombre.ToLower().Contains(texto) ||
+                    x.Solicitud.USUARIO.Apellido.ToLower().Contains(texto) ||
+                    x.Solicitud.USUARIO.Dni.Contains(texto));
+            }
+
+            if (estado != "Todos")
+                query = query.Where(x => x.Solicitud.Estado == estado);
+
+            var datos = query.OrderByDescending(x => x.Solicitud.FechaSolicitud).ToList();
+
+            using var workbook = new XLWorkbook();
+            var hoja = workbook.Worksheets.Add("Créditos");
+
+            hoja.Cell("A1").Value = "CREDIPLUS - REPORTE DE CRÉDITOS";
+            hoja.Range("A1:I1").Merge();
+            hoja.Range("A1:I1").Style.Font.Bold = true;
+            hoja.Range("A1:I1").Style.Font.FontSize = 18;
+            hoja.Range("A1:I1").Style.Font.FontColor = XLColor.White;
+            hoja.Range("A1:I1").Style.Fill.BackgroundColor = XLColor.FromHtml("#6D28D9");
+
+            hoja.Cell("A3").Value = "Generado:";
+            hoja.Cell("B3").Value = DateTime.Now.ToString("dd/MM/yyyy HH:mm");
+            hoja.Cell("A4").Value = "Filtro estado:";
+            hoja.Cell("B4").Value = estado;
+            hoja.Cell("A5").Value = "Búsqueda:";
+            hoja.Cell("B5").Value = string.IsNullOrWhiteSpace(buscar) ? "Sin búsqueda" : buscar;
+
+            hoja.Cell("A7").Value = "Solicitud";
+            hoja.Cell("B7").Value = "Cliente";
+            hoja.Cell("C7").Value = "DNI";
+            hoja.Cell("D7").Value = "Monto";
+            hoja.Cell("E7").Value = "Plazo";
+            hoja.Cell("F7").Value = "Interés";
+            hoja.Cell("G7").Value = "Estado";
+            hoja.Cell("H7").Value = "Fecha";
+            hoja.Cell("I7").Value = "Motivo";
+
+            hoja.Range("A7:I7").Style.Font.Bold = true;
+            hoja.Range("A7:I7").Style.Font.FontColor = XLColor.White;
+            hoja.Range("A7:I7").Style.Fill.BackgroundColor = XLColor.FromHtml("#4C1D95");
+
+            int fila = 8;
+
+            foreach (var item in datos)
+            {
+                hoja.Cell(fila, 1).Value = item.Solicitud.NumeroSolicitud;
+                hoja.Cell(fila, 2).Value = $"{item.Solicitud.USUARIO?.Nombre} {item.Solicitud.USUARIO?.Apellido}";
+                hoja.Cell(fila, 3).Value = item.Solicitud.USUARIO?.Dni;
+                hoja.Cell(fila, 4).Value = item.Solicitud.MontoSolicitado;
+                hoja.Cell(fila, 5).Value = item.Solicitud.PlazoMeses + " meses";
+                hoja.Cell(fila, 6).Value = item.Solicitud.InteresEstimado;
+                hoja.Cell(fila, 7).Value = item.Solicitud.Estado;
+                hoja.Cell(fila, 8).Value = item.Solicitud.FechaSolicitud.ToString("dd/MM/yyyy");
+                hoja.Cell(fila, 9).Value = item.Perfil?.MotivoPrestamo ?? "Sin motivo";
+
+                fila++;
+            }
+
+            hoja.Column(4).Style.NumberFormat.Format = "\"S/\" #,##0.00";
+            hoja.Column(6).Style.NumberFormat.Format = "\"S/\" #,##0.00";
+            hoja.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Creditos_CrediPlus_{DateTime.Now:yyyyMMdd_HHmm}.xlsx"
+            );
+        }
+        public IActionResult ExportarCreditosPdf(string? buscar, string estado = "Todos")
+        {
+            QuestPDF.Settings.License = LicenseType.Community;
+
+            var query =
+                from s in _context.SOLICITUD_CREDITO.Include(x => x.USUARIO)
+                join p in _context.PERFIL_FINANCIERO
+                    on s.Id_Solicitud equals p.SOLICITUD_CREDITO_Id_Solicitud into perfilJoin
+                from p in perfilJoin.DefaultIfEmpty()
+                select new { Solicitud = s, Perfil = p };
+
+            if (!string.IsNullOrWhiteSpace(buscar))
+            {
+                string texto = buscar.Trim().ToLower();
+
+                query = query.Where(x =>
+                    x.Solicitud.NumeroSolicitud.ToLower().Contains(texto) ||
+                    x.Solicitud.USUARIO.Nombre.ToLower().Contains(texto) ||
+                    x.Solicitud.USUARIO.Apellido.ToLower().Contains(texto) ||
+                    x.Solicitud.USUARIO.Dni.Contains(texto));
+            }
+
+            if (estado != "Todos")
+                query = query.Where(x => x.Solicitud.Estado == estado);
+
+            var datos = query.OrderByDescending(x => x.Solicitud.FechaSolicitud).ToList();
+
+            var pdf = Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4.Landscape());
+                    page.Margin(25);
+
+                    page.Header().Column(col =>
+                    {
+                        col.Item().Text("CrediPlus - Reporte de Créditos")
+                            .FontSize(20)
+                            .Bold()
+                            .FontColor("#6D28D9");
+
+                        col.Item().Text($"Generado: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                            .FontSize(9)
+                            .FontColor(Colors.Grey.Darken1);
+
+                        col.Item().Text($"Estado: {estado} | Búsqueda: {(string.IsNullOrWhiteSpace(buscar) ? "Sin búsqueda" : buscar)}")
+                            .FontSize(9)
+                            .FontColor(Colors.Grey.Darken2);
+                    });
+
+                    page.Content().PaddingTop(15).Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn(1);
+                            columns.RelativeColumn(2);
+                            columns.RelativeColumn(1);
+                            columns.RelativeColumn(1.2f);
+                            columns.RelativeColumn(1);
+                            columns.RelativeColumn(1);
+                            columns.RelativeColumn(1.2f);
+                            columns.RelativeColumn(1);
+                            columns.RelativeColumn(1.7f);
+                        });
+
+                        table.Header(header =>
+                        {
+                            header.Cell().Element(CreditosPdfHeader).Text("Solicitud").FontColor(Colors.White).Bold();
+                            header.Cell().Element(CreditosPdfHeader).Text("Cliente").FontColor(Colors.White).Bold();
+                            header.Cell().Element(CreditosPdfHeader).Text("DNI").FontColor(Colors.White).Bold();
+                            header.Cell().Element(CreditosPdfHeader).Text("Monto").FontColor(Colors.White).Bold();
+                            header.Cell().Element(CreditosPdfHeader).Text("Plazo").FontColor(Colors.White).Bold();
+                            header.Cell().Element(CreditosPdfHeader).Text("Interés").FontColor(Colors.White).Bold();
+                            header.Cell().Element(CreditosPdfHeader).Text("Estado").FontColor(Colors.White).Bold();
+                            header.Cell().Element(CreditosPdfHeader).Text("Fecha").FontColor(Colors.White).Bold();
+                            header.Cell().Element(CreditosPdfHeader).Text("Motivo").FontColor(Colors.White).Bold();
+                        });
+
+                        foreach (var item in datos)
+                        {
+                            table.Cell().Element(CreditosPdfCell).Text(item.Solicitud.NumeroSolicitud ?? "");
+                            table.Cell().Element(CreditosPdfCell).Text($"{item.Solicitud.USUARIO?.Nombre} {item.Solicitud.USUARIO?.Apellido}");
+                            table.Cell().Element(CreditosPdfCell).Text(item.Solicitud.USUARIO?.Dni ?? "");
+                            table.Cell().Element(CreditosPdfCell).Text($"S/ {item.Solicitud.MontoSolicitado:N2}");
+                            table.Cell().Element(CreditosPdfCell).Text($"{item.Solicitud.PlazoMeses} meses");
+                            table.Cell().Element(CreditosPdfCell).Text($"S/ {item.Solicitud.InteresEstimado:N2}");
+                            table.Cell().Element(CreditosPdfCell).Text(item.Solicitud.Estado);
+                            table.Cell().Element(CreditosPdfCell).Text(item.Solicitud.FechaSolicitud.ToString("dd/MM/yyyy"));
+                            table.Cell().Element(CreditosPdfCell).Text(item.Perfil?.MotivoPrestamo ?? "Sin motivo");
+                        }
+                    });
+
+                    page.Footer().AlignCenter()
+                        .Text("CrediPlus - Reporte de Créditos")
+                        .FontSize(9)
+                        .FontColor(Colors.Grey.Darken1);
+                });
+            }).GeneratePdf();
+
+            return File(pdf, "application/pdf", $"Creditos_CrediPlus_{DateTime.Now:yyyyMMdd_HHmm}.pdf");
+        }
+        private static IContainer CreditosPdfHeader(IContainer container)
+        {
+            return container
+                .Background("#6D28D9")
+                .PaddingVertical(6)
+                .PaddingHorizontal(4);
+        }
+
+        private static IContainer CreditosPdfCell(IContainer container)
+        {
+            return container
+                .BorderBottom(1)
+                .BorderColor(Colors.Grey.Lighten2)
+                .PaddingVertical(5)
+                .PaddingHorizontal(4);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarClienteAdmin(
+    int id,
+    string nombre,
+    string apellido,
+    string dni,
+    string celular,
+    string correo,
+    string? genero,
+    bool estadoActivo)
+        {
+            var cliente = await _context.Usuario
+                .FirstOrDefaultAsync(x => x.Id == id && x.Rol == "Cliente");
+
+            if (cliente == null)
+            {
+                return RedirectToAction("Clientes");
+            }
+
+            cliente.Nombre = nombre.Trim();
+            cliente.Apellido = apellido.Trim();
+            cliente.Dni = dni.Trim();
+            cliente.Celular = celular.Trim();
+            cliente.Correo = correo.Trim();
+            cliente.Genero = genero;
+            cliente.EstadoActivo = estadoActivo;
+
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction("Clientes");
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarClienteAdmin(int id)
+        {
+            var cliente = await _context.Usuario
+                .FirstOrDefaultAsync(x => x.Id == id && x.Rol == "Cliente");
+
+            if (cliente == null)
+            {
+                return Json(new { ok = false, mensaje = "No se encontró el cliente." });
+            }
+
+            bool tieneSolicitudActiva = await _context.SOLICITUD_CREDITO.AnyAsync(x =>
+                x.Usuario_Id_Usuario == id &&
+                (
+                    x.Estado == "Pendiente" ||
+                    x.Estado == "En Evaluación" ||
+                    x.Estado == "Aprobado" ||
+                    x.Estado == "Rechazado"
+                ));
+
+            if (tieneSolicitudActiva)
+            {
+                return Json(new { ok = false, mensaje = "No se puede eliminar este cliente porque tiene una solicitud activa." });
+            }
+
+            _context.Usuario.Remove(cliente);
+            await _context.SaveChangesAsync();
+
+            return Json(new { ok = true, mensaje = "Cliente eliminado correctamente." });
+        }
     }
 }
     
