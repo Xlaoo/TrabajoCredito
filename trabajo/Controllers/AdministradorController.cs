@@ -1283,7 +1283,12 @@ namespace trabajo.Controllers
             return File(pdf, "application/pdf", "Reporte_Administrador.pdf");
         }
 
-
+        public IActionResult GenerarReportes()
+        {
+            CargarDatosAdministrador();
+            ViewData["ActivePage"] = "GenerarReportes";
+            return View();
+        }
 
         public IActionResult PerfilAdministrador()
         {
@@ -1346,7 +1351,6 @@ namespace trabajo.Controllers
             TempData["MensajeOk"] = "Perfil actualizado correctamente.";
             return RedirectToAction("PerfilAdministrador");
         }
-
 
         [HttpPost]
         public async Task<JsonResult> EnviarCodigoPerfilAdministrador(string correo)

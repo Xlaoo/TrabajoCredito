@@ -55,9 +55,11 @@
 
                 <div class="section-title">Herramientas</div>
 
-                <a href="@Url.Action("reportesAdministrador", "Administrador")">
+                <a href="@Url.Action("GenerarReportes", "Administrador")"
+                   class="@(ViewData["ActivePage"]?.ToString() == "GenerarReportes" ? "active" : "")">
                     <i class="fas fa-file-export"></i> Generar Reportes
                 </a>
+
                 <a href="#"><i class="fas fa-download"></i> Exportar Datos</a>
 
                 <div class="section-title">Mi Cuenta</div>
