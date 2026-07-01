@@ -29,6 +29,7 @@ namespace trabajo.Models
         public DbSet<CancelacionEvaluacion> CancelacionEvaluacion { get; set; }
         public DbSet<MetodoPagoSolicitud> METODO_PAGO_SOLICITUD { get; set; }
         public DbSet<ReporteGenerado> REPORTE_GENERADO { get; set; }
+        public DbSet<ActividadAdministrador> ACTIVIDAD_ADMINISTRADOR { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -52,6 +53,7 @@ namespace trabajo.Models
             modelBuilder.Entity<SolicitudCredito>().ToTable("solicitud_credito");
             modelBuilder.Entity<CancelacionEvaluacion>().ToTable("cancelacion_evaluacion");
             modelBuilder.Entity<ReporteGenerado>().ToTable("reporte_generado");
+            modelBuilder.Entity<ActividadAdministrador>().ToTable("actividad_administrador");
         }
     }
 

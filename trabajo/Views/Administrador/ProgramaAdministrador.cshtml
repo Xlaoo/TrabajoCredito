@@ -36,7 +36,80 @@
     </div>
 
 </div>
+@if (TempData["MensajeOk"] != null)
+{
+    <div class="mensaje-admin mensaje-ok">
+        <i class="fas fa-check-circle"></i>
+        <span>@TempData["MensajeOk"]</span>
+    </div>
+}
 
+@if (TempData["MensajeError"] != null)
+{
+    <div class="mensaje-admin mensaje-error">
+        <i class="fas fa-times-circle"></i>
+        <span>@TempData["MensajeError"]</span>
+    </div>
+}
+@if (ViewBag.MostrarRecordatorios == true && ((List<string>)ViewBag.RecordatoriosAdmin).Any())
+{
+    <div class="admin-recordatorios-card">
+
+        <div class="recordatorios-header">
+            <i class="fas fa-bell"></i>
+
+            <div>
+                <h3>Recordatorios del Administrador</h3>
+                <p>Estas son las tareas que requieren tu atención.</p>
+            </div>
+
+        </div>
+
+        @foreach (string aviso in ViewBag.RecordatoriosAdmin)
+        {
+            <div class="recordatorio-item">
+                <i class="fas fa-circle-exclamation"></i>
+                <span>@aviso</span>
+            </div>
+        }
+
+    </div>
+}
+@if (ViewBag.MostrarNotificacionesSistema == true && ((List<string>)ViewBag.NotificacionesSistemaAdmin).Any())
+{
+    <div class="admin-sistema-alertas-card">
+        <div class="sistema-alertas-header">
+            <i class="fas fa-bell"></i>
+            <div>
+                <h3>Notificaciones del Sistema</h3>
+                <p>Alertas internas generadas automáticamente.</p>
+            </div>
+        </div>
+
+        @foreach (string alerta in ViewBag.NotificacionesSistemaAdmin)
+        {
+            <div class="sistema-alerta-item">
+                <i class="fas fa-info-circle"></i>
+                <span>@alerta</span>
+            </div>
+        }
+    </div>
+}
+@if (ViewBag.NotificacionCorreoActiva == true && ((List<string>)ViewBag.AlertasCorreoAdmin).Any())
+{
+    <div class="admin-correo-card">
+        <div>
+            <h3><i class="fas fa-envelope"></i> Notificaciones por Correo</h3>
+            <p>Tienes alertas listas para enviar a tu correo administrativo.</p>
+        </div>
+
+        <form asp-controller="Administrador" asp-action="EnviarAlertasCorreoAdmin" method="post">
+            <button type="submit" class="btn-enviar-correo-admin">
+                <i class="fas fa-paper-plane"></i> Enviar alertas a mi correo
+            </button>
+        </form>
+    </div>
+}
 <section class="stats">
 
     <div class="stat-card">
@@ -129,31 +202,44 @@
 
         <div id="contenedorActividades" class="activities-container">
 
-            @for (int i = 0; i < Model.ActividadesRecientes.Count; i++)
+            @if (!Model.ActividadesRecientes.Any())
             {
-                var item = Model.ActividadesRecientes[i];
-
-                <div class="activity-item @(i >= 5 ? "activity-hidden" : "")">
-                    <div class="activity-icon @item.Color">
-                        <i class="@item.Icono"></i>
-                    </div>
-
-                    <div class="activity-content">
-                        <strong>@item.Titulo</strong>
-                        <span>@item.Descripcion</span>
-                    </div>
-
-                    <div class="activity-date">
-                        @item.Fecha.ToString("dd/MM/yyyy hh:mm tt")
-                    </div>
+                <div class="quick-report-empty">
+                    <i class="fas fa-circle-info"></i>
+                    No hay actividades recientes.
                 </div>
+            }
+            else
+            {
+                @for (int i = 0; i < Model.ActividadesRecientes.Count; i++)
+                {
+                    var item = Model.ActividadesRecientes[i];
+
+                    <div class="activity-item @(i >= 3 ? "activity-hidden" : "")">
+                        <div class="activity-icon @item.Color">
+                            <i class="@item.Icono"></i>
+                        </div>
+
+                        <div class="activity-content">
+                            <strong>@item.Titulo</strong>
+                            <span>@item.Descripcion</span>
+                        </div>
+
+                        <div class="activity-date">
+                            @item.Fecha.ToString("dd/MM/yyyy hh:mm tt")
+                        </div>
+                    </div>
+                }
             }
 
         </div>
 
-        <button type="button" class="btn-view-all" id="btnToggleActividades">
-            Ver todas las actividades <i class="fas fa-arrow-right"></i>
-        </button>
+        @if (Model.ActividadesRecientes.Count > 3)
+        {
+            <button type="button" class="btn-view-all" id="btnToggleActividades">
+                Ver todas las actividades <i class="fas fa-arrow-right"></i>
+            </button>
+        }
     </div>
 
     <div class="admin-panel-card">
@@ -183,34 +269,43 @@
     <div class="admin-panel-card">
         <h3><i class="fas fa-file-alt"></i> Reportes Rápidos</h3>
 
-        <div class="quick-reports">
+        <div class="quick-reports quick-reports-rows">
 
-            <a class="quick-report-item purple @(ViewBag.ClientesPendiente ? "" : "bloqueado")"
-               href="@(ViewBag.ClientesPendiente? Url.Action("ReporteClientesExcel", "Administrador") : "#")">
-                <i class="fas fa-file-excel"></i>
-                <div>
-                    <strong>Reporte de Clientes</strong>
-                    <span>@(ViewBag.ClientesPendiente ? "Excel" : "Ya generado")</span>
-                </div>
-            </a>
+            <div class="quick-report-row">
+                <a class="quick-report-item purple" asp-controller="Administrador" asp-action="ReporteClientesExcel">
+                    <i class="fas fa-file-excel"></i>
+                    <div><strong>Clientes Excel</strong><span>Descargar actualizado</span></div>
+                </a>
 
-            <a class="quick-report-item green @(ViewBag.CreditosPendiente ? "" : "bloqueado")"
-               href="@(ViewBag.CreditosPendiente? Url.Action("ReporteCreditosExcel", "Administrador") : "#")">
-                <i class="fas fa-file-excel"></i>
-                <div>
-                    <strong>Reporte de Créditos</strong>
-                    <span>@(ViewBag.CreditosPendiente ? "Excel" : "Ya generado")</span>
-                </div>
-            </a>
+                <a class="quick-report-item purple" asp-controller="Administrador" asp-action="ReporteClientesPdfRapido">
+                    <i class="fas fa-file-pdf"></i>
+                    <div><strong>Clientes PDF</strong><span>Descargar actualizado</span></div>
+                </a>
+            </div>
 
-            <a class="quick-report-item orange @(ViewBag.PagosPendiente ? "" : "bloqueado")"
-               href="@(ViewBag.PagosPendiente? Url.Action("ReportePagosExcel", "Administrador") : "#")">
-                <i class="fas fa-database"></i>
-                <div>
-                    <strong>Reporte de Pagos</strong>
-                    <span>@(ViewBag.PagosPendiente ? "Excel" : "Ya generado")</span>
-                </div>
-            </a>
+            <div class="quick-report-row">
+                <a class="quick-report-item green" asp-controller="Administrador" asp-action="ReporteCreditosExcel">
+                    <i class="fas fa-file-excel"></i>
+                    <div><strong>Créditos Excel</strong><span>Descargar actualizado</span></div>
+                </a>
+
+                <a class="quick-report-item green" asp-controller="Administrador" asp-action="ReporteCreditosPdfRapido">
+                    <i class="fas fa-file-pdf"></i>
+                    <div><strong>Créditos PDF</strong><span>Descargar actualizado</span></div>
+                </a>
+            </div>
+
+            <div class="quick-report-row">
+                <a class="quick-report-item orange" asp-controller="Administrador" asp-action="ReportePagosExcel">
+                    <i class="fas fa-file-excel"></i>
+                    <div><strong>Pagos Excel</strong><span>Descargar actualizado</span></div>
+                </a>
+
+                <a class="quick-report-item orange" asp-controller="Administrador" asp-action="ReportePagosPdfRapido">
+                    <i class="fas fa-file-pdf"></i>
+                    <div><strong>Pagos PDF</strong><span>Descargar actualizado</span></div>
+                </a>
+            </div>
 
         </div>
     </div>
@@ -351,29 +446,27 @@
 
         let mostrandoTodo = false;
 
-        btnToggle.addEventListener("click", function () {
+        if (btnToggle) {
+            btnToggle.addEventListener("click", function () {
+                mostrandoTodo = !mostrandoTodo;
 
-            mostrandoTodo = !mostrandoTodo;
+                hiddenActivities.forEach(item => {
+                    if (mostrandoTodo) {
+                        item.classList.add("mostrar-actividad");
+                    } else {
+                        item.classList.remove("mostrar-actividad");
+                    }
+                });
 
-            hiddenActivities.forEach(item => {
-                item.style.display = mostrandoTodo ? "grid" : "none";
+                if (mostrandoTodo) {
+                    container.classList.add("expandido");
+                    btnToggle.innerHTML = '← Ver menos actividades';
+                } else {
+                    container.classList.remove("expandido");
+                    btnToggle.innerHTML = 'Ver todas las actividades <i class="fas fa-arrow-right"></i>';
+                }
             });
-
-            if (mostrandoTodo) {
-                container.classList.add("expandido");
-
-                btnToggle.innerHTML =
-                    '← Ver menos historial';
-            }
-            else {
-                container.classList.remove("expandido");
-
-                btnToggle.innerHTML =
-                    'Ver más historial →';
-
-                container.scrollTop = 0;
-            }
-        });
+        }
                        window.addEventListener("load", function () {
 
             const cantidad = parseInt(localStorage.getItem("notificacionesInicio") || "0");

@@ -213,6 +213,16 @@ namespace trabajo.Controllers
             }
             else if (usuarioEncontrado.Rol == "Administrador")
             {
+                _Context.ACTIVIDAD_ADMINISTRADOR.Add(new ActividadAdministrador
+                {
+                    IdUsuario = usuarioEncontrado.Id,
+                    Tipo = "Inicio de sesión",
+                    Descripcion = $"El administrador {usuarioEncontrado.Nombre} {usuarioEncontrado.Apellido} inició sesión correctamente.",
+                    Fecha = DateTime.Now
+                });
+
+                _Context.SaveChanges();
+
                 return RedirectToAction("ProgramaAdministrador", "Administrador");
             }
 
@@ -352,18 +362,41 @@ namespace trabajo.Controllers
 
             var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
 
-            if (usuario != null)
-            {
-                var solicitudPendiente = _Context.SOLICITUD_CREDITO
-     .FirstOrDefault(x => x.Usuario_Id_Usuario == usuario.Id &&
-         (x.Estado == "Pendiente" ||
-          x.Estado == "En Evaluación" ||
-          x.Estado == "Aprobado" ||
-          x.Estado == "Rechazado"));
+            if (usuario == null)
+                return RedirectToAction("IniciarSesion", "Login");
 
-                if (solicitudPendiente != null)
+            var solicitud = _Context.SOLICITUD_CREDITO
+                .Where(x => x.Usuario_Id_Usuario == usuario.Id &&
+                    (x.Estado == "Pendiente" ||
+                     x.Estado == "En Evaluación" ||
+                     x.Estado == "Aprobado" ||
+                     x.Estado == "Rechazado"))
+                .OrderByDescending(x => x.FechaSolicitud)
+                .FirstOrDefault();
+
+            if (solicitud != null)
+            {
+                if (solicitud.Estado == "Pendiente")
                 {
                     ViewBag.MostrarConfirmacion = true;
+                }
+                else if (solicitud.Estado == "En Evaluación")
+                {
+                    ViewBag.MostrarModalBloqueo = true;
+                    ViewBag.TituloBloqueo = "Solicitud en evaluación";
+                    ViewBag.MensajeBloqueo = "Ya tienes una solicitud en evaluación. Debes esperar la respuesta del analista antes de solicitar un nuevo crédito.";
+                }
+                else if (solicitud.Estado == "Aprobado")
+                {
+                    ViewBag.MostrarModalBloqueo = true;
+                    ViewBag.TituloBloqueo = "Solicitud aprobada activa";
+                    ViewBag.MensajeBloqueo = "Tienes una solicitud aprobada activa. No puedes solicitar otro crédito mientras esta solicitud siga vigente.";
+                }
+                else if (solicitud.Estado == "Rechazado")
+                {
+                    ViewBag.MostrarModalBloqueo = true;
+                    ViewBag.TituloBloqueo = "Solicitud rechazada";
+                    ViewBag.MensajeBloqueo = "Tienes una solicitud rechazada. Primero debes eliminarla desde Mis Solicitudes para poder solicitar un nuevo crédito.";
                 }
             }
 

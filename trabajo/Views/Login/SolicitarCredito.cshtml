@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
 <div class="page">
-    <div class="contenedor">
+    <div class="contenedor @(ViewBag.MostrarModalBloqueo == true ? "contenedor-bloqueado" : "")">
 
         <div class="side">
             <div>
@@ -303,6 +303,29 @@
 
     </div>
 </div>
+@if (ViewBag.MostrarModalBloqueo == true)
+{
+    <div class="modal-bloqueo">
+        <div class="modal-bloqueo-card">
+            <div class="modal-bloqueo-icono">
+                <i class="fas fa-circle-exclamation"></i>
+            </div>
+
+            <h2>@ViewBag.TituloBloqueo</h2>
+            <p>@ViewBag.MensajeBloqueo</p>
+
+            <div class="modal-bloqueo-botones">
+                <a href="@Url.Action("DashboardCliente", "Login")" class="btn-modal-secundario">
+                    Volver al inicio
+                </a>
+
+                <a href="@Url.Action("MisSolicitudes", "Login")" class="btn-modal-principal">
+                    Ver mis solicitudes
+                </a>
+            </div>
+        </div>
+    </div>
+}
 
 <script>
            function actualizarMonto() {
@@ -1041,4 +1064,77 @@
             transform: translateY(-2px);
             box-shadow: 0 8px 18px rgba(124,58,237,0.35);
         }
+
+    .modal-bloqueo {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.45);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .modal-bloqueo-card {
+        background: white;
+        width: 430px;
+        padding: 34px;
+        border-radius: 22px;
+        text-align: center;
+        box-shadow: 0 20px 50px rgba(0,0,0,.25);
+    }
+
+    .modal-bloqueo-icono {
+        width: 68px;
+        height: 68px;
+        background: #f3e8ff;
+        color: #6d28d9;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 30px;
+        margin: 0 auto 18px;
+    }
+
+    .modal-bloqueo-card h2 {
+        margin: 0 0 12px;
+        color: #3c096c;
+        font-size: 24px;
+    }
+
+    .modal-bloqueo-card p {
+        color: #4b5563;
+        line-height: 1.6;
+        margin-bottom: 24px;
+    }
+
+    .modal-bloqueo-botones {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-modal-secundario,
+    .btn-modal-principal {
+        flex: 1;
+        padding: 13px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 700;
+    }
+
+    .btn-modal-secundario {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .btn-modal-principal {
+        background: #6d28d9;
+        color: white;
+    }
+
+    .contenedor-bloqueado {
+        filter: blur(3px);
+        pointer-events: none;
+        user-select: none;
+    }
 </style>

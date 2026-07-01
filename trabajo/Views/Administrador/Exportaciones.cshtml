@@ -54,6 +54,14 @@
 			<span>Pendientes de generar</span>
 		</div>
 	</div>
+	<div class="export-actions">
+		<a asp-controller="Administrador"
+		   asp-action="GenerarReportes"
+		   class="btn-generar-reporte">
+			<i class="fa-solid fa-plus"></i>
+			Crear nuevo reporte
+		</a>
+	</div>
 
 	<form class="filter-box" method="get" asp-action="Exportaciones" asp-controller="Administrador">
 		<div>
@@ -84,6 +92,14 @@
 				<option value="En Proceso" selected="@(ViewBag.Estado == "En Proceso")">En Proceso</option>
 			</select>
 		</div>
+		<div>
+			<label>Formato</label>
+			<select name="formato">
+				<option value="Todos" selected="@(ViewBag.Formato == "Todos")">Todos</option>
+				<option value="Excel" selected="@(ViewBag.Formato == "Excel")">Excel</option>
+				<option value="PDF" selected="@(ViewBag.Formato == "PDF")">PDF</option>
+			</select>
+		</div>
 
 		<button type="submit" class="btn-search">
 			<i class="fas fa-search"></i> Buscar
@@ -103,6 +119,10 @@
 					<th>ID</th>
 					<th>Tipo de Exportación</th>
 					<th>Descripción</th>
+					<th>Fecha Inicio</th>
+					<th>Fecha Fin</th>
+					<th>Estado Filtro</th>
+					<th>Tipo Crédito</th>
 					<th>Formato</th>
 					<th>Solicitado por</th>
 					<th>Fecha Solicitud</th>
@@ -119,14 +139,31 @@
 				{
 					var estadoClass = item.Estado == "Completado" ? "ok" : "process";
 
-					var iconClass = item.TipoReporte == "Clientes" ? "fa-users text-purple"
-					: item.TipoReporte == "Creditos" ? "fa-money-bill text-green"
-					: "fa-receipt text-orange";
+					var iconClass = item.TipoReporte switch
+					{
+						"Clientes" => "fa-users text-purple",
+						"Creditos" => "fa-file-invoice-dollar text-green",
+						"Pagos" => "fa-money-bill-wave text-orange",
+						"Desempeno" => "fa-chart-bar text-blue",
+						"Mora" => "fa-exclamation-triangle text-red",
+						"Financiero" => "fa-briefcase text-teal",
+						"Sucursal" => "fa-building text-brown",
+						"TipoCredito" => "fa-chart-pie text-pink",
+						"Periodo" => "fa-calendar-alt text-sky",
+						"Actividad" => "fa-history text-indigo",
+						"Exportaciones" => "fa-file-download text-emerald",
+						"Personalizado" => "fa-cog text-gray",
+						_ => "fa-file text-gray"
+					};
 
 					<tr class="fila-exportacion" data-index="@index">
 						<td>EXP-@item.Id.ToString("D5")</td>
 						<td><i class="fa-solid @iconClass"></i> @item.TipoReporte</td>
 						<td>@item.Descripcion</td>
+						<td>@item.FechaInicioReporte.ToString("dd/MM/yyyy")</td>
+						<td>@item.FechaFinReporte.ToString("dd/MM/yyyy")</td>
+						<td>@(string.IsNullOrWhiteSpace(item.EstadoFiltro) ? "Todos" : item.EstadoFiltro)</td>
+						<td>@(string.IsNullOrWhiteSpace(item.TipoCreditoFiltro) ? "Todos" : item.TipoCreditoFiltro)</td>
 						<td><span class="tag excel">@item.Formato</span></td>
 						<td>@item.SolicitadoPor</td>
 						<td>@item.FechaSolicitud.ToString("dd/MM/yyyy hh:mm tt")</td>
@@ -349,7 +386,7 @@
 		border-radius: 16px;
 		padding: 20px;
 		display: grid;
-		grid-template-columns: repeat(4, 1fr) 120px 160px;
+		grid-template-columns: repeat(5, 1fr) 120px 160px;
 		gap: 18px;
 		align-items: end;
 		margin-bottom: 24px;
@@ -785,11 +822,73 @@
 		justify-content: center;
 		border: 2px solid #fff;
 	}
+
+	.text-blue {
+		color: #3b82f6;
+	}
+
+	.text-red {
+		color: #ef4444;
+	}
+
+	.text-teal {
+		color: #14b8a6;
+	}
+
+	.text-brown {
+		color: #d97706;
+	}
+
+	.text-pink {
+		color: #ec4899;
+	}
+
+	.text-sky {
+		color: #0ea5e9;
+	}
+
+	.text-indigo {
+		color: #6366f1;
+	}
+
+	.text-emerald {
+		color: #059669;
+	}
+
+	.text-gray {
+		color: #6b7280;
+	}
+
+	.export-actions {
+		display: flex;
+		justify-content: flex-end;
+		margin-bottom: 18px;
+	}
+
+	.btn-generar-reporte {
+		background: #7c3aed;
+		color: #fff;
+		padding: 12px 22px;
+		border-radius: 12px;
+		font-weight: 700;
+		text-decoration: none;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		transition: .2s;
+	}
+
+		.btn-generar-reporte:hover {
+			background: #6d28d9;
+			color: #fff;
+			text-decoration: none;
+			transform: translateY(-2px);
+		}
 </style>
 <script>
 	document.addEventListener("DOMContentLoaded", function () {
 		const filas = document.querySelectorAll(".fila-exportacion");
-		const filasPorPagina = 5;
+		const filasPorPagina = 3;
 		let paginaActual = 1;
 
 		const totalFilas = filas.length;

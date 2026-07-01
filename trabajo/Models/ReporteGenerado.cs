@@ -21,5 +21,9 @@ namespace trabajo.Models
         public DateTime FechaSolicitud { get; set; }
         public string Estado { get; set; }
         public bool Descargado { get; set; }
+        public DateTime FechaInicioReporte { get; set; }
+        public DateTime FechaFinReporte { get; set; }
+        public string? EstadoFiltro { get; set; }
+        public string? TipoCreditoFiltro { get; set; }
     }
 }

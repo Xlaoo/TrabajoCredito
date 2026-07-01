@@ -15,7 +15,6 @@ namespace trabajo.Models
         public string Dni { get; set; } = null!;
 
         public string Celular { get; set; } = null!;
-        public DateTime? UltimaConexion { get; set; }
 
         public string Correo { get; set; } = null!;
 
@@ -24,5 +23,11 @@ namespace trabajo.Models
         public DateTime FechaRegistro { get; set; }
         public string Genero { get; set; }
         public bool EstadoActivo { get; set; }
+        public DateTime? UltimaConexion { get; set; }
+        public bool NotificacionCorreo { get; set; } = true;
+
+        public bool NotificacionSistema { get; set; } = true;
+
+        public bool NotificacionRecordatorio { get; set; } = false;
     }
 }
