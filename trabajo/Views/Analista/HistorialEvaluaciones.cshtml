@@ -253,6 +253,32 @@
             font-weight: bold;
         }
 
+    .acciones-historial {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .btn-cronograma {
+        background: #f59e0b;
+        color: white;
+        border: none;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        font-size: 17px;
+        font-weight: bold;
+        transition: .25s;
+    }
+
+        .btn-cronograma:hover {
+            background: #d97706;
+            color: white;
+        }
         .modal-historial {
             position: fixed;
             inset: 0;
@@ -650,6 +676,7 @@
         .swal2-container {
             z-index: 99999999 !important;
         }
+
       </style>
     @* <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -792,7 +819,8 @@
                                     <td>S/ @solicitud.MontoSolicitado.ToString("N0")</td>
                                     <td>@solicitud.PlazoMeses meses</td>
                                     <td>@ultimaFecha.ToString("dd/MM/yyyy HH:mm")</td>
-                                    <td>
+                                <td>
+                                    <div class="acciones-historial">
                                         <button type="button"
                                                 class="btn-ojo"
                                                 onclick="abrirDetalle(
@@ -811,6 +839,33 @@
                     '@observacion')">
                                             👁
                                         </button>
+                                        <div class="dropdown d-inline">
+                                            <button class="btn-cronograma" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-file-invoice"></i>
+                                            </button>
+
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a class="dropdown-item"
+                                                       asp-controller="Analista"
+                                                       asp-action="CronogramaEvaluacionPdf"
+                                                       asp-route-idSolicitud="@solicitud.Id_Solicitud"
+                                                       target="_blank">
+                                                        <i class="fas fa-file-pdf text-danger"></i> PDF
+                                                    </a>
+                                                </li>
+
+                                                <li>
+                                                    <a class="dropdown-item"
+                                                       asp-controller="Analista"
+                                                       asp-action="CronogramaEvaluacionExcel"
+                                                       asp-route-idSolicitud="@solicitud.Id_Solicitud">
+                                                        <i class="fas fa-file-excel text-success"></i> Excel
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        </div>
                                     </td>
                                 </tr>
                             }

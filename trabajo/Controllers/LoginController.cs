@@ -852,13 +852,29 @@ string titularCuenta
                 ViewData["CorreoIntentado"] = usuarioEditado.Correo;
                 return View(usuario);
             }
-
+            string correoAnterior = usuario.Correo;
             usuario.Nombre = usuarioEditado.Nombre;
             usuario.Apellido = usuarioEditado.Apellido;
             usuario.Dni = usuarioEditado.Dni;
             usuario.Celular = usuarioEditado.Celular;
             usuario.Correo = usuarioEditado.Correo;
             usuario.Genero = usuarioEditado.Genero;
+            if (correoAnterior != usuarioEditado.Correo)
+            {
+                var idsSolicitudes = _Context.SOLICITUD_CREDITO
+                    .Where(x => x.Usuario_Id_Usuario == usuario.Id)
+                    .Select(x => x.Id_Solicitud)
+                    .ToList();
+
+                var cronogramas = _Context.CRONOGRAMA
+                    .Where(x => idsSolicitudes.Contains(x.SOLICITUD_CREDITO_Id_Solicitud))
+                    .ToList();
+
+                foreach (var c in cronogramas)
+                {
+                    c.CorreoDestino = usuarioEditado.Correo;
+                }
+            }
 
             if (!string.IsNullOrWhiteSpace(usuarioEditado.clave))
             {
