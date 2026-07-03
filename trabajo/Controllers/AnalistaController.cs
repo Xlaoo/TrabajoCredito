@@ -2254,8 +2254,47 @@ _context.HISTORIAL_CREDITO
 
             ViewBag.NombreAnalista = $"{nombre} {apellido}".Trim();
             ViewBag.CorreoAnalista = correo;
+            var admin = _context.Usuario.FirstOrDefault(x => x.Rol == "Administrador");
+            var dni = User.FindFirst("Dni")?.Value;
+            var analista = _context.Usuario.FirstOrDefault(x => x.Dni == dni && x.Rol == "Analista");
+
+            ViewBag.IdAdministrador = admin?.Id ?? 0;
+            ViewBag.IdAnalista = analista?.Id ?? 0;
+
+            ViewBag.MensajesAdmin = _context.MENSAJE_ADMIN_ANALISTA
+                .OrderBy(x => x.FechaEnvio)
+                .ToList();
+            ViewBag.AdminActivo = admin != null &&
+                                  admin.EstadoActivo &&
+                                  admin.UltimaConexion >= DateTime.Now.AddMinutes(-2);
 
             return View();
+        }
+        [HttpPost]
+        public IActionResult EnviarSolicitudSoporte(string asunto, string mensaje)
+        {
+            var dni = User.FindFirst("Dni")?.Value;
+
+            var analista = _context.Usuario
+                .FirstOrDefault(x => x.Dni == dni && x.Rol == "Analista");
+
+            if (analista == null)
+                return RedirectToAction("ContactarSoporte");
+
+            _context.SOLICITUD_SOPORTE.Add(new SolicitudSoporte
+            {
+                Id_Analista = analista.Id,
+                Asunto = asunto,
+                Mensaje = mensaje,
+                Estado = "Pendiente",
+                FechaEnvio = DateTime.Now,
+                Leido = false
+            });
+
+            _context.SaveChanges();
+
+            TempData["OkSoporte"] = "Solicitud enviada correctamente.";
+            return RedirectToAction("ContactarSoporte");
         }
 
 

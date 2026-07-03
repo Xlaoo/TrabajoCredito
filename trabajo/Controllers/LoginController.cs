@@ -51,7 +51,7 @@ namespace trabajo.Controllers
 
             var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
 
-            if (usuario != null && usuario.Rol == "Cliente")
+            if (usuario != null)
             {
                 usuario.EstadoActivo = false;
                 usuario.UltimaConexion = DateTime.Now;
@@ -201,12 +201,9 @@ namespace trabajo.Controllers
             new ClaimsPrincipal(claimsIdentity),
             properties
             );
-            if (usuarioEncontrado.Rol == "Cliente")
-            {
-                usuarioEncontrado.EstadoActivo = true;
-                usuarioEncontrado.UltimaConexion = DateTime.Now;
-                _Context.SaveChanges();
-            }
+            usuarioEncontrado.EstadoActivo = true;
+            usuarioEncontrado.UltimaConexion = DateTime.Now;
+            _Context.SaveChanges();
             if (usuarioEncontrado.Rol == "Analista")
             {
                 return RedirectToAction("ProgramaAnalista", "Analista");

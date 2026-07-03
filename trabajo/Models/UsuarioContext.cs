@@ -32,7 +32,8 @@ namespace trabajo.Models
         public DbSet<ActividadAdministrador> ACTIVIDAD_ADMINISTRADOR { get; set; }
         public DbSet<NotificacionAdmin> NOTIFICACION_ADMIN { get; set; }
         public DbSet<PlantillaNotificacion> PLANTILLA_NOTIFICACION { get; set; }
-
+        public DbSet<MensajeAdminAnalista> MENSAJE_ADMIN_ANALISTA { get; set; }
+        public DbSet<SolicitudSoporte> SOLICITUD_SOPORTE { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -58,6 +59,8 @@ namespace trabajo.Models
             modelBuilder.Entity<ActividadAdministrador>().ToTable("actividad_administrador");
             modelBuilder.Entity<NotificacionAdmin>().ToTable("notificacion_admin");
             modelBuilder.Entity<PlantillaNotificacion>().ToTable("plantilla_notificacion");
+            modelBuilder.Entity<MensajeAdminAnalista>().ToTable("mensaje_admin_analista");
+            modelBuilder.Entity<SolicitudSoporte>().ToTable("solicitud_soporte");
         }
     }
 

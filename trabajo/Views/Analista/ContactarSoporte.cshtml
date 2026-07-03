@@ -426,6 +426,99 @@
             font-size: 12px;
             font-weight: 800;
         }
+
+    .chat-messages {
+        height: 430px;
+        overflow-y: auto;
+        background: #fbf8ff;
+        padding: 22px;
+        border-top: 1px solid #eee7ff;
+        border-bottom: 1px solid #eee7ff;
+    }
+
+    .chat-message {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 14px;
+    }
+
+        .chat-message.analista {
+            align-items: flex-end;
+        }
+
+        .chat-message.admin {
+            align-items: flex-start;
+        }
+
+    .chat-bubble {
+        max-width: 70%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        font-weight: 700;
+        box-shadow: 0 5px 16px rgba(0,0,0,.08);
+    }
+
+    .chat-message.analista .chat-bubble {
+        background: #6d28d9;
+        color: white;
+    }
+
+    .chat-message.admin .chat-bubble {
+        background: white;
+        color: #241041;
+        border: 1px solid #e9d5ff;
+    }
+
+    .chat-meta {
+        font-size: 11px;
+        color: #8b7ca8;
+        margin-top: 6px;
+        font-weight: 700;
+    }
+
+    .chat-form {
+        display: flex;
+        gap: 10px;
+        padding: 16px;
+        background: white;
+    }
+
+        .chat-form input {
+            flex: 1;
+            border: 1px solid #ddd6fe;
+            border-radius: 16px;
+            padding: 14px;
+        }
+
+    .chat-send-btn {
+        width: 48px;
+        height: 48px;
+        border: none;
+        border-radius: 50%;
+        background: #6d28d9;
+        color: white;
+        font-size: 18px;
+    }
+
+    .chat-estado {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 13px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+        .chat-estado.activo {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .chat-estado.inactivo {
+            background: #fee2e2;
+            color: #ef4444;
+        }
 </style>
 
 <div class="layout">
@@ -509,9 +602,9 @@
                     </div>
                 </div>
 
-                <form onsubmit="enviarSoporte(event)">
+                <form asp-action="EnviarSolicitudSoporte" asp-controller="Analista" method="post">
                     <label>Asunto</label>
-                    <input type="text" id="asunto" placeholder="Escribe el asunto de tu consulta" required />
+                    <input type="text" id="asunto" name="asunto" placeholder="Escribe el asunto de tu consulta" required />
 
                     <label>Tipo de consulta</label>
                     <select id="tipoConsulta" required>
@@ -525,12 +618,19 @@
                     </select>
 
                     <label>Mensaje</label>
-                    <textarea id="mensaje" maxlength="500" oninput="actualizarContador()" placeholder="Describe tu problema o consulta con el mayor detalle posible..." required></textarea>
+                    <textarea id="mensaje" name="mensaje" maxlength="500" oninput="actualizarContador()" placeholder="Describe tu problema o consulta con el mayor detalle posible..." required></textarea>
                     <div class="contador"><span id="contadorMensaje">0</span>/500</div>
 
                     <button type="submit" class="btn-enviar">
                         <i class="fas fa-paper-plane"></i>
                         Enviar Solicitud
+                    </button>
+                    <button type="button"
+                            class="btn-enviar"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalChatAdmin">
+                        <i class="fas fa-comments"></i>
+                        Comunicarme con Administrador
                     </button>
 
                     <div id="mensajeOk" class="mensaje-ok">
@@ -692,7 +792,63 @@
 
     </main>
 </div>
+<div class="modal fade" id="modalChatAdmin" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content" style="border-radius:24px;border:none;overflow:hidden;">
 
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-comments"></i> Comunicación con Administrador
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+
+            <div class="modal-body p-0">
+                <div class="analistas-panel chat-panel">
+                    <div class="analistas-panel-header">
+                        <div>
+                            <h3 class="analistas-panel-title">Chat con Administrador</h3>
+                            <span class="chat-estado @(ViewBag.AdminActivo == true ? "activo" : "inactivo")">
+                                <i class="fas fa-circle"></i>
+                                @(ViewBag.AdminActivo == true ? "Administrador Activo" : "Administrador Inactivo")
+                            </span>
+                            <p class="analistas-panel-subtitle">Mensajes en tiempo real Analista ↔ Administrador.</p>
+                        </div>
+                    </div>
+
+                    <div class="chat-messages" id="chatMensajesAdmin">
+                        @if (ViewBag.MensajesAdmin != null)
+                        {
+                            foreach (var mensaje in ViewBag.MensajesAdmin)
+                            {
+                                var claseMensaje = mensaje.RemitenteRol == "Analista" ? "analista" : "admin";
+
+                                <div class="chat-message @claseMensaje">
+                                    <div class="chat-bubble">@mensaje.Mensaje</div>
+                                    <div class="chat-meta">
+                                        @mensaje.RemitenteRol · @mensaje.FechaEnvio.ToString("dd/MM/yyyy hh:mm tt")
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    <form class="chat-form" id="formChatAdmin">
+                        <input type="text"
+                               id="mensajeAdminInput"
+                               autocomplete="off"
+                               placeholder="Escribe un mensaje para el administrador..." />
+
+                        <button type="submit" class="chat-send-btn" id="btnEnviarAdmin">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
     function actualizarContador() {
         let mensaje = document.getElementById("mensaje").value;
@@ -712,6 +868,7 @@
         setTimeout(() => {
             document.getElementById("mensajeOk").classList.remove("activo");
         }, 4000);
+
     }
             function toggleFaq(elemento) {
         elemento.classList.toggle("abierto");
@@ -729,4 +886,57 @@
             texto.innerText = "Ver todas las preguntas";
         }
     }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
+<script>
+    const idAdministradorSoporte = @((int?)ViewBag.IdAdministrador ?? 0);
+    const idAnalistaSoporte = @((int?)ViewBag.IdAnalista ?? 0);
+    const remitenteRolSoporte = "Analista";
+
+    const chatMensajesAdmin = document.getElementById("chatMensajesAdmin");
+    const formChatAdmin = document.getElementById("formChatAdmin");
+    const mensajeAdminInput = document.getElementById("mensajeAdminInput");
+
+    let connectionAdmin = new signalR.HubConnectionBuilder()
+        .withUrl("/chatAnalistaHub")
+        .withAutomaticReconnect()
+        .build();
+
+    connectionAdmin.on("RecibirMensaje", function (data) {
+        const remitente = data.remitenteRol || data.RemitenteRol;
+        const mensaje = data.mensaje || data.Mensaje;
+        const fecha = data.fechaEnvio || data.FechaEnvio || new Date().toLocaleString();
+
+        const clase = remitente === "Analista" ? "analista" : "admin";
+
+        chatMensajesAdmin.innerHTML += `
+            <div class="chat-message ${clase}">
+                <div class="chat-bubble">${mensaje}</div>
+                <div class="chat-meta">${remitente} · ${fecha}</div>
+            </div>`;
+
+        chatMensajesAdmin.scrollTop = chatMensajesAdmin.scrollHeight;
+    });
+
+    connectionAdmin.start().then(() => {
+        connectionAdmin.invoke("UnirseConversacion", idAdministradorSoporte, idAnalistaSoporte);
+    });
+
+    formChatAdmin.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const texto = mensajeAdminInput.value.trim();
+        if (!texto) return;
+
+        await connectionAdmin.invoke(
+            "EnviarMensaje",
+            idAdministradorSoporte,
+            idAnalistaSoporte,
+            remitenteRolSoporte,
+            texto
+        );
+
+        mensajeAdminInput.value = "";
+    });
 </script>

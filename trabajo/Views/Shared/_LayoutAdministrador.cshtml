@@ -59,8 +59,9 @@
                     <i class="fas fa-chart-line"></i>
                     Exportaciones
                 </a>
-                <a href="#" class="@(ViewData["ActivePage"]?.ToString() == "Analistas" ? "active" : "")">
-                    <i class="fa-solid fa-users-gear"></i>Analistas
+                <a href="@Url.Action("Analistas", "Administrador")"
+                   class="@(ViewData["ActivePage"]?.ToString() == "Analistas" ? "active" : "")">
+                    <i class="fa-solid fa-users-gear"></i> Analistas
                 </a>
 
                 <div class="section-title">Herramientas</div>
@@ -80,7 +81,7 @@
                    class="@(ViewData["ActivePage"]?.ToString() == "Perfil" ? "active" : "")">
                     <i class="fas fa-user"></i> Perfil
                 </a>
-                <a href="@Url.Action("IniciarSesion", "Login")" class="logout-link">
+                <a href="@Url.Action("CerrarSesion", "Login")" class="logout-link">
                     <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
                 </a>
             </nav>

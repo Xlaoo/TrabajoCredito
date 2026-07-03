@@ -15,7 +15,7 @@ using System.Net.Mail;
     using trabajo.Models.ViewModels;
     using trabajo.Service;
 
-    namespace trabajo.Controllers
+namespace trabajo.Controllers
     {
         [Authorize]
         public class AdministradorController : Controller
@@ -28,7 +28,245 @@ using System.Net.Mail;
             {
                 _context = context;
             }
-            public IActionResult ProgramaAdministrador()
+        public IActionResult Analistas()
+        {
+            CargarDatosAdministrador();
+
+            var admin = _context.Usuario.FirstOrDefault(x => x.Rol == "Administrador");
+            var analista = _context.Usuario.FirstOrDefault(x => x.Rol == "Analista");
+
+            var modelo = new AdminAnalistaViewModel
+            {
+                IdAdministrador = admin?.Id ?? 0,
+                IdAnalista = analista?.Id ?? 0,
+                NombreAnalista = analista != null ? $"{analista.Nombre} {analista.Apellido}" : "Sin analista",
+                DniAnalista = analista?.Dni ?? "-",
+                CelularAnalista = analista?.Celular ?? "-",
+                CorreoAnalista = analista?.Correo ?? "-",
+                EstadoActivo = analista != null &&
+               analista.EstadoActivo &&
+               analista.UltimaConexion >= DateTime.Now.AddMinutes(-2),
+                FechaAsignacion = analista?.FechaRegistro ?? DateTime.Now,
+
+                SolicitudesAsignadas = analista == null ? 0 :
+    _context.SOLICITUD_CREDITO.Count(x => x.FechaSolicitud >= analista.FechaRegistro),
+
+                SolicitudesCompletadas = analista == null ? 0 :
+    _context.SOLICITUD_CREDITO.Count(x =>
+        x.FechaSolicitud >= analista.FechaRegistro &&
+        (x.Estado == "Aprobado" || x.Estado == "Cancelado")),
+
+                SolicitudesEnProceso = analista == null ? 0 :
+    _context.SOLICITUD_CREDITO.Count(x =>
+        x.FechaSolicitud >= analista.FechaRegistro &&
+        x.Estado == "En Evaluación"),
+
+                SolicitudesPendientes = analista == null ? 0 :
+    _context.SOLICITUD_CREDITO.Count(x =>
+        x.FechaSolicitud >= analista.FechaRegistro &&
+        x.Estado == "Pendiente"),
+
+                TasaEfectividad = analista == null ? 0 :
+(
+    _context.SOLICITUD_CREDITO.Count(x => x.FechaSolicitud >= analista.FechaRegistro) == 0
+    ? 0
+    : (int)Math.Round(
+        (double)_context.SOLICITUD_CREDITO.Count(x =>
+            x.FechaSolicitud >= analista.FechaRegistro &&
+            (x.Estado == "Aprobado" || x.Estado == "Cancelado")) * 100 /
+        _context.SOLICITUD_CREDITO.Count(x =>
+            x.FechaSolicitud >= analista.FechaRegistro)
+    )
+),
+
+                Actividades = new List<AdminAnalistaActividadViewModel>
+{
+    new AdminAnalistaActividadViewModel
+    {
+        Titulo = "Panel de analista activo",
+        Descripcion = analista != null
+            ? $"El analista {analista.Nombre} {analista.Apellido} está asignado al sistema."
+            : "No existe analista asignado.",
+        Fecha = DateTime.Now,
+        Icono = "fas fa-user-check"
+    }
+},
+
+                Mensajes = _context.MENSAJE_ADMIN_ANALISTA
+    .OrderBy(x => x.FechaEnvio)
+    .Select(x => new AdminAnalistaMensajeViewModel
+    {
+        IdMensaje = x.IdMensaje,
+        IdAdministrador = x.IdAdministrador,
+        IdAnalista = x.IdAnalista,
+        RemitenteRol = x.RemitenteRol,
+        Mensaje = x.Mensaje,
+        FechaEnvio = x.FechaEnvio,
+        Leido = x.Leido
+    })
+    .ToList()
+            };
+            ViewBag.ClientesDisponibles = _context.Usuario
+                .Where(x => x.Rol == "Cliente")
+                .OrderBy(x => x.Nombre)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.Nombre,
+                    x.Apellido,
+                    x.Dni,
+                    TieneSolicitudActiva = _context.SOLICITUD_CREDITO.Any(s =>
+                        s.Usuario_Id_Usuario == x.Id &&
+                        (s.Estado == "Pendiente" ||
+                         s.Estado == "En Evaluación" ||
+                         s.Estado == "Aprobado" ||
+                         s.Estado == "Rechazado"))
+                })
+                .ToList();
+
+            ViewBag.SolicitudSoporte = _context.SOLICITUD_SOPORTE
+                .Where(x => x.Estado == "Pendiente" && x.Leido == false)
+                .OrderByDescending(x => x.FechaEnvio)
+                .FirstOrDefault();
+
+            return View(modelo);
+        }
+        [HttpPost]
+        public IActionResult ConfirmarSolicitudSoporte(int id)
+        {
+            var solicitud = _context.SOLICITUD_SOPORTE
+                .FirstOrDefault(x => x.Id_Soporte == id);
+
+            if (solicitud != null)
+            {
+                solicitud.Estado = "Vista";
+                solicitud.Leido = true;
+                _context.SaveChanges();
+            }
+
+            return RedirectToAction("Analistas");
+        }
+        private void LimpiarSolicitudesDelAnalistaAnterior(int idAnalista)
+        {
+            var solicitudes = _context.SOLICITUD_CREDITO
+                .Where(x => x.Usuario_Id_Usuario == idAnalista)
+                .ToList();
+
+            foreach (var solicitud in solicitudes)
+            {
+                solicitud.Estado = "ArchivadoPorCambioAnalista";
+            }
+
+            var usuario = _context.Usuario.FirstOrDefault(x => x.Id == idAnalista);
+
+            if (usuario != null)
+            {
+                usuario.EstadoActivo = false;
+                usuario.UltimaConexion = null;
+            }
+        }
+        [HttpPost]
+        public IActionResult ReemplazarAnalistaExistente(int idCliente)
+        {
+            var analistaActual = _context.Usuario.FirstOrDefault(x => x.Rol == "Analista");
+            var nuevoAnalista = _context.Usuario.FirstOrDefault(x => x.Id == idCliente && x.Rol == "Cliente");
+
+            if (nuevoAnalista == null)
+            {
+                TempData["ErrorAnalista"] = "Seleccione un cliente válido.";
+                return RedirectToAction("Analistas");
+            }
+            bool tieneSolicitudActiva = _context.SOLICITUD_CREDITO.Any(s =>
+    s.Usuario_Id_Usuario == nuevoAnalista.Id &&
+    (s.Estado == "Pendiente" ||
+     s.Estado == "En Evaluación" ||
+     s.Estado == "Aprobado" ||
+     s.Estado == "Rechazado"));
+
+            if (tieneSolicitudActiva)
+            {
+                TempData["ErrorAnalista"] = "No puede cambiar este usuario a analista porque tiene una solicitud activa. Escoge otro usuario sin solicitud activa.";
+                return RedirectToAction("Analistas");
+            }
+
+            if (analistaActual != null)
+            {
+                analistaActual.Rol = "Cliente";
+                analistaActual.EstadoActivo = false;
+                LimpiarSolicitudesDelAnalistaAnterior(analistaActual.Id);
+                var soportesAnterior = _context.SOLICITUD_SOPORTE
+    .Where(x => x.Id_Analista == analistaActual.Id);
+
+                _context.SOLICITUD_SOPORTE.RemoveRange(soportesAnterior);
+            }
+
+            nuevoAnalista.Rol = "Analista";
+            nuevoAnalista.EstadoActivo = false;
+            nuevoAnalista.FechaRegistro = DateTime.Now;
+            nuevoAnalista.UltimaConexion = null;
+
+            _context.MENSAJE_ADMIN_ANALISTA.RemoveRange(_context.MENSAJE_ADMIN_ANALISTA);
+            _context.SaveChanges();
+
+            TempData["OkAnalista"] = "Analista reemplazado correctamente.";
+            return RedirectToAction("Analistas");
+        }
+
+        [HttpPost]
+        public IActionResult CrearReemplazarAnalista(
+    string nombre,
+    string apellido,
+    string dni,
+    string celular,
+    string correo,
+    string genero,
+    string clave)
+        {
+            if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(apellido) ||
+                string.IsNullOrWhiteSpace(dni) || string.IsNullOrWhiteSpace(celular) ||
+                string.IsNullOrWhiteSpace(correo) || string.IsNullOrWhiteSpace(genero))
+            {
+                TempData["ErrorAnalista"] = "Complete todos los campos.";
+                return RedirectToAction("Analistas");
+            }
+
+            var analistaActual = _context.Usuario.FirstOrDefault(x => x.Rol == "Analista");
+
+            if (analistaActual != null)
+            {
+                analistaActual.Rol = "Cliente";
+                analistaActual.EstadoActivo = false;
+                LimpiarSolicitudesDelAnalistaAnterior(analistaActual.Id);
+                var soportesAnterior = _context.SOLICITUD_SOPORTE
+    .Where(x => x.Id_Analista == analistaActual.Id);
+
+                _context.SOLICITUD_SOPORTE.RemoveRange(soportesAnterior);
+            }
+
+            var nuevo = new Usuario
+            {
+                Nombre = nombre,
+                Apellido = apellido,
+                Dni = dni,
+                Celular = celular,
+                Correo = correo,
+                Genero = genero,
+                Rol = "Analista",
+                EstadoActivo = false,
+                FechaRegistro = DateTime.Now,
+                UltimaConexion = null,
+                clave = utilidades.EncriptarClave(clave)
+            };
+
+            _context.Usuario.Add(nuevo);
+            _context.MENSAJE_ADMIN_ANALISTA.RemoveRange(_context.MENSAJE_ADMIN_ANALISTA);
+            _context.SaveChanges();
+
+            TempData["OkAnalista"] = "Nuevo analista creado correctamente.";
+            return RedirectToAction("Analistas");
+        }
+
+        public IActionResult ProgramaAdministrador()
             {
                 CargarDatosAdministrador();
                 DateTime primerDiaDelMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
@@ -5035,6 +5273,65 @@ $"La notificación fue enviada correctamente a {usuario.Nombre} {usuario.Apellid
             return File(pdf.GeneratePdf(), "application/pdf");
         }
 
+        public IActionResult ChatAnalista()
+        {
+            CargarDatosAdministrador();
+
+            var analista = _context.Usuario.FirstOrDefault(x => x.Rol == "Analista");
+            ViewBag.Analista = analista;
+
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult ObtenerMensajesAdminAnalista()
+        {
+            var mensajes = _context.MENSAJE_ADMIN_ANALISTA
+                .OrderBy(x => x.FechaEnvio)
+                .ToList();
+
+            return Json(mensajes);
+        }
+
+        [HttpPost]
+        public IActionResult GuardarMensajeAdminAnalista(string mensaje)
+        {
+            var admin = _context.Usuario.FirstOrDefault(x => x.Rol == "Administrador");
+            var analista = _context.Usuario.FirstOrDefault(x => x.Rol == "Analista");
+
+            if (admin == null || analista == null || string.IsNullOrWhiteSpace(mensaje))
+                return Json(new { ok = false });
+
+            var nuevo = new MensajeAdminAnalista
+            {
+                IdAdministrador = admin.Id,
+                IdAnalista = analista.Id,
+                RemitenteRol = "Administrador",
+                Mensaje = mensaje,
+                FechaEnvio = DateTime.Now,
+                Leido = false
+            };
+
+            _context.MENSAJE_ADMIN_ANALISTA.Add(nuevo);
+            _context.SaveChanges();
+
+            return Json(new { ok = true });
+        }
+        [HttpGet]
+        public IActionResult EstadoAnalistaActual()
+        {
+            var analista = _context.Usuario.FirstOrDefault(x => x.Rol == "Analista");
+
+            bool activo = analista != null &&
+                          analista.EstadoActivo &&
+                          analista.UltimaConexion >= DateTime.Now.AddMinutes(-2);
+
+            return Json(new
+            {
+                activo = activo,
+                texto = activo ? "Activo" : "Inactivo"
+            });
+        }
     }
 }
     
