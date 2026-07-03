@@ -3,19 +3,25 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
     <title>@ViewData["Title"] - CrediPlus Analista</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="~/css/panel-roles.css" />
     <link rel="stylesheet" href="~/css/alertas-notificaciones.css" />
+
     @RenderSection("Styles", required: false)
 </head>
+
 <body>
     <div class="layout">
 
         @{
             bool bloquearMenu = ViewData["ActivePage"]?.ToString() == "VerSolicitud";
+            var totalNoLeidos = ViewBag.TotalNoLeidos as int?;
         }
+
         <aside class="sidebar">
             <div class="sidebar-brand">
                 <div class="brand-icon">🛡</div>
@@ -30,93 +36,218 @@
 
                 <a href="@(bloquearMenu ? "#" : Url.Action("ProgramaAnalista", "Analista"))"
                    class="@(ViewData["ActivePage"]?.ToString() == "ProgramaAnalista" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
-                    <i class="fas fa-home"></i> ProgramaAnalista
+                    <i class="fas fa-home"></i>
+                    ProgramaAnalista
                 </a>
 
                 <div class="section-title">Evaluaciones</div>
 
                 <a href="@(bloquearMenu ? "#" : Url.Action("SolicitudesPendientes", "Analista"))"
                    class="@(ViewData["ActivePage"]?.ToString() == "SolicitudesPendientes" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
-                    <i class="fas fa-clipboard-list"></i> Solicitudes Pendientes
+                    <i class="fas fa-clipboard-list"></i>
+                    Solicitudes Pendientes
                 </a>
+
                 <a href="@(bloquearMenu ? "#" : Url.Action("HistorialEvaluaciones", "Analista"))"
                    class="@(ViewData["ActivePage"]?.ToString() == "HistorialEvaluaciones" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
-                    <i class="fas fa-history"></i> Historial Evaluaciones
+                    <i class="fas fa-history"></i>
+                    Historial Evaluaciones
                 </a>
 
                 <div class="section-title">Seguimiento</div>
 
                 <a href="@(bloquearMenu ? "#" : Url.Action("CalendarioRevisiones", "Analista"))"
                    class="@(ViewData["ActivePage"]?.ToString() == "CalendarioRevisiones" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
-                    <i class="fas fa-calendar-alt"></i> Calendario Revisiones
+                    <i class="fas fa-calendar-alt"></i>
+                    Calendario Revisiones
                 </a>
+
                 <a href="@(bloquearMenu ? "#" : Url.Action("AlertasNotificaciones", "Analista"))"
                    class="@(ViewData["ActivePage"]?.ToString() == "AlertasNotificaciones" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
                     <i class="fas fa-bell"></i>
                     <span>Alertas y Notificaciones</span>
-                    @{
-                        var totalNoLeidos = ViewBag.TotalNoLeidos as int?;
-                    }
+
                     @if (totalNoLeidos > 0)
                     {
                         <span class="badge-notif">@totalNoLeidos</span>
                     }
                 </a>
+
                 <a href="@(bloquearMenu ? "#" : Url.Action("GestionDePago", "Analista"))"
                    class="@(ViewData["ActivePage"]?.ToString() == "GestionDePago" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
-                    <i class="fas fa-coins"></i> Gestión de Pagos
+                    <i class="fas fa-coins"></i>
+                    Gestión de Pagos
                 </a>
 
                 <div class="section-title">Retroalimentación</div>
 
                 <a href="@(bloquearMenu ? "#" : Url.Action("CalificacionesServicio", "Analista"))"
                    class="@(ViewData["ActivePage"]?.ToString() == "CalificacionesServicio" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
-                    <i class="fas fa-star"></i> Calificaciones del Servicio
+                    <i class="fas fa-star"></i>
+                    Calificaciones del Servicio
                 </a>
 
                 <div class="section-title">Herramientas</div>
 
                 <a href="@(bloquearMenu ? "#" : Url.Action("PoliticasRiesgo", "Analista"))"
                    class="@(ViewData["ActivePage"]?.ToString() == "PoliticasRiesgo" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
-                    <i class="fas fa-cog"></i> Políticas de Riesgo
+                    <i class="fas fa-cog"></i>
+                    Políticas de Riesgo
                 </a>
 
                 <div class="section-title">Mi Cuenta</div>
 
                 <a href="@(bloquearMenu ? "#" : Url.Action("PerfilAnalista", "Analista"))"
                    class="@(ViewData["ActivePage"]?.ToString() == "PerfilAnalista" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
-                    <i class="fas fa-user"></i> PerfilAnalista
+                    <i class="fas fa-user"></i>
+                    PerfilAnalista
                 </a>
-                <a href="@Url.Action("IniciarSesion", "Login")" class="logout-link">
-                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+
+                <a href="@Url.Action("CerrarSesion", "Login")" class="logout-link">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Cerrar Sesión
                 </a>
             </nav>
 
             <div class="sidebar-help-box">
                 <h4>¿Necesitas ayuda?</h4>
-                    <p>Comunícate con el administrador del sistema</p>
+                <p>Comunícate con el administrador del sistema</p>
+
                 <a href="@(bloquearMenu ? "#" : Url.Action("ContactarSoporte", "Analista"))"
-                   class="btn-help-custom @(bloquearMenu ? "menu-bloqueado" : "")">
-                    <i class="fas fa-headset"></i> Contactar Soporte
+                   id="linkContactarSoporte"
+                   class="btn-help-custom @(ViewData["ActivePage"]?.ToString() == "ContactarSoporte" ? "active" : "") @(bloquearMenu ? "menu-bloqueado" : "")">
+                    <i class="fas fa-headset"></i>
+                    Contactar Soporte
+                    <span id="badgeChatAdminLayout" class="badge-chat-admin-layout oculto">0</span>
                 </a>
             </div>
-            
         </aside>
 
-        <!-- CONTENIDO PRINCIPAL -->
         <main class="content">
             @RenderBody()
         </main>
 
     </div>
+
     <style>
-        .menu a.menu-bloqueado {
-            opacity: .55;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
+            .menu a.menu-bloqueado,
+            .btn-help-custom.menu-bloqueado {
+                opacity: .55;
+                cursor: not-allowed;
+                pointer-events: none;
+            }
+
+            .btn-help-custom {
+                position: relative;
+            }
+
+            .badge-chat-admin-layout {
+                position: absolute;
+                top: -9px;
+                right: -9px;
+                min-width: 24px;
+                height: 24px;
+                padding: 0 7px;
+                border-radius: 999px;
+                background: #ef4444;
+                color: #ffffff;
+                border: 3px solid #ffffff;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 11px;
+                font-weight: 950;
+                line-height: 1;
+                box-shadow: 0 10px 22px rgba(239, 68, 68, .38);
+                animation: pulsoChatAdminLayout 1.2s infinite;
+            }
+
+                .badge-chat-admin-layout.oculto {
+                    display: none;
+                }
+
+            .btn-help-custom.tiene-alerta-admin {
+                background: #ef4444 !important;
+                color: #ffffff !important;
+                box-shadow: 0 18px 34px rgba(239, 68, 68, .30);
+            }
+
+            @@keyframes pulsoChatAdminLayout {
+                0% {
+                    transform: scale(1);
+                    box-shadow: 0 0 0 0 rgba(239, 68, 68, .55);
+                }
+
+                70% {
+                    transform: scale(1.08);
+                    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+                }
+
+                100% {
+                    transform: scale(1);
+                    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+                }
+            }
     </style>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+        async function actualizarConexionUsuario() {
+        try {
+        await fetch('@Url.Action("Actualizar", "Conexion")', {
+        method: 'POST',
+        credentials: 'same-origin'
+        });
+        } catch (e) {
+        console.log("No se pudo actualizar la conexión del usuario.");
+        }
+        }
+
+        function actualizarBadgeChatAdminLayout(total) {
+        const badge = document.getElementById("badgeChatAdminLayout");
+        const link = document.getElementById("linkContactarSoporte");
+        const cantidad = Number(total || 0);
+
+        if (!badge || !link) return;
+
+        if (cantidad > 0) {
+        badge.textContent = cantidad > 99 ? "99+" : cantidad;
+        badge.classList.remove("oculto");
+        link.classList.add("tiene-alerta-admin");
+        } else {
+        badge.textContent = "0";
+        badge.classList.add("oculto");
+        link.classList.remove("tiene-alerta-admin");
+        }
+        }
+
+        async function consultarMensajesAdminNoLeidos() {
+        try {
+        const respuesta = await fetch('/Analista/ChatAdminNoLeidos', {
+        method: 'GET',
+        credentials: 'same-origin'
+        });
+
+        const data = await respuesta.json();
+
+        if (data.ok) {
+        actualizarBadgeChatAdminLayout(data.total);
+        }
+        } catch (e) {
+        console.log("No se pudieron consultar mensajes del administrador.");
+        }
+        }
+
+        actualizarConexionUsuario();
+        consultarMensajesAdminNoLeidos();
+
+        setInterval(actualizarConexionUsuario, 30000);
+        setInterval(consultarMensajesAdminNoLeidos, 10000);
+        });
+    </script>
+
     @RenderSection("Scripts", required: false)
 </body>
 </html>

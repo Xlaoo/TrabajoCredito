@@ -1,15 +1,15 @@
+using trabajo.Hubs;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using trabajo.Models;
 using trabajo.Service;
-using QuestPDF.Infrastructure;
-QuestPDF.Settings.License = LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddSignalR();
 builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddSession(options =>
@@ -73,5 +73,5 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Login}/{action=PantallaPrincipal}/{id?}");
-
+    app.MapHub<ChatAnalistaHub>("/chatAnalistaHub");
 app.Run();

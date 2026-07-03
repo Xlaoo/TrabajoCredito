@@ -234,63 +234,21 @@
 
                                 <td>
                                     <div class="creditos-actions">
-
                                         <button type="button"
                                                 class="action-btn"
                                                 onclick="abrirDetalleCredito(
-                            '@credito.NumeroSolicitud',
-                            '@credito.Cliente',
-                            '@credito.Dni',
-                            'S/ @credito.MontoSolicitado.ToString("N2")',
-                            '@credito.PlazoMeses meses',
-                            'S/ @credito.InteresEstimado.ToString("N2")',
-                            '@credito.Estado',
-                            '@credito.FechaSolicitud.ToString("dd/MM/yyyy")',
-                            '@credito.MotivoPrestamo'
-                        )">
+                                                            '@credito.NumeroSolicitud',
+                                                            '@credito.Cliente',
+                                                            '@credito.Dni',
+                                                            'S/ @credito.MontoSolicitado.ToString("N2")',
+                                                            '@credito.PlazoMeses meses',
+                                                            'S/ @credito.InteresEstimado.ToString("N2")',
+                                                            '@credito.Estado',
+                                                            '@credito.FechaSolicitud.ToString("dd/MM/yyyy")',
+                                                            '@credito.MotivoPrestamo'
+                                                        )">
                                             <i class="far fa-eye"></i>
                                         </button>
-
-                                        @if (credito.Estado == "Aprobado")
-                                        {
-                                            <div class="dropdown d-inline">
-
-                                                <button class="btn-cronograma"
-                                                        type="button"
-                                                        data-bs-toggle="dropdown">
-                                                    <i class="fas fa-file-invoice"></i>
-                                                </button>
-
-                                                <ul class="dropdown-menu">
-
-                                                    <li>
-                                                        <a class="dropdown-item"
-                                                           asp-controller="Administrador"
-                                                           asp-action="CronogramaCreditoPdf"
-                                                           asp-route-idSolicitud="@credito.IdSolicitud"
-                                                           target="_blank">
-
-                                                            <i class="fas fa-file-pdf text-danger"></i>
-                                                            PDF
-                                                        </a>
-                                                    </li>
-
-                                                    <li>
-                                                        <a class="dropdown-item"
-                                                           asp-controller="Administrador"
-                                                           asp-action="CronogramaCreditoExcel"
-                                                           asp-route-idSolicitud="@credito.IdSolicitud">
-
-                                                            <i class="fas fa-file-excel text-success"></i>
-                                                            Excel
-                                                        </a>
-                                                    </li>
-
-                                                </ul>
-
-                                            </div>
-                                        }
-
                                     </div>
                                 </td>
                             </tr>

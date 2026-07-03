@@ -4,9 +4,132 @@
     Layout = "~/Views/Shared/_LayoutAnalista.cshtml";
     ViewData["Title"] = "Contactar Soporte";
     ViewData["ActivePage"] = "ContactarSoporte";
+
+    int idAdministrador = ViewBag.IdAdministrador == null ? 0 : Convert.ToInt32(ViewBag.IdAdministrador);
+    int idAnalista = ViewBag.IdAnalista == null ? 0 : Convert.ToInt32(ViewBag.IdAnalista);
+    string nombreAdministrador = ViewBag.NombreAdministrador as string ?? "Administrador";
+    int mensajesAdminNoLeidos = ViewBag.MensajesAdminNoLeidos == null ? 0 : Convert.ToInt32(ViewBag.MensajesAdminNoLeidos);
+
+    var mensajesAdmin = ViewBag.ChatAdminMensajes as System.Collections.Generic.List<trabajo.Models.ViewModels.AdminAnalistaMensajeViewModel>
+        ?? new System.Collections.Generic.List<trabajo.Models.ViewModels.AdminAnalistaMensajeViewModel>();
+
+    bool chatBloqueado = idAdministrador <= 0 || idAnalista <= 0;
 }
 
+@* <!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+ *@
 <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background: #faf8ff;
+        font-family: 'Segoe UI', sans-serif;
+        color: #241041;
+    }
+
+    /* .layout {
+                display: flex;
+                min-height: 100vh;
+            }
+
+            .sidebar {
+                width: 280px;
+                min-width: 280px;
+                height: 100vh;
+                position: sticky;
+                top: 0;
+                overflow-y: auto;
+                background: linear-gradient(180deg, #240046, #3c096c, #5a189a);
+                color: white;
+                padding: 25px;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .logo {
+                font-size: 28px;
+                font-weight: 800;
+                margin-bottom: 10px;
+            }
+
+            .role {
+                color: #d8b4fe;
+                margin-bottom: 40px;
+                font-size: 14px;
+            }
+
+            .menu a {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                color: white;
+                text-decoration: none;
+                padding: 15px 18px;
+                border-radius: 14px;
+                margin-bottom: 10px;
+                transition: .3s;
+            }
+
+                .menu a:hover,
+                .menu a.active {
+                    background: rgba(255,255,255,.12);
+                }
+
+            .section-title {
+                margin-top: 25px;
+                margin-bottom: 15px;
+                color: #c4b5fd;
+                font-size: 12px;
+                font-weight: bold;
+                text-transform: uppercase;
+            }
+
+            .help-card {
+                margin-top: auto;
+                background: rgba(255,255,255,.08);
+                border: 1px solid rgba(255,255,255,.1);
+                border-radius: 18px;
+                padding: 18px;
+            }
+
+                .help-card h4 {
+                    font-size: 20px;
+                    margin-bottom: 10px;
+                }
+
+                .help-card p {
+                    color: #d8b4fe;
+                    font-size: 14px;
+                    margin-bottom: 15px;
+                }
+
+            .btn-help {
+                width: 100%;
+                border: 1px solid rgba(255,255,255,.15);
+                background: rgba(255,255,255,.05);
+                color: white;
+                border-radius: 12px;
+                padding: 12px;
+                text-decoration: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            }
+
+                .btn-help:hover {
+                    background: rgba(255,255,255,.12);
+                    color: white;
+                }
+     */
     .content {
         flex: 1;
         padding: 35px 45px;
@@ -426,9 +549,385 @@
             font-size: 12px;
             font-weight: 800;
         }
-</style>
 
+
+    .acciones-soporte {
+        margin-top: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+        .acciones-soporte .btn-enviar {
+            margin: 0;
+        }
+
+    .btn-chat-admin {
+        position: relative;
+        border: none;
+        background: linear-gradient(135deg, #7c3aed, #5b21b6);
+        color: white;
+        border-radius: 12px;
+        padding: 15px 34px;
+        font-weight: 900;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        box-shadow: 0 14px 28px rgba(109,40,217,.25);
+        transition: .25s;
+    }
+
+    .chat-admin-alert-badge {
+        position: absolute;
+        top: -9px;
+        right: -9px;
+        min-width: 24px;
+        height: 24px;
+        padding: 0 7px;
+        border-radius: 999px;
+        background: #ef4444;
+        color: #ffffff;
+        border: 3px solid #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 950;
+        line-height: 1;
+        box-shadow: 0 10px 22px rgba(239, 68, 68, .38);
+        animation: pulsoChatAdmin 1.2s infinite;
+    }
+
+        .chat-admin-alert-badge.oculto {
+            display: none;
+        }
+
+    @@keyframes pulsoChatAdmin {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, .55);
+        }
+
+        70% {
+            transform: scale(1.08);
+            box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+        }
+
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+        }
+    }
+
+    .btn-chat-admin.tiene-alerta {
+        background: linear-gradient(135deg, #ef4444, #b91c1c);
+        box-shadow: 0 18px 34px rgba(239, 68, 68, .30);
+    }
+
+    .btn-chat-admin:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 34px rgba(109,40,217,.32);
+    }
+
+    .btn-chat-admin:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .chat-admin-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, .58);
+        backdrop-filter: blur(5px);
+        z-index: 99999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 22px;
+    }
+
+        .chat-admin-overlay.show {
+            display: flex;
+        }
+
+    .chat-admin-modal {
+        width: min(760px, 96vw);
+        height: min(720px, 92vh);
+        background: #ffffff;
+        border-radius: 24px;
+        box-shadow: 0 30px 70px rgba(31, 11, 74, .28);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #eee7ff;
+    }
+
+    .chat-admin-header {
+        padding: 20px 22px;
+        background: linear-gradient(135deg, #6d28d9, #4c1d95);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .chat-admin-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .chat-admin-title-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        background: rgba(255,255,255,.16);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+    }
+
+    .chat-admin-title h3 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 900;
+    }
+
+    .chat-admin-title p {
+        margin: 3px 0 0;
+        font-size: 12px;
+        color: #ddd6fe;
+        font-weight: 700;
+    }
+
+    .chat-admin-close {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255,255,255,.14);
+        color: #ffffff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+
+    .chat-admin-status-row {
+        padding: 12px 22px;
+        background: #faf7ff;
+        border-bottom: 1px solid #eee7ff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: #6b7280;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .chat-admin-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #6d28d9;
+    }
+
+    .chat-admin-messages {
+        flex: 1;
+        padding: 22px;
+        overflow-y: auto;
+        background: linear-gradient(180deg, #ffffff 0%, #faf7ff 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .chat-admin-empty {
+        height: 100%;
+        min-height: 260px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: #6b7280;
+        gap: 10px;
+    }
+
+        .chat-admin-empty i {
+            font-size: 44px;
+            color: #a78bfa;
+        }
+
+    .chat-admin-message {
+        max-width: 76%;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+        .chat-admin-message.analista {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .chat-admin-message.admin {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+    .chat-admin-bubble {
+        padding: 12px 15px;
+        border-radius: 17px;
+        font-size: 14px;
+        line-height: 1.45;
+        word-break: break-word;
+    }
+
+    .chat-admin-message.analista .chat-admin-bubble {
+        background: #6d28d9;
+        color: #ffffff;
+        border-bottom-right-radius: 5px;
+    }
+
+    .chat-admin-message.admin .chat-admin-bubble {
+        background: #ffffff;
+        color: #1f2937;
+        border: 1px solid #e9e2ff;
+        border-bottom-left-radius: 5px;
+    }
+
+    .chat-admin-meta {
+        font-size: 11px;
+        color: #94a3b8;
+        font-weight: 800;
+    }
+
+    .chat-admin-form {
+        border-top: 1px solid #eee7ff;
+        background: #ffffff;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+        .chat-admin-form input {
+            flex: 1;
+            width: auto;
+            height: 48px;
+            border: 1px solid #ddd6fe;
+            border-radius: 999px;
+            padding: 0 16px;
+            outline: none;
+            font-size: 14px;
+        }
+
+            .chat-admin-form input:focus {
+                border-color: #7c3aed;
+                box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+            }
+
+    .chat-admin-send {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: none;
+        background: #6d28d9;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+        .chat-admin-send:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+        }
+
+    @@media (max-width: 700px) {
+        .acciones-soporte {
+            flex-direction: column;
+        }
+
+            .acciones-soporte .btn-enviar,
+            .btn-chat-admin {
+                width: 100%;
+                justify-content: center;
+            }
+
+        .chat-admin-modal {
+            height: 94vh;
+            border-radius: 18px;
+        }
+
+        .chat-admin-message {
+            max-width: 90%;
+        }
+    }
+</style>
+@* <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body> *@
 <div class="layout">
+
+    @*  <div class="sidebar">
+            <div class="logo">🛡 CrediPlus</div>
+            <div class="role">Analista de Riesgo</div>
+
+            <div class="menu">
+                <div class="section-title">Principal</div>
+
+                <a href="@Url.Action("ProgramaAnalista", "Analista")">🏠 Inicio</a>
+
+                <div class="section-title">Evaluaciones</div>
+
+                <a href="@Url.Action("SolicitudesPendientes", "Analista")">📄 Solicitudes Pendientes</a>
+                <a href="@Url.Action("HistorialEvaluaciones", "Analista")">🕘 Historial Evaluaciones</a>
+
+                <div class="section-title">Seguimiento</div>
+
+                <a href="@Url.Action("CalendarioRevisiones", "Analista")">📅 Calendario Revisiones</a>
+                <a href="@Url.Action("AlertasNotificaciones", "Analista")">🔔 Alertas y Notificaciones</a>
+                <a href="@Url.Action("GestionDePago", "Analista")">💰 Gestión de Pagos</a>
+
+                <div class="section-title">Retroalimentación</div>
+
+                <a href="@Url.Action("CalificacionesServicio", "Analista")">⭐ Calificaciones del Servicio</a>
+
+                <div class="section-title">Herramientas</div>
+
+                <a href="@Url.Action("PoliticasRiesgo", "Analista")">🛡️ Políticas de Riesgo</a>
+
+                <div class="section-title">Mi Cuenta</div>
+
+                <a href="@Url.Action("PerfilAnalista", "Analista")">👤 Perfil</a>
+                <a href="@Url.Action("CerrarSesion", "Login")">🚪 Cerrar Sesión</a>
+            </div>
+
+            <div class="help-card">
+                <h4>¿Necesitas ayuda?</h4>
+                <p>Comunícate con el administrador del sistema</p>
+
+                <a href="@Url.Action("ContactarSoporte", "Analista")" class="btn-help">
+                    <i class="fas fa-headset"></i>
+                    Contactar Soporte
+                </a>
+            </div>
+        </div> *@
 
     <main class="content">
 
@@ -528,10 +1027,25 @@
                     <textarea id="mensaje" maxlength="500" oninput="actualizarContador()" placeholder="Describe tu problema o consulta con el mayor detalle posible..." required></textarea>
                     <div class="contador"><span id="contadorMensaje">0</span>/500</div>
 
-                    <button type="submit" class="btn-enviar">
-                        <i class="fas fa-paper-plane"></i>
-                        Enviar Solicitud
-                    </button>
+                    <div class="acciones-soporte">
+                        <button type="submit" class="btn-enviar">
+                            <i class="fas fa-paper-plane"></i>
+                            Enviar Solicitud
+                        </button>
+
+                        <button type="button"
+                                class="btn-chat-admin @(mensajesAdminNoLeidos > 0 ? "tiene-alerta" : "")"
+                                id="btnChatAdmin"
+                                onclick="abrirChatAdmin()"
+                                disabled="@(chatBloqueado ? "disabled" : null)">
+                            <i class="fas fa-user-shield"></i>
+                            Chat con el admin
+                            <span id="badgeChatAdmin"
+                                  class="chat-admin-alert-badge @(mensajesAdminNoLeidos > 0 ? "" : "oculto")">
+                                @mensajesAdminNoLeidos
+                            </span>
+                        </button>
+                    </div>
 
                     <div id="mensajeOk" class="mensaje-ok">
                         ✅ Solicitud enviada correctamente. Soporte revisará tu caso.
@@ -693,40 +1207,364 @@
     </main>
 </div>
 
+
+
+<div class="chat-admin-overlay" id="modalChatAdmin" onclick="cerrarChatAdminDesdeFondo(event)">
+    <div class="chat-admin-modal">
+        <div class="chat-admin-header">
+            <div class="chat-admin-title">
+                <div class="chat-admin-title-icon">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <div>
+                    <h3>Chat con el administrador</h3>
+                    <p>Comunicación directa y en tiempo real</p>
+                </div>
+            </div>
+
+            <button type="button" class="chat-admin-close" onclick="cerrarChatAdmin()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="chat-admin-status-row">
+            <span>
+                Administrador: <strong>@nombreAdministrador</strong>
+            </span>
+            <span class="chat-admin-status" id="chatAdminEstado">
+                <i class="fas fa-circle-notch fa-spin"></i>
+                Preparando chat
+            </span>
+        </div>
+
+        <div class="chat-admin-messages" id="chatAdminMensajes">
+            @if (mensajesAdmin.Any())
+            {
+                foreach (var mensajeChat in mensajesAdmin)
+                {
+                    var claseMensaje = mensajeChat.RemitenteRol == "Analista" ? "analista" : "admin";
+
+                    <div class="chat-admin-message @claseMensaje">
+                        <div class="chat-admin-bubble">@mensajeChat.Mensaje</div>
+                        <div class="chat-admin-meta">
+                            @mensajeChat.RemitenteRol · @mensajeChat.FechaEnvio.ToString("dd/MM/yyyy hh:mm tt")
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="chat-admin-empty" id="chatAdminVacio">
+                    <i class="far fa-comments"></i>
+                    <strong>Aún no hay mensajes</strong>
+                    <span>Escribe al administrador para iniciar la conversación.</span>
+                </div>
+            }
+        </div>
+
+        <form class="chat-admin-form" id="formChatAdmin">
+            <input type="text"
+                   id="mensajeAdminInput"
+                   autocomplete="off"
+                   placeholder="Escribe un mensaje para el administrador..."
+                   disabled="@(chatBloqueado ? "disabled" : null)" />
+
+            <button type="submit"
+                    class="chat-admin-send"
+                    id="btnEnviarAdmin"
+                    disabled="@(chatBloqueado ? "disabled" : null)">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
 <script>
     function actualizarContador() {
-        let mensaje = document.getElementById("mensaje").value;
-        document.getElementById("contadorMensaje").innerText = mensaje.length;
+    let mensaje = document.getElementById("mensaje").value;
+    document.getElementById("contadorMensaje").innerText = mensaje.length;
     }
 
     function enviarSoporte(event) {
-        event.preventDefault();
+    event.preventDefault();
 
-        document.getElementById("mensajeOk").classList.add("activo");
+    document.getElementById("mensajeOk").classList.add("activo");
 
-        document.getElementById("asunto").value = "";
-        document.getElementById("tipoConsulta").value = "";
-        document.getElementById("mensaje").value = "";
-        document.getElementById("contadorMensaje").innerText = "0";
+    document.getElementById("asunto").value = "";
+    document.getElementById("tipoConsulta").value = "";
+    document.getElementById("mensaje").value = "";
+    document.getElementById("contadorMensaje").innerText = "0";
 
-        setTimeout(() => {
-            document.getElementById("mensajeOk").classList.remove("activo");
-        }, 4000);
+    setTimeout(() => {
+    document.getElementById("mensajeOk").classList.remove("activo");
+    }, 4000);
     }
-            function toggleFaq(elemento) {
-        elemento.classList.toggle("abierto");
+    function toggleFaq(elemento) {
+    elemento.classList.toggle("abierto");
     }
 
     function mostrarMasFaq() {
-        let lista = document.querySelector(".faq-list");
-        let texto = document.getElementById("textoFaq");
+    let lista = document.querySelector(".faq-list");
+    let texto = document.getElementById("textoFaq");
 
-        lista.classList.toggle("mostrar-todo");
+    lista.classList.toggle("mostrar-todo");
 
-        if (lista.classList.contains("mostrar-todo")) {
-            texto.innerText = "Ver menos preguntas";
-        } else {
-            texto.innerText = "Ver todas las preguntas";
-        }
+    if (lista.classList.contains("mostrar-todo")) {
+    texto.innerText = "Ver menos preguntas";
+    } else {
+    texto.innerText = "Ver todas las preguntas";
     }
+    }
+
+
+    const idAdministradorChat = @idAdministrador;
+    const idAnalistaChat = @idAnalista;
+    const remitenteChat = "Analista";
+    let chatAdminConnection = null;
+    let chatAdminIniciado = false;
+
+    const modalChatAdmin = document.getElementById("modalChatAdmin");
+    const chatAdminMensajes = document.getElementById("chatAdminMensajes");
+    const formChatAdmin = document.getElementById("formChatAdmin");
+    const mensajeAdminInput = document.getElementById("mensajeAdminInput");
+    const btnEnviarAdmin = document.getElementById("btnEnviarAdmin");
+    const chatAdminEstado = document.getElementById("chatAdminEstado");
+    const btnChatAdmin = document.getElementById("btnChatAdmin");
+    const badgeChatAdmin = document.getElementById("badgeChatAdmin");
+
+    function chatAdminEstaAbierto() {
+    return modalChatAdmin && modalChatAdmin.classList.contains("show");
+    }
+
+    function actualizarBadgeChatAdmin(total) {
+    const cantidad = Number(total || 0);
+    const badgeLayout = document.getElementById("badgeChatAdminLayout");
+    const linkLayout = document.getElementById("linkContactarSoporte");
+
+    if (badgeChatAdmin && btnChatAdmin) {
+    if (cantidad > 0) {
+    badgeChatAdmin.textContent = cantidad > 99 ? "99+" : cantidad;
+    badgeChatAdmin.classList.remove("oculto");
+    btnChatAdmin.classList.add("tiene-alerta");
+    } else {
+    badgeChatAdmin.textContent = "0";
+    badgeChatAdmin.classList.add("oculto");
+    btnChatAdmin.classList.remove("tiene-alerta");
+    }
+    }
+
+    if (badgeLayout && linkLayout) {
+    if (cantidad > 0) {
+    badgeLayout.textContent = cantidad > 99 ? "99+" : cantidad;
+    badgeLayout.classList.remove("oculto");
+    linkLayout.classList.add("tiene-alerta-admin");
+    } else {
+    badgeLayout.textContent = "0";
+    badgeLayout.classList.add("oculto");
+    linkLayout.classList.remove("tiene-alerta-admin");
+    }
+    }
+    }
+
+    async function consultarNotificacionesChatAdmin() {
+    if (!idAdministradorChat || !idAnalistaChat) return;
+
+    try {
+    const respuesta = await fetch("/Analista/ChatAdminNoLeidos", {
+    method: "GET",
+    credentials: "same-origin"
+    });
+
+    const data = await respuesta.json();
+
+    if (data.ok) {
+    actualizarBadgeChatAdmin(data.total);
+    }
+    } catch (e) {
+    console.log("No se pudo consultar notificaciones del chat admin.");
+    }
+    }
+
+    async function marcarChatAdminLeido() {
+    if (!idAdministradorChat || !idAnalistaChat) return;
+
+    try {
+    const respuesta = await fetch("/Analista/MarcarChatAdminLeido", {
+    method: "POST",
+    credentials: "same-origin"
+    });
+
+    const data = await respuesta.json();
+
+    if (data.ok) {
+    actualizarBadgeChatAdmin(0);
+    }
+    } catch (e) {
+    console.log("No se pudo marcar el chat admin como leído.");
+    }
+    }
+
+    function abrirChatAdmin() {
+    if (!modalChatAdmin) return;
+
+    modalChatAdmin.classList.add("show");
+    document.body.style.overflow = "hidden";
+    scrollChatAdminFinal();
+    iniciarChatAdminTiempoReal();
+    marcarChatAdminLeido();
+
+    if (mensajeAdminInput && !mensajeAdminInput.disabled) {
+    setTimeout(() => mensajeAdminInput.focus(), 250);
+    }
+    }
+
+    function cerrarChatAdmin() {
+    if (!modalChatAdmin) return;
+
+    modalChatAdmin.classList.remove("show");
+    document.body.style.overflow = "";
+    }
+
+    function cerrarChatAdminDesdeFondo(event) {
+    if (event.target === modalChatAdmin) {
+    cerrarChatAdmin();
+    }
+    }
+
+    function scrollChatAdminFinal() {
+    if (chatAdminMensajes) {
+    chatAdminMensajes.scrollTop = chatAdminMensajes.scrollHeight;
+    }
+    }
+
+    function cambiarEstadoChatAdmin(texto, icono, color) {
+    if (!chatAdminEstado) return;
+
+    chatAdminEstado.innerHTML = `<i class="${icono}"></i> ${texto}`;
+    chatAdminEstado.style.color = color;
+    }
+
+    function agregarMensajeChatAdmin(remitente, mensaje, fechaEnvio) {
+    if (!chatAdminMensajes) return;
+
+    const vacio = document.getElementById("chatAdminVacio");
+    if (vacio) vacio.remove();
+
+    const clase = remitente === "Analista" ? "analista" : "admin";
+
+    const contenedor = document.createElement("div");
+    contenedor.className = "chat-admin-message " + clase;
+
+    const burbuja = document.createElement("div");
+    burbuja.className = "chat-admin-bubble";
+    burbuja.textContent = mensaje;
+
+    const meta = document.createElement("div");
+    meta.className = "chat-admin-meta";
+    meta.textContent = remitente + " · " + fechaEnvio;
+
+    contenedor.appendChild(burbuja);
+    contenedor.appendChild(meta);
+    chatAdminMensajes.appendChild(contenedor);
+
+    scrollChatAdminFinal();
+    }
+
+    async function iniciarChatAdminTiempoReal() {
+    if (chatAdminIniciado) return;
+
+    if (!idAdministradorChat || !idAnalistaChat) {
+    cambiarEstadoChatAdmin("Chat no disponible", "fas fa-circle-xmark", "#ef4444");
+    return;
+    }
+
+    chatAdminIniciado = true;
+
+    chatAdminConnection = new signalR.HubConnectionBuilder()
+    .withUrl("/chatAnalistaHub")
+    .withAutomaticReconnect()
+    .build();
+
+    chatAdminConnection.on("RecibirMensaje", function (data) {
+    agregarMensajeChatAdmin(data.remitenteRol, data.mensaje, data.fechaEnvio);
+
+    if (data.remitenteRol === "Administrador") {
+    if (chatAdminEstaAbierto()) {
+    marcarChatAdminLeido();
+    } else {
+    consultarNotificacionesChatAdmin();
+    }
+    }
+    });
+
+    chatAdminConnection.onreconnecting(function () {
+    cambiarEstadoChatAdmin("Reconectando", "fas fa-circle-notch fa-spin", "#f59e0b");
+    });
+
+    chatAdminConnection.onreconnected(function () {
+    chatAdminConnection.invoke("UnirseConversacion", idAdministradorChat, idAnalistaChat);
+    cambiarEstadoChatAdmin("Conectado", "fas fa-circle", "#16a34a");
+    });
+
+    chatAdminConnection.onclose(function () {
+    cambiarEstadoChatAdmin("Desconectado", "fas fa-circle", "#ef4444");
+    chatAdminIniciado = false;
+    });
+
+    try {
+    await chatAdminConnection.start();
+    await chatAdminConnection.invoke("UnirseConversacion", idAdministradorChat, idAnalistaChat);
+    cambiarEstadoChatAdmin("Conectado", "fas fa-circle", "#16a34a");
+    scrollChatAdminFinal();
+    } catch (error) {
+    console.error("Error SignalR:", error);
+    cambiarEstadoChatAdmin("Error de conexión", "fas fa-circle", "#ef4444");
+    chatAdminIniciado = false;
+    }
+    }
+
+    if (formChatAdmin) {
+    formChatAdmin.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    if (!chatAdminConnection) {
+    iniciarChatAdminTiempoReal();
+    return;
+    }
+
+    const texto = mensajeAdminInput.value.trim();
+    if (!texto) return;
+
+    btnEnviarAdmin.disabled = true;
+
+    chatAdminConnection.invoke("EnviarMensaje", idAdministradorChat, idAnalistaChat, remitenteChat, texto)
+    .then(function () {
+    mensajeAdminInput.value = "";
+    })
+    .catch(function (error) {
+    console.error("Error enviando mensaje:", error);
+    alert("No se pudo enviar el mensaje. Revisa la conexión del chat.");
+    })
+    .finally(function () {
+    btnEnviarAdmin.disabled = false;
+    mensajeAdminInput.focus();
+    });
+    });
+    }
+
+    document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && modalChatAdmin && modalChatAdmin.classList.contains("show")) {
+    cerrarChatAdmin();
+    }
+    });
+
+    scrollChatAdminFinal();
+    consultarNotificacionesChatAdmin();
+    iniciarChatAdminTiempoReal();
+    setInterval(consultarNotificacionesChatAdmin, 10000);
+
 </script>
+@* </body>
+</html> *@

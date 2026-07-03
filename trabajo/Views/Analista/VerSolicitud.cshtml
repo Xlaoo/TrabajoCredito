@@ -1,4045 +1,4266 @@
 ﻿@model trabajo.Models.SolicitudCredito
 @using trabajo.Models
 @{
-    Layout = null;
-    Layout = "~/Views/Shared/_LayoutAnalista.cshtml";
-    ViewData["Title"] = "Ver Solicitud";
-    ViewData["ActivePage"] = "VerSolicitud";
 
-    decimal capacidadPago =
-        Model.PERFIL_FINANCIERO.IngresoMensual * 0.30m;
+	Layout = null;
+	decimal capacidadPago =
+		Model.PERFIL_FINANCIERO.IngresoMensual * 0.30m;
 
-    decimal disponiblePrestamo =
-        capacidadPago * 10.5m;
-    var historial = ViewBag.Historial as List<HistorialCredito>;
-    var ultimoHistorial = historial?.LastOrDefault();
-    var resumen = ViewBag.Resumen as ResumenCredito;
+	decimal disponiblePrestamo =
+		capacidadPago * 10.5m;
+	var historial = ViewBag.Historial as List<HistorialCredito>;
+	var ultimoHistorial = historial?.LastOrDefault();
+	var resumen = ViewBag.Resumen as ResumenCredito;
 
-    int activas = resumen?.DeudasActivas ?? 0;
-    int pagadas = resumen?.DeudasPagadas ?? 0;
-    int vencidas = resumen?.DeudasVencidas ?? 0;
-    int deudasEncontradas = activas + vencidas;
-    bool tieneOtrosCreditos =
-    Model.PERFIL_FINANCIERO?.OtrosCreditos ?? false;
+	int activas = resumen?.DeudasActivas ?? 0;
+	int pagadas = resumen?.DeudasPagadas ?? 0;
+	int vencidas = resumen?.DeudasVencidas ?? 0;
+	int deudasEncontradas = activas + vencidas;
+	bool tieneOtrosCreditos =
+	Model.PERFIL_FINANCIERO?.OtrosCreditos ?? false;
 
-    if (Model.PERFIL_FINANCIERO == null)
-    {
-        <text>No existe perfil financiero</text>
-        return;
-    }
+	if (Model.PERFIL_FINANCIERO == null)
+	{
+		<text>No existe perfil financiero</text>
+		return;
+	}
 
-    var ultimaActualizacion =
+	var ultimaActualizacion =
 historial?.Max(x => x.FechaFin);
 
-    int totalHistorial = activas + pagadas + vencidas;
+	int totalHistorial = activas + pagadas + vencidas;
 
-    string nivelRiesgo = "";
-    string claseColor = "";
-    string posicionAguja = "";
+	string nivelRiesgo = "";
+	string claseColor = "";
+	string posicionAguja = "";
 
-    if (vencidas > 0)
-    {
-        nivelRiesgo = "CRÍTICO";
-        claseColor = "critico";
-        posicionAguja = "70deg";
-    }
-    else if (activas > 0 && pagadas > 0)
-    {
-        nivelRiesgo = "ALTO";
-        claseColor = "alto";
-        posicionAguja = "35deg";
-    }
-    else if (pagadas > 0)
-    {
-        nivelRiesgo = "BAJO";
-        claseColor = "bajo";
-        posicionAguja = "-70deg";
-    }
-    else
-    {
-        nivelRiesgo = "MEDIO";
-        claseColor = "medio";
-        posicionAguja = "-20deg";
-    }
-    var estadoNormalizado = Model.Estado?.Trim().ToLower();
-    var estaEnEvaluacion = estadoNormalizado == "en evaluación";
+	if (vencidas > 0)
+	{
+		nivelRiesgo = "CRÍTICO";
+		claseColor = "critico";
+		posicionAguja = "70deg";
+	}
+	else if (activas > 0 && pagadas > 0)
+	{
+		nivelRiesgo = "ALTO";
+		claseColor = "alto";
+		posicionAguja = "35deg";
+	}
+	else if (pagadas > 0)
+	{
+		nivelRiesgo = "BAJO";
+		claseColor = "bajo";
+		posicionAguja = "-70deg";
+	}
+	else
+	{
+		nivelRiesgo = "MEDIO";
+		claseColor = "medio";
+		posicionAguja = "-20deg";
+	}
+	var estadoNormalizado = Model.Estado?.Trim().ToLower();
+	var estaEnEvaluacion = estadoNormalizado == "en evaluación";
 
+	Layout = "~/Views/Shared/_LayoutAnalista.cshtml";
+	ViewData["Title"] = "Ver Solicitud";
+	ViewData["ActivePage"] = "VerSolicitud";
 }
 
-<style>
-    .contenedor {
-        background: white;
-        border-radius: 25px;
-        padding: 25px;
-        box-shadow: 0 10px 25px rgba(124,58,237,.08);
-    }
-
-    h1 {
-        color: #4c1d95;
-        font-size: 40px;
-        font-weight: 800;
-        margin-bottom: 25px;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    th {
-        background: #f3e8ff;
-        color: #5b21b6;
-        padding: 15px;
-        text-align: left;
-    }
-
-    td {
-        padding: 10px 15px;
-        border-bottom: 1px solid #eee;
-    }
-
-    .btn-ver {
-        background: #6d28d9;
-        color: white;
-        text-decoration: none;
-        padding: 10px 15px;
-        border-radius: 10px;
-    }
-
-    .top-bar {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        margin-bottom: 20px;
-    }
-
-    .btn-regresar {
-        background: #e5e7eb;
-        color: #374151;
-        border: none;
-        padding: 10px 18px;
-        border-radius: 10px;
-        cursor: pointer;
-        font-weight: 600;
-    }
-
-    .titulo-solicitud {
-        color: #4c1d95;
-        font-size: 42px;
-        font-weight: 800;
-        margin: 0;
-    }
-
-    .estado {
-        color: #555;
-        margin-bottom: 25px;
-    }
-
-    .grid-solicitud {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 20px;
-    }
-
-    .card-info {
-        background: white;
-        border-radius: 18px;
-        padding: 20px;
-        box-shadow: 0 3px 12px rgba(0,0,0,.08);
-    }
-
-        .card-info h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-        }
-
-    .foto-cliente {
-        width: 90px;
-        height: 90px;
-        border-radius: 12px;
-        background: #eee;
-        margin: auto;
-        margin-bottom: 15px;
-    }
-
-    .acciones {
-        margin-top: 30px;
-    }
-
-    .btn-validar {
-        background: #6d28d9;
-        color: white;
-        border: none;
-        padding: 14px 35px;
-        border-radius: 10px;
-        font-size: 16px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    .fila-superior {
-        display: flex;
-        gap: 20px;
-        align-items: flex-start;
-    }
-
-    .card {
-        background: white;
-        border-radius: 15px;
-        padding: 15px;
-        box-shadow: 0 2px 8px rgba(0,0,0,.10);
-    }
-
-        .card h3 {
-            margin-top: 0;
-            font-size: 20px;
-        }
-
-    .card-personal {
-        width: 280px;
-        min-height: 370px;
-    }
-
-    .card-financiero {
-        width: 300px;
-        min-height: 130px;
-    }
-
-    .card-derecha {
-        width: 260px;
-    }
-
-    .foto-usuario {
-        width: 90px;
-        height: 90px;
-        display: block;
-        margin: auto;
-        margin-bottom: 15px;
-    }
-
-    .titulo-principal {
-        color: #4c1d95;
-        font-size: 28px;
-        font-weight: 800;
-        margin-bottom: 0;
-    }
-
-    .estado {
-        color: #555;
-        margin-bottom: 20px;
-    }
-
-    .btn-validar {
-        background: #6d28d9;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 12px 25px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    .btn-regresar {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        text-decoration: none;
-        background: #e5e7eb;
-        color: #374151;
-        padding: 12px 20px;
-        border-radius: 10px;
-        font-weight: 600;
-        transition: .3s;
-    }
-
-        .btn-regresar:hover {
-            background: #d1d5db;
-        }
-
-    .perfil-editable {
-        width: 450px;
-        padding: 20px;
-    }
-
-    .titulo-perfil {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-
-    .btn-lapiz {
-        border: none;
-        background: #f3e8ff;
-        color: #6d28d9;
-        border-radius: 8px;
-        padding: 8px 12px;
-        cursor: pointer;
-        font-size: 16px;
-    }
-
-    .perfil-financiero-modern {
-        width: 420px;
-        padding: 20px;
-    }
-
-    .header-perfil {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-
-        .header-perfil h3 {
-            margin: 0;
-            color: #5b21b6;
-            font-size: 22px;
-            font-weight: 700;
-        }
-
-    .btn-editar {
-        width: 42px;
-        height: 42px;
-        border: none;
-        border-radius: 12px;
-        background: #efe7ff;
-        cursor: pointer;
-        font-size: 18px;
-    }
-
-        .btn-editar:hover {
-            background: #e3d5ff;
-        }
-
-    .item-perfil {
-        display: flex;
-        align-items: center;
-        padding: 14px;
-        border: 1px solid #eee;
-        border-bottom: none;
-    }
-
-        .item-perfil:last-child {
-            border-bottom: 1px solid #eee;
-        }
-
-    .icono {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        background: #f3e8ff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-size: 18px;
-    }
-
-    .texto {
-        flex: 1;
-    }
-
-    .valor {
-        font-weight: 600;
-        color: #374151;
-    }
-
-    .btn-editar {
-        position: absolute;
-        top: 18px;
-        right: 18px;
-        width: 42px;
-        height: 42px;
-        border: none;
-        border-radius: 12px;
-        background: #efe7ff;
-        cursor: pointer;
-        font-size: 18px;
-    }
-
-    .perfil-financiero-modern {
-        width: 420px;
-        padding: 20px;
-        position: relative;
-    }
-
-    .btn-editar:hover {
-        background: #e3d5ff;
-    }
-
-
-    .btn-guardar-perfil:hover {
-        background: #15803d;
-    }
-
-    .input-editar {
-        width: 140px;
-        padding: 8px 12px;
-        border: 2px solid #d8b4fe;
-        border-radius: 10px;
-        font-size: 14px;
-        font-weight: 600;
-        color: #4c1d95;
-        background: #faf5ff;
-        outline: none;
-        transition: .3s;
-    }
-
-        .input-editar:focus {
-            border-color: #7c3aed;
-            box-shadow: 0 0 8px rgba(124,58,237,.2);
-        }
-
-    .select-editar {
-        width: 140px;
-        padding: 8px 12px;
-        border: 2px solid #d8b4fe;
-        border-radius: 10px;
-        font-size: 14px;
-        font-weight: 600;
-        color: #4c1d95;
-        background: #faf5ff;
-        cursor: pointer;
-        outline: none;
-        transition: .3s;
-    }
-
-        .select-editar:focus {
-            border-color: #7c3aed;
-            box-shadow: 0 0 8px rgba(124,58,237,.2);
-        }
-
-    .acciones-perfil {
-        margin-top: 20px;
-        display: flex;
-        gap: 12px;
-    }
-
-    .btn-editar-perfil {
-        background: #6d28d9;
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 10px;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-        .btn-editar-perfil:hover {
-            background: #5b21b6;
-        }
-
-
-    .btn-cancelar-perfil {
-        background: #dc2626;
-        color: white;
-        border: none;
-        padding: 12px 22px;
-        border-radius: 10px;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-    .icono-header {
-        width: 45px;
-        height: 45px;
-        background: #f3e8ff;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-    }
-
-    .acciones-inferiores {
-        margin-top: 20px;
-        display: flex;
-        justify-content: center;
-        gap: 12px;
-    }
-
-    .btn-editar-perfil {
-        background: #6d28d9;
-        color: white;
-        border: none;
-        padding: 12px 25px;
-        border-radius: 10px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-
-    #grupoAcciones {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .btn-guardar-perfil {
-        background: #16a34a;
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 10px;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-    .btn-cancelar-perfil {
-        background: #dc2626;
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 10px;
-        font-weight: 700;
-        cursor: pointer;
-    }
-
-    .resumen-financiero-modern {
-        width: 420px;
-        padding: 20px;
-    }
-
-        .resumen-financiero-modern h3 {
-            color: #5b21b6;
-            margin-bottom: 18px;
-        }
-
-    .item-resumen {
-        display: flex;
-        align-items: center;
-        border: 1px solid #eee;
-        border-radius: 12px;
-        padding: 14px;
-        margin-bottom: 12px;
-    }
-
-    .icono-resumen {
-        width: 42px;
-        height: 42px;
-        background: #f3e8ff;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-    }
-
-    .valor-verde {
-        color: #16a34a;
-        font-weight: 700;
-    }
-
-    .valor-rojo {
-        color: #dc2626;
-        font-weight: 700;
-    }
-
-    .valor-azul {
-        color: #2563eb;
-        font-weight: 700;
-    }
-
-    .valor-morado {
-        color: #7c3aed;
-        font-weight: 700;
-    }
-
-    .resumen-financiero-modern {
-        width: 420px;
-        padding: 20px;
-    }
-
-    .deuda-crediticia {
-        width: 720px;
-        padding: 20px;
-    }
-
-    .header-deuda {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-
-        .header-deuda h3 {
-            margin: 0;
-            color: #5b21b6;
-            font-weight: 800;
-        }
-
-    .btn-editar-deuda {
-        border: none;
-        background: #f3e8ff;
-        color: #6d28d9;
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        cursor: pointer;
-    }
-
-    .contenido-deuda {
-        display: flex;
-        gap: 25px;
-    }
-
-    .lado-izquierdo {
-        flex: 1;
-    }
-
-    .lado-derecho {
-        flex: 1;
-    }
-
-    .fila-deuda {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-    }
-
-    .badge-si {
-        background: #16a34a;
-        color: white;
-        padding: 5px 14px;
-        border-radius: 8px;
-        font-weight: bold;
-    }
-
-    .badge-no {
-        background: #dc2626;
-        color: white;
-        padding: 5px 14px;
-        border-radius: 8px;
-        font-weight: bold;
-    }
-
-    .historial {
-        margin-bottom: 20px;
-        color: #374151;
-    }
-
-    .btn-historial {
-        background: #6d28d9;
-        color: white;
-        border: none;
-        border-radius: 10px;
-        padding: 12px 18px;
-        cursor: pointer;
-        font-weight: 600;
-    }
-
-        .btn-historial:hover {
-            background: #5b21b6;
-        }
-
-    .dato {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 15px;
-    }
-
-    .verde {
-        color: #16a34a;
-        font-weight: 700;
-    }
-
-    .naranja {
-        color: #f97316;
-        font-weight: 700;
-    }
-
-    .amarillo {
-        color: #eab308;
-        font-weight: 700;
-    }
-
-    .rojo {
-        color: #dc2626;
-        font-weight: 700;
-    }
-
-    .footer-deuda {
-        margin-top: auto;
-        padding: 12px;
-        background: #f8fafc;
-        border-radius: 10px;
-        color: #64748b;
-        font-size: 13px;
-    }
-
-    #evaluacionFinanciera {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-    }
-
-    .modalHistorialCredito {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,.5);
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-    }
-
-    .contenidoHistorial {
-        background: white;
-        width: 1400px;
-        max-width: 95%;
-        max-height: 80vh;
-        overflow: auto;
-        border-radius: 20px;
-        padding: 25px;
-    }
-
-    .estado-activa {
-        background: #dc2626;
-        color: white;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-weight: bold;
-    }
-
-    .estado-pagada {
-        background: #16a34a;
-        color: white;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-weight: bold;
-    }
-
-    .estado-vencida {
-        background: #f97316;
-        color: white;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-weight: bold;
-    }
-
-    .btnCerrarHistorial {
-        background: #6d28d9;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 10px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-
-        .btnCerrarHistorial:hover {
-            background: #5b21b6;
-        }
-
-    .estado-activa,
-    .estado-pagada,
-    .estado-vencida {
-        display: inline-block;
-        min-width: 110px;
-        text-align: center;
-        padding: 8px 12px;
-        border-radius: 8px;
-        color: white;
-        font-weight: bold;
-    }
-
-    .scoring-card {
-        width: 420px;
-        background: white;
-        border-radius: 18px;
-        padding: 20px;
-        box-shadow: 0 3px 12px rgba(0,0,0,.08);
-    }
-
-    .scoring-title {
-        color: #5b21b6;
-        font-size: 28px;
-        font-weight: 800;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-
-
-    .medidor::after {
-        content: '';
-        position: absolute;
-        bottom: -70px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 180px;
-        height: 180px;
-        background: white;
-        border-radius: 50%;
-    }
-
-
-
-    .resultado-riesgo {
-        margin-top: 25px;
-        text-align: center;
-    }
-
-        .resultado-riesgo span {
-            padding: 10px 30px;
-            border-radius: 12px;
-            font-weight: 800;
-            font-size: 22px;
-        }
-
-
-
-    .info-scoring {
-        margin-top: 20px;
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 15px;
-        color: #64748b;
-        text-align: center;
-        font-size: 14px;
-    }
-
-    .fila-deuda-scoring {
-        display: flex;
-        gap: 20px;
-        width: 100%;
-        align-items: flex-start;
-    }
-
-    .deuda-crediticia {
-        flex: 1;
-        min-height: 345px;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .scoring-card {
-        width: 680px;
-        min-width: 680px;
-        background: white;
-        border-radius: 25px;
-        padding: 25px;
-        box-shadow: 0 4px 15px rgba(0,0,0,.08);
-    }
-
-    .scoring-title {
-        text-align: center;
-        color: #5b21b6;
-        font-size: 22px;
-        font-weight: 900;
-        margin-bottom: 20px;
-    }
-
-    .medidor {
-        position: relative;
-        width: 340px;
-        height: 170px;
-        margin: auto;
-        overflow: hidden;
-    }
-
-        /* MEDIO CIRCULO */
-        .medidor::before {
-            content: '';
-            position: absolute;
-            width: 340px;
-            height: 340px;
-            border-radius: 50%;
-            background: conic-gradient( #22c55e 0deg 45deg, /* Verde */
-            #facc15 45deg 90deg, /* Amarillo */
-            #f97316 90deg 135deg, /* Naranja */
-            #ef4444 135deg 180deg /* Rojo */
-            );
-            transform: rotate(-90deg);
-        }
-
-
-        .medidor::after {
-            content: '';
-            position: absolute;
-            width: 95px;
-            height: 95px;
-            background: white;
-            border-radius: 50%;
-        }
-
-    /* Aguja */
-    .aguja {
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        width: 5px;
-        height: 100px;
-        background: linear-gradient( to top, #1e293b, #0f172a );
-        background: #1e293b;
-        transform-origin: bottom center;
-        z-index: 10;
-        box-shadow: 0 0 10px rgba(0,0,0,.25);
-        border-radius: 20px;
-    }
-
-        /* Punta de la aguja */
-        .aguja::before {
-            content: '';
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-bottom: 16px solid #1e293b;
-        }
-
-    .centro {
-        position: absolute;
-        width: 28px;
-        height: 28px;
-        background: radial-gradient( circle, #475569, #0f172a );
-        border-radius: 50%;
-        bottom: -14px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 11;
-        border: 3px solid white;
-    }
-
-    .resultado-riesgo {
-        margin-top: 20px;
-        text-align: center;
-    }
-
-        .resultado-riesgo span {
-            padding: 10px 30px;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: 800;
-        }
-
-    .bajo {
-        background: #dcfce7;
-        color: #16a34a;
-    }
-
-    .medio {
-        background: #fef3c7;
-        color: #ca8a04;
-    }
-
-    .alto {
-        background: #ffedd5;
-        color: #ea580c;
-    }
-
-    .critico {
-        background: #fee2e2;
-        color: #dc2626;
-    }
-
-    .info-scoring {
-        margin-top: 18px;
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 15px;
-        text-align: center;
-        color: #64748b;
-        font-size: 14px;
-    }
-
-    #evaluacionFinanciera {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-
-    .fila-cards {
-        display: flex;
-        gap: 20px;
-        margin-bottom: 20px;
-        align-items: flex-start;
-    }
-
-    .fila-resumen-analisis {
-        display: flex;
-        gap: 20px;
-        align-items: flex-start;
-    }
-
-    .resumen-financiero-modern {
-        width: 420px;
-    }
-
-    .comentarios-analisis {
-        width: 500px;
-        min-height: 320px;
-    }
-
-        .comentarios-analisis h3 {
-            color: #5b21b6;
-            margin-bottom: 15px;
-        }
-
-    .txt-analisis {
-        width: 100%;
-        height: 220px;
-        resize: none;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        padding: 15px;
-        font-size: 14px;
-        box-sizing: border-box;
-    }
-
-    .nivel-recomendacion {
-        margin-top: 15px;
-    }
-
-    .badge-manual {
-        background: #facc15;
-        color: #444;
-        padding: 8px 14px;
-        border-radius: 8px;
-        font-weight: bold;
-        margin-left: 10px;
-    }
-
-    .toolbar-analisis {
-        display: flex;
-        gap: 8px;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-bottom: none;
-        border-radius: 10px 10px 0 0;
-        background: #fafafa;
-    }
-
-        .toolbar-analisis button {
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            padding: 5px 8px;
-            color: #4b5563;
-            font-size: 14px;
-        }
-
-            .toolbar-analisis button:hover {
-                background: #f3f4f6;
-                border-radius: 6px;
-            }
-
-    .txt-analisis {
-        width: 100%;
-        height: 220px;
-        resize: none;
-        border: 1px solid #ddd;
-        border-top: none;
-        padding: 15px;
-        box-sizing: border-box;
-        border-radius: 0 0 10px 10px;
-    }
-
-    .recomendacion-footer {
-        margin-top: 32px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .badge-manual {
-        background: #fcd34d;
-        color: #444;
-        padding: 8px 14px;
-        border-radius: 8px;
-        font-weight: 700;
-        margin-left: 10px;
-    }
-
-    .selector-riesgo {
-        width: 170px;
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        cursor: pointer;
-    }
-
-    .txt-analisis {
-        width: 100%;
-        height: 220px;
-        border: 1px solid #ddd;
-        border-top: none;
-        min-height: 120px;
-        padding: 10px;
-        box-sizing: border-box;
-        border-radius: 0 0 10px 10px;
-        overflow-y: auto;
-        outline: none;
-        background: white;
-    }
-
-    .acciones-evaluacion {
-        display: flex;
-        gap: 20px;
-        margin-top: 25px;
-        width: 100%;
-    }
-
-        .acciones-evaluacion button {
-            flex: 1;
-            border: none;
-            height: 55px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 700;
-            cursor: pointer;
-            transition: .3s;
-        }
-
-    .btn-no-validar {
-        background: #5b21b6;
-    }
-
-        .btn-no-validar:hover {
-            background: #4c1d95;
-        }
-
-    .btn-rechazar {
-        background: #ef4444;
-    }
-
-        .btn-rechazar:hover {
-            background: #dc2626;
-        }
-
-    .btn-aprobar {
-        background: #16a34a;
-    }
-
-        .btn-aprobar:hover {
-            background: #15803d;
-        }
-
-    .btn-evaluacion {
-        background: #2563eb;
-    }
-
-        .btn-evaluacion:hover {
-            background: #1d4ed8;
-        }
-
-    .btn-no-validar {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-    }
-
-    .icono-no-validar {
-        font-size: 22px;
-        filter: brightness(0) invert(1);
-    }
-
-    .editor-comentarios {
-        min-height: 120px;
-        padding: 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        outline: none;
-        position: relative;
-        cursor: text;
-    }
-
-        .editor-comentarios:before {
-            content: attr(data-placeholder);
-            color: #9ca3af;
-            pointer-events: none;
-            position: absolute;
-        }
-
-        .editor-comentarios:not(:empty):before {
-            content: "";
-        }
-
-    .btn-aprobar:disabled,
-    .btn-rechazar:disabled,
-    .btn-evaluacion:disabled {
-        background-color: #9ca3af !important; /* gris */
-        color: #ffffff;
-        cursor: not-allowed;
-        opacity: 0.7;
-    }
-
-        .btn-aprobar:disabled:hover,
-        .btn-rechazar:disabled:hover,
-        .btn-evaluacion:disabled:hover {
-            transform: none;
-            box-shadow: none;
-        }
-
-    .acciones-evaluacion {
-        display: flex;
-        gap: 15px;
-        margin-top: 20px;
-    }
-
-        .acciones-evaluacion button {
-            flex: 1;
-            height: 52px;
-            border: none;
-            border-radius: 14px;
-            font-weight: 700;
-            font-size: 14px;
-            color: white;
-            transition: .25s;
-            cursor: pointer;
-        }
-
-            .acciones-evaluacion button:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(0,0,0,.15);
-            }
-
-    .btn-mensaje {
-        background: linear-gradient(135deg,#8b5cf6,#7c3aed);
-    }
-
-    .btn-mensaje {
-        background: #7c3aed;
-        color: white;
-        border: none;
-        border-radius: 12px;
-        padding: 10px 16px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: .25s;
-    }
-
-
-        .btn-mensaje:hover {
-            background: #6d28d9 !important;
-        }
-
-    #modalChat {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,.55);
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 5000;
-    }
-
-    .chat-contenido {
-        width: 850px;
-        height: 650px;
-        background: white;
-        border-radius: 22px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .chat-header {
-        background: linear-gradient(135deg,#7c3aed,#5b21b6);
-        color: white;
-        padding: 18px 25px;
-    }
-
-    .chat-titulo {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 22px;
-        font-weight: 800;
-    }
-
-    .chat-subtitulo {
-        margin-top: 6px;
-        font-size: 14px;
-        color: #ede9fe;
-    }
-
-    #chatMensajes {
-        flex: 1;
-        overflow-y: auto;
-        background: #faf8ff;
-        padding: 20px;
-    }
-
-    .chat-footer {
-        border-top: 1px solid #e5e7eb;
-        padding: 14px;
-        display: flex;
-        gap: 10px;
-    }
-
-        .chat-footer input {
-            flex: 1;
-            border: 2px solid #ddd6fe;
-            border-radius: 14px;
-            padding: 12px;
-        }
-
-    .btn-enviar-chat {
-        border: none;
-        background: #7c3aed;
-        color: white;
-        padding: 14px 24px;
-        border-radius: 14px;
-        cursor: pointer;
-    }
-
-    .mensaje-cliente {
-        display: flex;
-        justify-content: flex-start;
-        margin-bottom: 15px;
-    }
-
-    .mensaje-analista {
-        display: flex;
-        justify-content: flex-end;
-        margin-bottom: 15px;
-    }
-
-    .burbuja-cliente {
-        background: white;
-        padding: 12px 16px;
-        border-radius: 16px;
-        max-width: 70%;
-    }
-
-    .burbuja-analista {
-        background: #7c3aed;
-        color: white;
-        padding: 12px 16px;
-        border-radius: 16px;
-        max-width: 70%;
-    }
-
-
-
-    .chat-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .chat-footer {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-        .chat-footer input[type=text] {
-            flex: 1;
-        }
-
-    .btn-chat-icon {
-        width: 50px;
-        min-width: 50px;
-        height: 50px;
-    }
-
-    .btn-enviar-chat {
-        min-width: 100px;
-        height: 50px;
-    }
-
-    .btn-cerrar-chat {
-        border: none;
-        background: transparent !important;
-        color: white;
-        font-size: 24px;
-        cursor: pointer;
-        padding: 0;
-        width: auto;
-        height: auto;
-        box-shadow: none;
-    }
-
-    .chat-vacio {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-        opacity: .18;
-    }
-
-        .chat-vacio i {
-            font-size: 85px;
-            color: #7c3aed;
-            margin-bottom: 15px;
-        }
-
-        .chat-vacio h4 {
-            color: #7c3aed;
-            font-size: 20px;
-            font-weight: 800;
-        }
-
-        .chat-vacio p {
-            color: #6b7280;
-        }
-
-    .btn-chat-icon {
-        width: 46px;
-        height: 46px;
-        border: none;
-        border-radius: 14px;
-        background: #f3e8ff;
-        color: #7c3aed;
-        font-size: 20px;
-        cursor: pointer;
-        box-shadow: 0 6px 15px rgba(124,58,237,.15);
-    }
-
-        .btn-chat-icon:hover {
-            background: #e9d5ff;
-        }
-
-    .swal2-container {
-        z-index: 200000 !important;
-    }
-
-    .avatar-chat {
-        font-size: 40px;
-        color: #8b5cf6;
-        margin: 0 10px;
-    }
-
-    .nombre-chat {
-        font-size: 13px;
-        font-weight: 700;
-        color: #7c3aed;
-        margin-bottom: 4px;
-    }
-
-    .Apellido-chat {
-        font-size: 13px;
-        font-weight: 700;
-        color: #7c3aed;
-        margin-bottom: 4px;
-    }
-
-    .nombre-derecha {
-        text-align: right;
-    }
-
-    .Apellido-derecha {
-        text-align: right;
-    }
-
-    .fecha-chat {
-        font-size: 11px;
-        color: #9ca3af;
-        margin-top: 5px;
-    }
-
-    .fecha-derecha {
-        text-align: right;
-        width: 100%;
-    }
-
-    .mensaje-cliente {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 18px;
-    }
-
-    .mensaje-analista {
-        display: flex;
-        justify-content: flex-end;
-        align-items: flex-start;
-        margin-bottom: 18px;
-    }
-
-    .chat-derecha {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-    }
-
-    .cabecera-derecha {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 4px;
-    }
-
-    .imagen-contenedor {
-        margin-top: 8px;
-    }
-
-    .imagen-chat {
-        max-width: 280px;
-        border-radius: 12px;
-        cursor: pointer;
-        display: block;
-    }
-
-    .archivo-seleccionado {
-        font-size: 13px;
-        color: #7c3aed;
-        font-weight: 600;
-        margin-bottom: 8px;
-        padding-left: 5px;
-    }
-
-    .archivo-preview {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        color: #7c3aed;
-        font-size: 13px;
-        margin-bottom: 8px;
-    }
-
-        .archivo-preview button {
-            border: none;
-            background: #ef4444;
-            color: white;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-    .imagen-contenedor {
-        background: transparent;
-        padding: 0;
-    }
-
-    .imagen-chat {
-        max-width: 280px;
-        border-radius: 12px;
-        display: block;
-        cursor: pointer;
-        background: transparent;
-    }
-
-    .burbuja-analista img,
-    .burbuja-cliente img {
-        background: transparent;
-    }
-
-    .texto-chat {
-        margin-top: 8px;
-    }
-
-    .imagen-contenedor {
-        background: none !important;
-        padding: 0 !important;
-        box-shadow: none !important;
-        border: none !important;
-    }
-
-    .imagen-chat {
-        max-width: 280px;
-        border-radius: 12px;
-        display: block;
-        cursor: pointer;
-    }
-
-    .modal-evaluacion {
-        display: none; /* oculto al iniciar */
-        position: fixed;
-        inset: 0;
-        z-index: 99999;
-        background: rgba(0,0,0,.45);
-        justify-content: center;
-        align-items: center;
-    }
-
-
-    .modal-contenido {
-        background: white;
-        width: 800px;
-        min-height: 500px;
-        border-radius: 20px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        max-width: 90%;
-    }
-
-    .modal-header {
-        padding: 25px;
-        border-bottom: 1px solid #ddd;
-        text-align: center;
-    }
-
-        .modal-header h4 {
-            margin: 0;
-            color: #6d28d9;
-            font-weight: 600;
-        }
-
-    .cerrar-modal {
-        font-size: 28px;
-        cursor: pointer;
-    }
-
-    .modal-body {
-        flex: 1;
-        padding: 30px;
-    }
-
-
-    .btn-mas {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        border: 2px solid #7b2cbf;
-        background: white;
-        color: #7b2cbf;
-        font-size: 40px;
-        cursor: pointer;
-    }
-
-
-
-    .btn-regresar-modal {
-        padding: 10px 25px;
-        border: 1px solid #ccc;
-        background: white;
-        border-radius: 10px;
-    }
-
-    .btn-enviar-modal {
-        padding: 10px 30px;
-        background: #6d28d9;
-        color: white;
-        border: none;
-        border-radius: 10px;
-    }
-
-
-    .btn-regresar-modal,
-    .btn-enviar-modal {
-        pointer-events: auto !important;
-        cursor: pointer !important;
-        position: relative;
-        z-index: 10001;
-    }
-
-
-    .grupo-monto,
-    .grupo-plazo {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .input-monto {
-        width: 120px;
-        padding: 8px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-    }
-
-    .select-plazo {
-        padding: 8px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-    }
-
-    .btnEliminarOpcion {
-        border: none;
-        background: #ef4444;
-        color: white;
-        width: 35px;
-        height: 35px;
-        border-radius: 8px;
-        cursor: pointer;
-    }
-
-    #contenedorOpciones {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-
-
-
-    .btn-mas {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        border: 2px solid #7c3aed;
-        background: white;
-        color: #7c3aed;
-        font-size: 40px;
-        cursor: pointer;
-    }
-
-        .btn-mas:hover {
-            background: #f5f3ff;
-        }
-
-    .modal-body {
-        flex: 1;
-        padding: 30px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    #contenedorOpciones {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-    }
-
-    .fila-opcion {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 20px;
-        margin-bottom: 20px;
-    }
-
-    .grupo-monto,
-    .grupo-plazo {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .input-monto {
-        width: 140px;
-        padding: 10px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-    }
-
-    .select-plazo {
-        padding: 10px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-    }
-
-    .btnEliminarOpcion {
-        width: 35px;
-        height: 35px;
-        border: none;
-        border-radius: 8px;
-        background: #ef4444;
-        color: white;
-        cursor: pointer;
-    }
-
-    .contenedor-mas {
-        display: flex;
-        justify-content: center;
-        margin-top: 30px;
-    }
-
-    .btn-mas {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        border: 2px solid #7c3aed;
-        background: white;
-        color: #7c3aed;
-        font-size: 40px;
-        cursor: pointer;
-    }
-
-        .btn-mas:hover {
-            background: #f5f3ff;
-        }
-
-    .acciones-modal {
-        display: flex;
-        justify-content: space-between;
-        padding: 25px 30px;
-    }
-
-    .btn-regresar-modal {
-        padding: 10px 25px;
-        border: 1px solid #ccc;
-        background: white;
-        border-radius: 10px;
-        cursor: pointer;
-    }
-
-    .btn-enviar-modal {
-        padding: 10px 30px;
-        border: none;
-        background: #6d28d9;
-        color: white;
-        border-radius: 10px;
-        cursor: pointer;
-    }
-
-    #btnRegresarModal,
-    #btnEnviarModal {
-        position: relative;
-        z-index: 99999;
-    }
-
-    .btn-reporte {
-        background: #f97316;
-        color: white;
-        border: none;
-        border-radius: 14px;
-        padding: 16px 35px;
-        font-weight: bold;
-    }
-
-        .btn-reporte:hover {
-            background: #ea580c;
-        }
-
-    .modal-reporte {
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,.55);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 99999;
-    }
-
-    .reporte-box {
-        width: 520px;
-        background: white;
-        border-radius: 22px;
-        box-shadow: 0 20px 60px rgba(0,0,0,.25);
-        overflow: hidden;
-    }
-
-    .reporte-header {
-        background: #f97316;
-        color: white;
-        padding: 18px 22px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-        .reporte-header h3 {
-            margin: 0;
-            font-weight: 800;
-        }
-
-        .reporte-header button {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 22px;
-            cursor: pointer;
-        }
-
-    .reporte-body {
-        padding: 22px;
-    }
-
-    .reporte-card {
-        background: #fff7ed;
-        border: 2px solid #fed7aa;
-        border-radius: 16px;
-        padding: 18px;
-        margin-bottom: 15px;
-    }
-
-        .reporte-card h4 {
-            color: #c2410c;
-            font-weight: 800;
-            margin-bottom: 10px;
-        }
-
-        .reporte-card p {
-            margin: 6px 0;
-            font-size: 16px;
-        }
-
-    .sin-reporte {
-        text-align: center;
-        padding: 30px;
-        color: #6b7280;
-        font-weight: 700;
-    }
-</style>
-
-<div class="content">
-
-    <div class="contenedor">
-        <div class="top-bar">
-
-            <a id="btnRegresar"
-               href="@Url.Action("SolicitudesPendientes", "Analista")"
-               class="btn-regresar">
-                ← Regresar
-            </a>
-
-        </div>
-
-        <h2 class="titulo-principal">
-            Detalle de Solicitud - SOL-@Model.Id_Solicitud.ToString("D5")
-        </h2>
-
-        <div class="estado">
-            Estado: @Model.Estado
-        </div>
-
-        <div class="fila-superior">
-
-            <div class="card card-personal">
-
-                <h3>DATOS PERSONALES</h3>
-
-                @if (Model.USUARIO.Genero == "Femenino")
-                {
-                    <img src="https://cdn-icons-png.flaticon.com/512/6997/6997662.png"
-                         class="foto-usuario" />
-                }
-                else
-                {
-                    <img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-                         class="foto-usuario" />
-                }
-
-                <p>
-                    <b>Nombre Completo:</b>
-                    @Model.USUARIO.Nombre @Model.USUARIO.Apellido
-                </p>
-
-                <p>
-                    <b>DNI:</b>
-                    @Model.USUARIO.Dni
-                </p>
-
-                <p>
-                    <b>Teléfono:</b>
-                    @Model.USUARIO.Celular
-                </p>
-
-                <p>
-                    <b>Email:</b>
-                    @Model.USUARIO.Correo
-                </p>
-                <p>
-                    <b>Género:</b>
-                    @Model.USUARIO.Genero
-                </p>
-
-                <p>
-                    <b>Fecha de Evaluación:</b>
-                    @Model.FechaSolicitud.ToString("dd/MM/yyyy")
-                </p>
-
-            </div>
-
-            <div style="display:flex; flex-direction:column; gap:20px;">
-
-                <div class="card card-financiero"
-                     style="position:relative;">
-
-                    <h3>PERFIL FINANCIERO</h3>
-
-                    <p>
-                        <b>Monto</b>
-                        <span style="float:right">
-                            S/ @Model.MontoSolicitado.ToString("N0")
-                        </span>
-                    </p>
-
-                    <p>
-                        <b>Plazo</b>
-                        <span style="float:right">
-                            @Model.PlazoMeses meses
-                        </span>
-                    </p>
-
-                    <p>
-                        <b>Motivo</b>
-                        <span style="float:right">
-                            @Model.PERFIL_FINANCIERO.MotivoPrestamo
-                        </span>
-                    </p>
-                    <p>
-                        <b>Ocupación</b>
-                        <span style="float:right">
-                            @Model.PERFIL_FINANCIERO.Ocupacion
-                        </span>
-                    </p>
-
-
-                </div>
-
-                <div class="card card-financiero">
-
-                    <h3>RESUMEN FINANCIERO</h3>
-
-                    <p>
-                        <b>Ingresos mensuales:</b>
-                        <span style="float:right">
-                            S/ @Model.PERFIL_FINANCIERO.IngresoMensual.ToString("N2")
-                        </span>
-                    </p>
-
-                    <p>
-                        <b>Egresos mensuales:</b>
-                        <span style="float:right">
-                            S/ @Model.PERFIL_FINANCIERO.EgresoMensual.ToString("N2")
-                        </span>
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div class="card card-derecha">
-
-                <h3>OTROS CRÉDITOS</h3>
-
-                <p>
-                    <b>¿Tiene otros créditos?</b>
-                    <span style="float:right">
-                        @(Model.PERFIL_FINANCIERO.OtrosCreditos ? "Sí" : "No")
-                    </span>
-                </p>
-
-            </div>
-
-        </div>
-        <div class="acciones">
-
-            <button id="btnValidar"
-                    class="btn-validar">
-                VALIDAR CLIENTE
-            </button>
-
-        </div>
-        <div id="evaluacionFinanciera" style="display:none;">
-            <div class="fila-cards">
-                <div class="card perfil-financiero-modern">
-
-                    <div class="header-perfil">
-                        <h3>PERFIL FINANCIERO</h3>
-
-                        <div id="iconoEstado" class="icono-header">
-                            ✏️
-                        </div>
-                    </div>
-
-                    <div class="item-perfil">
-                        <div class="icono">💲</div>
-
-                        <div class="texto">
-                            <strong>Monto solicitado:</strong>
-                        </div>
-
-                        <span id="txtMonto" style="float:right">
-                            S/ @Model.MontoSolicitado.ToString("N0")
-                        </span>
-                        <input type="text"
-                               id="inputMonto"
-                               class="input-editar"
-                               value="@Model.MontoSolicitado.ToString("N0")"
-                               style="display:none;" />
-                    </div>
-
-                    <div class="item-perfil">
-                        <div class="icono">📅</div>
-
-                        <div class="texto">
-                            <strong>Plazo:</strong>
-                        </div>
-
-                        <span id="txtPlazo" style="float:right">
-                            @Model.PlazoMeses meses
-                        </span>
-                        <select id="inputPlazo"
-                                class="select-editar"
-                                style="display:none;">
-                            <option value="12">12 meses</option>
-                            <option value="18">18 meses</option>
-                            <option value="24">24 meses</option>
-                            <option value="30">30 meses</option>
-                            <option value="36">36 meses</option>
-                            <option value="48">48 meses</option>
-                            <option value="60">60 meses</option>
-                            <option value="72">72 meses</option>
-                        </select>
-
-                    </div>
-
-                    <div class="item-perfil">
-                        <div class="icono">📄</div>
-
-                        <div class="texto">
-                            <strong>Motivo:</strong>
-                        </div>
-
-                        <div class="valor">
-                            @Model.PERFIL_FINANCIERO.MotivoPrestamo
-                        </div>
-                    </div>
-
-                    <div class="item-perfil">
-                        <div class="icono">💼</div>
-
-                        <div class="texto">
-                            <strong>Ocupación:</strong>
-                        </div>
-
-                        <div class="valor">
-                            @Model.PERFIL_FINANCIERO.Ocupacion
-                        </div>
-                    </div>
-                    <div class="acciones-inferiores">
-
-                        <button id="btnIniciarEdicion"
-                                class="btn-editar-perfil">
-                            ✏️ Editar Perfil Financiero
-                        </button>
-
-                        <div id="grupoAcciones" style="display:none;">
-
-                            <button type="button"
-                                    id="btnGuardarPerfil"
-                                    class="btn-guardar-perfil">
-                                💾 Guardar
-                            </button>
-
-                            <button type="button"
-                                    id="btnCancelarPerfil"
-                                    class="btn-cancelar-perfil">
-                                ❌ Cancelar
-                            </button>
-
-                        </div>
-
-                    </div>
-
-
-
-                </div>
-
-                <div class="card resumen-financiero-modern">
-
-                    <h3>RESUMEN FINANCIERO</h3>
-
-                    <div class="item-resumen">
-                        <div class="icono-resumen">📈</div>
-
-                        <div class="texto">
-                            <strong>Ingresos mensuales:</strong>
-                        </div>
-
-                        <div class="valor-verde">
-                            S/ @Model.PERFIL_FINANCIERO.IngresoMensual.ToString("N2")
-                        </div>
-                    </div>
-
-                    <div class="item-resumen">
-                        <div class="icono-resumen">📉</div>
-
-                        <div class="texto">
-                            <strong>Egresos mensuales:</strong>
-                        </div>
-
-                        <div class="valor-rojo">
-                            S/ @Model.PERFIL_FINANCIERO.EgresoMensual.ToString("N2")
-                        </div>
-                    </div>
-
-                    <div class="item-resumen">
-                        <div class="icono-resumen">📊</div>
-
-                        <div class="texto">
-                            <strong>Capacidad de pago (30%):</strong>
-                        </div>
-
-                        <div class="valor-azul">
-                            S/ @capacidadPago.ToString("N2")
-                        </div>
-                    </div>
-
-                    <div class="item-resumen">
-                        <div class="icono-resumen">💸</div>
-
-                        <div class="texto">
-                            <strong>Disponible para préstamo:</strong>
-                        </div>
-
-                        <div class="valor-morado">
-                            S/ @disponiblePrestamo.ToString("N2")
-                        </div>
-                    </div>
-
-                </div>
-                <div class="card comentarios-analisis">
-
-                    <h3>COMENTARIOS DEL SISTEMA Y ANÁLISIS</h3>
-
-                    <div class="toolbar-analisis">
-                        <button type="button" onclick="formatText('bold')"><b>B</b></button>
-
-                        <button type="button" onclick="formatText('italic')">
-                            <i>I</i>
-                        </button>
-
-                        <button type="button" onclick="formatText('underline')">
-                            <u>U</u>
-                        </button>
-
-                        <button type="button" onclick="formatText('insertUnorderedList')">
-                            ☰
-                        </button>
-
-                        <button type="button" onclick="formatText('justifyLeft')">
-                            ≡
-                        </button>
-
-                        <button type="button" onclick="formatText('justifyCenter')">
-                            ≣
-                        </button>
-
-                        <button type="button" onclick="formatText('justifyRight')">
-                            ☷
-                        </button>
-                    </div>
-
-                    <div id="editorComentarios"
-                         class="editor-comentarios"
-                         contenteditable="true"
-                         data-placeholder="Escriba un comentario sobre la evaluación...">
-                    </div>
-
-                    <div class="recomendacion-footer">
-
-                        <div class="nivel-recomendacion">
-                            <strong>Nivel de recomendación:</strong>
-
-                            <span id="badgeNivel" class="badge-manual">
-                                Manual
-                            </span>
-                        </div>
-
-                        <select id="selectorRiesgo" class="selector-riesgo">
-                            <option value="" selected>Manual</option>
-                            <option value="critico">Crítico</option>
-                            <option value="alto">Alto</option>
-                            <option value="medio">Medio</option>
-                            <option value="bajo">Bajo</option>
-                        </select>
-
-                    </div>
-
-                </div>
-            </div>
-            <div class="fila-cards">
-                <div class="card deuda-crediticia">
-
-                    <div class="header-deuda">
-                        <h3>DEUDA ACTUAL Y DEUDOR</h3>
-
-                        <button class="btn-editar-deuda">
-                            ✏️
-                        </button>
-                    </div>
-
-                    <div class="contenido-deuda">
-
-                        <div class="lado-izquierdo">
-
-                            <div class="fila-deuda">
-                                <strong>¿Tiene otros créditos Activos?</strong>
-
-                                @if (tieneOtrosCreditos)
-                                {
-                                    <span class="badge-si">Sí</span>
-                                }
-                                else
-                                {
-                                    <span class="badge-no">No</span>
-                                }
-                            </div>
-
-                            <div class="historial">
-                                <strong>Historial crediticio:</strong><br />
-                                <span id="txtDeudasEncontradas">
-                                    @deudasEncontradas deudas encontradas
-                                </span>
-                                <div id="sinHistorial"
-                                     style="display:none;
-            color:#64748b;
-            margin-top:8px;
-               font-size:14px;">
-                                    No cuenta con historial crediticio.
-                                </div>
-                            </div>
-
-                            <button class="btnHistorialCredito btn-historial"
-                                    data-id="@Model.Id_Solicitud">
-
-                                👁 Ver historial crediticio
-                            </button>
-                            <div id="modalHistorialCredito"
-                                 class="modalHistorialCredito">
-
-                                <div class="contenidoHistorial">
-
-                                    <h2>Historial Crediticio</h2>
-
-
-                                    <div id="datosCliente"></div>
-
-                                    <table class="table">
-
-                                        <thead>
-                                            <tr>
-                                                <th>Nombre</th>
-                                                <th>Apellido</th>
-                                                <th>DNI</th>
-                                                <th>Entidad</th>
-                                                <th>Tipo Crédito</th>
-                                                <th>Monto</th>
-                                                <th>Plazo</th>
-                                                <th>Cuotas Pagadas</th>
-                                                <th>Estado</th>
-                                                <th>Fecha Inicio</th>
-                                                <th>Fecha Fin</th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody id="tablaHistorial">
-                                        </tbody>
-
-                                    </table>
-
-                                    <button id="cerrarHistorial"
-                                            class="btnCerrarHistorial">
-                                        Cerrar
-                                    </button>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <div class="lado-derecho">
-                            <div class="dato">
-                                <span>Deudas activas:</span>
-                                <strong id="txtActivas" class="rojo">@activas</strong>
-                            </div>
-
-                            <div class="dato">
-                                <span>Deudas pagadas:</span>
-                                <strong id="txtPagadas" class="verde">@pagadas</strong>
-                            </div>
-
-                            <div class="dato">
-                                <span>Deudas vencidas:</span>
-                                <strong id="txtVencidas" class="naranja">@vencidas</strong>
-                            </div>
-
-
-                            <div class="dato">
-                                <span>Última actualización:</span>
-                                <strong id="txtUltimaActualizacion">
-                                    @ultimaActualizacion?.ToString("dd/MM/yyyy")
-                                </strong>
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <div class="footer-deuda">
-                        ℹ La información mostrada es referencial y generada automáticamente.
-                    </div>
-
-
-
-                </div>
-
-                <div class="card scoring-card">
-
-                    <div class="scoring-title">
-                        PUNTAJE DE RIESGO (SCORING)
-                    </div>
-
-                    <div class="medidor">
-
-                        <div class="aguja"
-                             style="transform:translateX(-50%) rotate(@posicionAguja);">
-                        </div>
-
-                        <div class="centro"></div>
-
-                    </div>
-
-                    <div class="resultado-riesgo">
-                        <span class="@claseColor">
-                            @nivelRiesgo
-                        </span>
-                    </div>
-
-                    <div class="info-scoring">
-                        El puntaje se calcula en base al comportamiento financiero del cliente y su capacidad de pago.
-                    </div>
-
-                </div>
-            </div>
-            <div class="acciones-evaluacion">
-
-                <button id="btnNoValidar" class="btn-no-validar">
-                    <span class="icono-no-validar">👤</span>
-                    NO VALIDAR CLIENTE
-                </button>
-
-                <button id="btnRechazar" class="btn-rechazar">
-                    ✖ RECHAZAR
-                </button>
-
-                <button id="btnAprobar" class="btn-aprobar">
-                    ✔ APROBAR
-                </button>
-
-                @if (!estaEnEvaluacion)
-                {
-                    <button id="btnEvaluacion" class="btn-evaluacion">
-                        🕒 EN EVALUACIÓN
-                    </button>
-                }
-                else
-                {
-                    <button id="btnReporte"
-                            type="button"
-                            class="btn-reporte"
-                            onclick="abrirReporte(@Model.Id_Solicitud)">
-                        📄 REPORTE
-                    </button>
-                }
-                <button id="btnMensaje"
-                        type="button"
-                        class="btn-mensaje"
-                        onclick="abrirChat(@Model.Id_Solicitud)">
-                    <i class="fas fa-comments"></i>
-                    MENSAJE
-                </button>
-
-            </div>
-
-
-        </div>
-
-    </div>
-
-</div>
-
-<div id="modalChat" style="display:none;">
-
-    <div class="chat-contenido">
-
-        <div class="chat-header">
-
-            <div>
-
-                <div class="chat-titulo">
-                    <i class="fas fa-comments"></i>
-                    <span id="tituloSolicitud">
-                        Mensajes
-                    </span>
-                </div>
-
-                <div class="chat-subtitulo">
-
-                    Cliente:
-                    <span id="chatCliente">
-                        -
-                    </span>
-                    &nbsp; • &nbsp;
-
-                    Estado:
-                    <span id="chatEstado">-</span>
-
-                </div>
-
-            </div>
-
-            <button class="btn-cerrar-chat"
-                    onclick="cerrarChat()">
-                <i class="fas fa-times"></i>
-            </button>
-
-        </div>
-
-        <div id="chatMensajes">
-
-            <div class="chat-vacio">
-
-                <i class="fas fa-comments"></i>
-
-                <h4>No hay mensajes</h4>
-
-                <p>
-                    Inicia una conversación con el Usuario.
-                </p>
-
-            </div>
-
-        </div>
-
-        <div class="chat-footer">
-
-            <div id="nombreArchivoSeleccionado" class="archivo-seleccionado"></div>
-            <input type="text"
-                   id="txtMensaje"
-                   placeholder="Escribe tu mensaje..." />
-
-            <input type="file"
-                   id="fileImagen"
-                   accept="image/*"
-                   style="display:none">
-
-            <button class="btn-chat-icon"
-                    onclick="document.getElementById('fileImagen').click()">
-                <i class="far fa-image"></i>
-            </button>
-
-            <button class="btn-enviar-chat"
-                    onclick="enviarMensaje()">
-
-                <i class="fas fa-paper-plane"></i>
-
-                Enviar
-
-            </button>
-
-        </div>
-
-    </div>
-
-
-</div>
-<div id="modalReporte" class="modal-reporte" style="display:none;">
-    <div class="reporte-box">
-
-        <div class="reporte-header">
-            <h3>📄 Reporte de propuestas</h3>
-            <button type="button" onclick="cerrarReporte()">✕</button>
-        </div>
-
-        <div id="contenidoReporte" class="reporte-body">
-        </div>
-
-    </div>
-</div>
-<div id="modalEvaluacion" class="modal-evaluacion">
-
-    <div class="modal-contenido">
-
-        <div class="modal-header">
-            <h4>¿Desea agregar otras opciones de crédito?</h4>
-        </div>
-
-        <div class="modal-body">
-
-            <div id="contenedorOpciones"></div>
-
-        </div>
-
-        <div class="contenedor-mas">
-            <button type="button"
-                    id="btnAgregarOpcion"
-                    class="btn-mas">
-                +
-            </button>
-        </div>
-
-        <div class="acciones-modal">
-            <button type="button"
-                    id="btnRegresarModal"
-                    class="btn-regresar-modal">
-
-                Regresar
-
-            </button>
-
-            <button type="button"
-                    id="btnEnviarModal"
-                    class="btn-enviar-modal">
-
-                Enviar
-
-            </button>
-        </div>
-    </div>
-</div>
-
-<script>
-    const idSolicitudActual = @Model.Id_Solicitud;
-                    function formatText(command) {
-        document.getElementById("editorComentarios").focus();
-        document.execCommand(command, false, null);
-    }
-            const editor = document.getElementById("editorComentarios");
-
-    editor.addEventListener("focus", function () {
-        if (editor.innerHTML === "<br>") {
-            editor.innerHTML = "";
-        }
-    });
-
-    editor.addEventListener("blur", function () {
-        if (editor.innerText.trim() === "") {
-            editor.innerHTML = "";
-        }
-    });
-
-
-    document.getElementById("btnNoValidar")
-    .addEventListener("click", function(){
-
-                document.getElementById("evaluacionFinanciera")
-    .style.display = "none";
-
-    document.getElementById("btnValidar")
-    .style.display = "inline-block";
-
-    document.getElementById("btnRegresar")
-    .style.display = "inline-flex";
-    });
-            document.getElementById("selectorRiesgo")
-    .addEventListener("change", function(){
-
-        const badge =
-        document.getElementById("badgeNivel");
-
-        badge.innerText =
-        this.options[this.selectedIndex].text;
-
-    });
-    const modalEvaluacion = document.getElementById("modalEvaluacion");
-    const cerrarModal = document.querySelector(".cerrar-modal");
-    const btnRegresarModal = document.getElementById("btnRegresarModal");
-    const btnEnviarModal = document.getElementById("btnEnviarModal");
-    const btnEvaluacion = document.getElementById("btnEvaluacion");
-    const contenedorOpciones = document.getElementById("contenedorOpciones");
-    const btnAgregarOpcion = document.getElementById("btnAgregarOpcion");
-
-
-    if (btnEvaluacion) {
-
-        btnEvaluacion.addEventListener("click", function () {
-
-            const comentario = document
-                .getElementById("editorComentarios")
-                .innerText.trim();
-
-            const nivelRiesgo = document
-                .querySelector(".resultado-riesgo span")
-                .innerText.trim()
-                .toUpperCase();
-
-            const nivelRecomendacion = document
-                .getElementById("badgeNivel")
-                .innerText.trim();
-    console.log("Nivel riesgo:", "[" + nivelRiesgo + "]");
-    console.log("Perfil modificado:", perfilModificado);
-            if (!perfilModificado &&
-                (nivelRiesgo === "ALTO" || nivelRiesgo === "MEDIO")) {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Perfil financiero pendiente",
-                    text: "Debe editar y guardar los cambios del perfil financiero.",
-                    confirmButtonText: "Entendido"
-                });
-
-                return;
-            }
-
-            if (!perfilModificado && nivelRiesgo === "BAJO") {
-
-                Swal.fire({
-                    title: "Perfil financiero",
-                    text: "¿Harás algún cambio en el perfil financiero (monto o plazo)?",
-                    icon: "question",
-                    showCancelButton: true,
-                    confirmButtonText: "Sí",
-                    cancelButtonText: "No"
-                }).then((result) => {
-
-                    if (result.isConfirmed) {
-
-                        Swal.fire({
-                            icon: "warning",
-                            title: "Perfil financiero pendiente",
-                            text: "Debe editar y guardar los cambios del perfil financiero.",
-                            confirmButtonText: "Entendido"
-                        });
-
-                    } else {
-
-                        perfilModificado = true;
-                        btnEvaluacion.click();
-
-                    }
-
-                });
-
-                return;
-            }
-
-            if (comentario === "") {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Comentario obligatorio",
-                    text: "Debe escribir un comentario para continuar.",
-                    confirmButtonText: "Entendido"
-                });
-
-                return;
-            }
-
-            if (nivelRecomendacion === "Manual") {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Nivel de recomendación",
-                    text: "Debe seleccionar un nivel de recomendación.",
-                    confirmButtonText: "Entendido"
-                });
-
-                return;
-            }
-
-            modalEvaluacion.style.display = "flex";
-
-        });
-
-    }
-                            const btnRechazar = document.getElementById("btnRechazar");
-
-    if (btnRechazar) {
-
-        btnRechazar.addEventListener("click", function () {
-
-            const comentario = document
-                .getElementById("editorComentarios")
-                .innerText.trim();
-
-            const nivel = document
-                .getElementById("badgeNivel")
-                .innerText.trim();
-
-            if (comentario === "") {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Comentario requerido",
-                    text: "Debe registrar un comentario antes de continuar.",
-                    confirmButtonColor: "#7c3aed"
-                });
-
-                return;
-            }
-
-            if (nivel === "Manual") {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Nivel de recomendación",
-                    text: "Debe seleccionar un nivel de recomendación.",
-                    confirmButtonColor: "#7c3aed"
-                });
-
-                return;
-            }
-
-            Swal.fire({
-                title: "¿Está seguro de rechazar al cliente?",
-                text: "La solicitud será Rechazada.",
-                icon: "question",
-                showCancelButton: true,
-                confirmButtonColor: "#16a34a",
-                cancelButtonColor: "#6b7280",
-                confirmButtonText: "SI",
-                cancelButtonText: "NO"
-            }).then((result) => {
-
-                if (result.isConfirmed) {
-
-                    Swal.fire({
-                        icon: "success",
-                        title: "Solicitud Aprobada",
-                        text: "El usuario fue rechazado correctamente.",
-                        confirmButtonColor: "#dc2626"
-                    });
-
-                }
-                        if (result.isConfirmed) {
-
-        fetch('/Analista/RechazarSolicitud', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body:
-                'idSolicitud=@Model.Id_Solicitud'
-                + '&comentario=' + encodeURIComponent(comentario)
-                + '&nivelRiesgo=' + encodeURIComponent(nivel)
-        })
-        .then(response => response.json())
-        .then(data => {
-
-            if (data.success) {
-
-                        Swal.fire({
-        icon: "success",
-        title: "Solicitud rechazada",
-        text: "El usuario fue rechazado correctamente.",
-        confirmButtonColor: "#dc2626"
-    }).then(() => {
-
-        window.location.href = '/Analista/SolicitudesPendientes';
-
-    });
-
-            }
-            else {
-
-                Swal.fire({
-                    icon: "error",
-                    title: "Error",
-                    text: data.mensaje
-                });
-
-            }
-
-        })
-        .catch(error => {
-
-            console.error(error);
-
-            Swal.fire({
-                icon: "error",
-                title: "Error",
-                text: "Ocurrió un error al rechazar la solicitud."
-            });
-
-        });
-
-    }
-
-            });
-
-        });
-
-    }
-    const btnAprobar = document.getElementById("btnAprobar");
-
-    if (btnAprobar) {
-
-        btnAprobar.addEventListener("click", function () {
-
-            const comentario = document
-                .getElementById("editorComentarios")
-                .innerText.trim();
-
-            const nivel = document
-                .getElementById("badgeNivel")
-                .innerText.trim();
-
-    if (!perfilModificado) {
-
-        Swal.fire({
-            title: "Perfil financiero",
-            text: "¿Seguirás con los mismos datos de monto y plazo?",
-            footer: "Si selecciona 'No', deberá editar y guardar el perfil financiero.",
-            icon: "question",
-            showCancelButton: true,
-            confirmButtonText: "Sí",
-            cancelButtonText: "No"
-        }).then((result) => {
-
-            if (result.isConfirmed) {
-
-                perfilModificado = true;
-                btnAprobar.click();
-            }
-            else {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Perfil financiero pendiente",
-                    text: "Debe editar y guardar los cambios del perfil financiero para continuar."
-                });
-
-            }
-
-        });
-
-        return;
-    }
-
-            if (comentario === "") {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Comentario requerido",
-                    text: "Debe registrar un comentario antes de continuar.",
-                    confirmButtonColor: "#7c3aed"
-                });
-
-                return;
-            }
-            if (nivel === "Manual") {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Nivel de recomendación",
-                    text: "Debe seleccionar un nivel de recomendación.",
-                    confirmButtonColor: "#7c3aed"
-                });
-
-                return;
-            }
-
-            Swal.fire({
-                title: "¿Está seguro de aprobar el crédito al usuario?",
-                text: "La solicitud será aprobada.",
-                icon: "question",
-                showCancelButton: true,
-                confirmButtonColor: "#16a34a",
-                cancelButtonColor: "#6b7280",
-                confirmButtonText: "SI",
-                cancelButtonText: "NO"
-            }).then((result) => {
-
-                if (result.isConfirmed) {
-
-                    fetch('/Analista/AprobarSolicitud', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
-                        body:
-                            'idSolicitud=@Model.Id_Solicitud'
-                            + '&comentario=' + encodeURIComponent(comentario)
-                            + '&nivelRiesgo=' + encodeURIComponent(nivel)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-
-                        if (data.success) {
-
-                            Swal.fire({
-                                icon: "success",
-                                title: "Solicitud aprobada",
-                                text: "El usuario fue aprobado correctamente.",
-                                confirmButtonColor: "#16a34a"
-                            }).then(() => {
-
-                                window.location.href = '/Analista/SolicitudesPendientes';
-
-                            });
-
-                        }
-                        else {
-
-                            Swal.fire({
-                                icon: "error",
-                                title: "Error",
-                                text: data.mensaje
-                            });
-
-                        }
-
-                    })
-                    .catch(error => {
-
-                        console.error(error);
-
-                        Swal.fire({
-                            icon: "error",
-                            title: "Error",
-                            text: "Ocurrió un error al aprobar la solicitud."
-                        });
-
-                    });
-
-                }
-
-            });
-
-        });
-
-    }
-
-        const btnValidar = document.getElementById("btnValidar");
-        const btnRegresar = document.getElementById("btnRegresar");
-        const evaluacionFinanciera = document.getElementById("evaluacionFinanciera");
-                const btnHistorial =
-    document.querySelector(".btn-historial");
-
-    console.log("btnValidar =", btnValidar);
-
-                btnValidar.addEventListener("click", function () {
-
-        console.log("Botón presionado");
-        console.log("Id Solicitud:", @Model.Id_Solicitud);
-
-                fetch('/Analista/ValidarCliente?idSolicitud=@Model.Id_Solicitud', {
-        method: 'POST'
-    })
-    .then(async response => {
-
-        if (!response.ok) {
-            const mensaje = await response.text();
-            throw new Error(mensaje);
-        }
-
-        return response.json();
-    })
-    .then(data =>{
-
-
-
-    console.log(data);
-
-    const mensajeSinHistorial =
-        document.getElementById("sinHistorial");
-
-        if (
-            data.activas == 0 &&
-            data.pagadas == 0 &&
-            data.vencidas == 0
-        ) {
-            btnHistorial.style.display = "none";
-            mensajeSinHistorial.style.display = "block";
-        }
-        else {
-            btnHistorial.style.display = "block";
-            mensajeSinHistorial.style.display = "none";
-        }
-
-        document.getElementById("txtActivas").innerText = data.activas;
-        document.getElementById("txtPagadas").innerText = data.pagadas;
-        document.getElementById("txtVencidas").innerText = data.vencidas;
-                if (
-        data.activas == 0 &&
-        data.pagadas == 0 &&
-        data.vencidas == 0
-    )
-    {
-        document.getElementById("txtUltimaActualizacion")
-            .innerText = "No tiene historial";
-    }
-    else
-    {
-        document.getElementById("txtUltimaActualizacion")
-            .innerText = data.ultimaFecha;
-    }
-
-        document.getElementById("txtDeudasEncontradas").innerText =
-            (data.activas + data.vencidas) + " deudas encontradas";
-                    let nivel = "";
-    let clase = "";
-    let aguja = "";
-
-    if (data.vencidas > 0) {
-        nivel = "CRÍTICO";
-        clase = "critico";
-        aguja = "70deg";
-    }
-    else if (data.activas > 0 && data.pagadas > 0) {
-        nivel = "ALTO";
-        clase = "alto";
-        aguja = "35deg";
-    }
-    else if (data.pagadas > 0) {
-        nivel = "BAJO";
-        clase = "bajo";
-        aguja = "-70deg";
-    }
-    else {
-        nivel = "MEDIO";
-        clase = "medio";
-        aguja = "-20deg";
-    }
-
-    document.querySelector(".resultado-riesgo span").innerText = nivel;
-    document.querySelector(".resultado-riesgo span").className = clase;
-
-    document.querySelector(".aguja").style.transform =
-        `translateX(-50%) rotate(${aguja})`;
-                        const btnAprobar = document.getElementById("btnAprobar");
-    const btnRechazar = document.getElementById("btnRechazar");
-    const btnEvaluacion = document.getElementById("btnEvaluacion");
-
-    const estaEnEvaluacion = @estaEnEvaluacion.ToString().ToLower();
-
-    if (estaEnEvaluacion) {
-
-        btnAprobar.disabled = false;
-        btnRechazar.disabled = false;
-
-        if (btnEvaluacion) {
-            btnEvaluacion.disabled = true;
-        }
-
-    }
-    else {
-
-        // Pendiente: mantener la lógica actual
-        if (nivel === "CRÍTICO") {
-
-            btnAprobar.disabled = true;
-            btnRechazar.disabled = false;
-
-            if (btnEvaluacion) btnEvaluacion.disabled = false;
-        }
-        else if (nivel === "ALTO") {
-
-            btnAprobar.disabled = true;
-            btnRechazar.disabled = true;
-
-            if (btnEvaluacion) btnEvaluacion.disabled = false;
-        }
-        else if (nivel === "MEDIO") {
-
-            btnAprobar.disabled = true;
-            btnRechazar.disabled = true;
-
-            if (btnEvaluacion) btnEvaluacion.disabled = false;
-        }
-        else if (nivel === "BAJO") {
-
-            btnAprobar.disabled = false;
-            btnRechazar.disabled = true;
-
-            if (btnEvaluacion) btnEvaluacion.disabled = false;
-        }
-    }
-
-                btnRegresar.style.display = "none";
-    btnValidar.style.display = "none";
-
-    document.getElementById("btnNoValidar").style.display = "flex";
-
-    evaluacionFinanciera.style.display = "flex";
-    })
-    .catch(error => {
-        console.error(error);
-        alert(error.message);
-    });
-
-    });
-        const btnIniciarEdicion =
-        document.getElementById("btnIniciarEdicion");
-
-        const btnGuardarPerfil =
-        document.getElementById("btnGuardarPerfil");
-
-        const btnCancelarPerfil =
-        document.getElementById("btnCancelarPerfil");
-
-        const grupoAcciones =
-        document.getElementById("grupoAcciones");
-
-        const textoMonto =
-        document.getElementById("txtMonto");
-
-        const textoPlazo =
-        document.getElementById("txtPlazo");
-
-        const inputMonto =
-        document.getElementById("inputMonto");
-
-
-        const inputPlazo =
-        document.getElementById("inputPlazo");
-        inputPlazo.value = "@Model.PlazoMeses";
-
-        let montoOriginal;
-        let plazoOriginal;
-                let decisionPerfil = null;     // null, "si" o "no"
-    let perfilModificado = false;
-
-        btnIniciarEdicion.addEventListener("click", function () {
-            document.getElementById("iconoEstado").innerHTML = "💾";
-
-            montoOriginal = inputMonto.value;
-            plazoOriginal = inputPlazo.value;
-
-            textoMonto.style.display = "none";
-            textoPlazo.style.display = "none";
-
-            inputMonto.style.display = "inline-block";
-            inputPlazo.style.display = "inline-block";
-
-            btnIniciarEdicion.style.display = "none";
-            grupoAcciones.style.display = "inline-flex";
-        });
-
-        btnGuardarPerfil.addEventListener("click", function () {
-            document.getElementById("iconoEstado").innerHTML = "✏️";
-                    if (
-        montoOriginal != inputMonto.value ||
-        plazoOriginal != inputPlazo.value
-    ) {
-        perfilModificado = true;
-    }
-                        const montoNumerico = parseInt(
-        inputMonto.value.replace(/[^\d]/g, "")
-    );
-
-    textoMonto.innerText =
-        "S/ " + montoNumerico.toLocaleString('es-PE');
-
-            textoPlazo.innerText =
-    inputPlazo.value;
-
-            textoMonto.style.display = "inline";
-            textoPlazo.style.display = "inline";
-
-            inputMonto.style.display = "none";
-            inputPlazo.style.display = "none";
-
-            grupoAcciones.style.display = "none";
-            btnIniciarEdicion.style.display = "inline-block";
-
-        });
-
-        btnCancelarPerfil.addEventListener("click", function () {
-            document.getElementById("iconoEstado").innerHTML = "✏️";
-            inputMonto.value = montoOriginal;
-            inputPlazo.value = plazoOriginal;
-
-            textoMonto.style.display = "inline";
-            textoPlazo.style.display = "inline";
-
-            inputMonto.style.display = "none";
-            inputPlazo.style.display = "none";
-
-            grupoAcciones.style.display = "none";
-            btnIniciarEdicion.style.display = "inline-block";
-
-        });
-                document.querySelectorAll(".btnHistorialCredito")
-    .forEach(btn => {
-
-        btn.addEventListener("click", async () => {
-
-            const id = btn.dataset.id;
-
-                const response =
-                await fetch(`/Analista/ObtenerHistorialCredito?idSolicitud=${id}`);
-
-            const data = await response.json();
-
-            if (!data.ok)
-                return;
-
-
-
-            let filas = "";
-
-            data.historial.forEach(h => {
-
-                        filas += `
-    <tr>
-        <td>${data.nombre}</td>
-        <td>${data.apellido}</td>
-        <td>${data.dni}</td>
-        <td>${h.banco}</td>
-        <td>${h.tipoCredito}</td>
-        <td>S/ ${Number(h.monto).toLocaleString('es-PE')}</td>
-        <td>${h.plazoMeses}</td>
-        <td>${h.cuotasPagadas}</td>
-                <td>
-        <span class="${
-            h.estadoCredito === 'ACTIVA'
-                ? 'estado-activa'
-                : h.estadoCredito === 'PAGADA'
-                ? 'estado-pagada'
-                : 'estado-vencida'
-        }">
-            ${h.estadoCredito}
-        </span>
-    </td>
-        <td>${h.fechaInicio}</td>
-        <td>${h.fechaFin}</td>
-    </tr>
-    `;
-            });
-
-            document.getElementById("tablaHistorial")
-            .innerHTML = filas;
-
-            document.getElementById("modalHistorialCredito")
-            .style.display = "flex";
-
-        });
-
-    });
-
-    document.getElementById("cerrarHistorial")
-    .addEventListener("click", () => {
-
-        document.getElementById("modalHistorialCredito")
-        .style.display = "none";
-
-    });
-                    function mostrarAviso(texto)
-    {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Atención',
-            text: texto,
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#6d28d9',
-            allowOutsideClick: false,
-
-            didOpen: () => {
-                const swal = document.querySelector('.swal2-container');
-                if (swal) {
-                    swal.style.zIndex = '999999999';
-                }
-            }
-        });
-    }
-                    let solicitudActual = 0;
-
-                            function abrirChat(idSolicitud)
-    {
-        console.log("Solicitud:", idSolicitud);
-        solicitudActual = idSolicitud;
-
-        document.getElementById("modalChat").style.display = "flex";
-
-        cargarInfoSolicitud(idSolicitud);
-
-        cargarMensajes(idSolicitud);
-    }
-                    function cargarInfoSolicitud(idSolicitud)
-    {
-        fetch('/Analista/ObtenerInfoSolicitud?idSolicitud=' + idSolicitud)
-        .then(r => r.json())
-        .then(data => {
-             console.log(data);
-            document.getElementById("tituloSolicitud").innerHTML =
-                "Mensajes - Solicitud " + data.numeroSolicitud;
-
-            document.getElementById("chatCliente").innerHTML =
-                data.cliente;
-
-            document.getElementById("chatEstado").innerHTML =
-                data.estado;
-        });
-    }
-        let imagenSeleccionada = null;
-            document.getElementById("fileImagen")
-    .addEventListener("change", function () {
-
-            if(this.files.length > 0)
-    {
-        imagenSeleccionada = this.files[0];
-
-        document.getElementById("nombreArchivoSeleccionado")
-            .innerHTML =
-                    `
-    <div class="archivo-preview">
-        📷 ${imagenSeleccionada.name}
-        <button type="button" onclick="quitarImagen()">✕</button>
-    </div>
-    `;
-    }
-
-    });
-            function quitarImagen()
-    {
-        imagenSeleccionada = null;
-
-        document.getElementById("fileImagen").value = "";
-
-        document.getElementById("nombreArchivoSeleccionado").innerHTML = "";
-    }
-                            function enviarMensaje()
-    {
-        let mensaje = document.getElementById("txtMensaje").value.trim();
-
-        if(mensaje === "" && imagenSeleccionada == null)
-        {
-            mostrarAviso(
-                "Debe escribir un mensaje o adjuntar una imagen."
-            );
-            return;
-        }
-
-        let formData = new FormData();
-
-        formData.append("idSolicitud", solicitudActual);
-        formData.append("mensaje", mensaje);
-
-        if(imagenSeleccionada != null)
-        {
-            formData.append("imagen", imagenSeleccionada);
-        }
-
-        fetch('/Analista/EnviarMensaje', {
-            method: 'POST',
-            body: formData
-        })
-        .then(r => r.json())
-        .then(data => {
-
-            document.getElementById("txtMensaje").value = "";
-            document.getElementById("fileImagen").value = "";
-              document.getElementById("nombreArchivoSeleccionado")
-    .innerHTML = "";
-            imagenSeleccionada = null;
-
-            cargarMensajes(solicitudActual);
-
-        })
-        .catch(error => {
-
-            console.error(error);
-            alert("Error al enviar mensaje");
-
-        });
-    }
-            function verImagen(url)
-    {
-        Swal.fire({
-            imageUrl: url,
-            imageAlt: 'Imagen',
-            showConfirmButton: false,
-            showCloseButton: true,
-            width: '80%'
-        });
-    }
-
-                    function cargarMensajes(idSolicitud)
-    {
-        fetch('/Analista/ObtenerMensajes?idSolicitud=' + idSolicitud)
-        .then(r => r.json())
-        .then(data => {
-
-            let html = "";
-
-            if(data.length === 0)
-            {
-                html = `
-                <div class="chat-vacio">
-                    <i class="fas fa-comments"></i>
-                    <h4>No hay mensajes todavía</h4>
-                    <p>Inicia una conversación con el Usuario</p>
-                </div>`;
-            }
-            else
-            {
-                data.forEach(m => {
-                console.log(m);
-                if (m.tipoUsuario === "Analista") {
-
-        html += `
-    <div class="mensaje-analista">
-
-        <div class="chat-derecha">
-
-            <div class="cabecera-derecha">
-                <span class="nombre-chat">
-                    ${m.nombre}
-                </span>
-
-                <div class="avatar-chat">
-                    <i class="fas fa-user-circle"></i>
-                </div>
-            </div>
-
-        <div class="${m.imagen ? 'imagen-contenedor' : 'burbuja-analista'}">
-
-        ${m.imagen
-            ? `<img src="${m.imagen}"
-               class="imagen-chat"
-               onclick="verImagen('${m.imagen}')">`
-            : ''
-        }
-
-        ${m.mensaje != "[Imagen]"
-            ? `<div class="texto-chat">${m.mensaje}</div>`
-            : ''
-        }
-
-    </div>
-
-            <div class="fecha-chat fecha-derecha">
-                ${m.fecha}
-            </div>
-
-        </div>
-
-    </div>`;
-    }
-    else {
-
-        html += `
-    <div class="mensaje-cliente">
-
-        <div class="avatar-chat">
-            <i class="fas fa-user-circle"></i>
-        </div>
-
-        <div>
-            <div class="nombre-chat">
-                ${m.nombre}
-            </div>
-
-                        <div class="${m.imagen ? 'imagen-contenedor' : 'burbuja-cliente'}">
-
-        ${m.imagen
-            ? `<img src="${m.imagen}"
-               class="imagen-chat"
-               onclick="verImagen('${m.imagen}')">`
-            : ''
-        }
-
-        ${m.mensaje != "[Imagen]"
-            ? `<div class="texto-chat">${m.mensaje}</div>`
-            : ''
-        }
-
-    </div>
-
-            <div class="fecha-chat">
-                ${m.fecha}
-            </div>
-        </div>
-
-    </div>`;
-    }
-
-    });
-            }
-
-            document.getElementById("chatMensajes").innerHTML = html;
-
-        });
-    }
-
-    function cerrarChat()
-    {
-        document.getElementById("modalChat").style.display = "none";
-    }
-
-
-            btnEnviarModal.addEventListener("click", function () {
-
-        const cantidadOpciones =
-            contenedorOpciones.querySelectorAll(".fila-opcion").length;
-
-    if (cantidadOpciones === 0) {
-
-        Swal.fire({
-            title: "¿Está seguro?",
-            text: "¿Está seguro que desea enviar la opción actual al usuario?",
-            icon: "question",
-            showCancelButton: true,
-            confirmButtonText: "Sí",
-            cancelButtonText: "No",
-            confirmButtonColor: "#6d28d9"
-        }).then((result) => {
-
-            if (result.isConfirmed) {
-
-                const propuestas = [];
-
-                        let montoPrincipal;
-    let plazoPrincipal;
-
-    const inputMonto = document.getElementById("inputMonto");
-    const inputPlazo = document.getElementById("inputPlazo");
-
-    const txtMonto = document.getElementById("txtMonto");
-    const txtPlazo = document.getElementById("txtPlazo");
-
-    if (inputMonto.style.display !== "none") {
-
-    montoPrincipal = parseFloat(
-        inputMonto.value.replace(/[^\d]/g, "")
-    );
-
-        plazoPrincipal = parseInt(inputPlazo.value);
-
-    } else {
-
-        montoPrincipal = parseFloat(
-            txtMonto.textContent.replace(/[^\d]/g, "")
-        );
-
-        plazoPrincipal = parseInt(
-            txtPlazo.textContent.replace(/[^\d]/g, "")
-        );
-    }
-
-    propuestas.push({
-        monto: montoPrincipal,
-        plazoMeses: plazoPrincipal,
-        esRecomendada: true
-    });
-        const comentarioActual = document
-    .getElementById("editorComentarios")
-    .innerText.trim();
-
-                fetch("/Analista/EnviarEvaluacion", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        idSolicitud: idSolicitudActual,
-                        propuestas: propuestas,
-                        comentario: comentarioActual
-
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-
-                    if (data.success) {
-
-                        Swal.fire({
-                            icon: "success",
-                            title: "Enviado",
-                            text: "La propuesta fue enviada al usuario.",
-                            confirmButtonColor: "#6d28d9"
-                        }).then(() => {
-
-                            window.location.href = "/Analista/SolicitudesPendientes";
-
-                        });
-
-                    } else {
-
-                        Swal.fire({
-                            icon: "error",
-                            title: "Error",
-                            text: data.mensaje
-                        });
-
-                    }
-
-                });
-
-            }
-
-        });
-
-        return;
-    }
-
-
-        if (!validarOpcionesCredito()) {
-            return;
-        }
-
-        Swal.fire({
-            title: "¿Desea enviar estas opciones de crédito al usuario?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Sí",
-            cancelButtonText: "No",
-            confirmButtonColor: "#6d28d9"
-        }).then((result) => {
-
-                    if (result.isConfirmed) {
-
-        const propuestas = [];
-
-                let montoPrincipal;
-    let plazoPrincipal;
-
-    const inputMonto = document.getElementById("inputMonto");
-    const inputPlazo = document.getElementById("inputPlazo");
-
-    const txtMonto = document.getElementById("txtMonto");
-    const txtPlazo = document.getElementById("txtPlazo");
-
-    if (inputMonto.style.display !== "none") {
-
-                montoPrincipal = parseFloat(
-        inputMonto.value.replace(/[^\d]/g, "")
-    );
-
-        plazoPrincipal = parseInt(inputPlazo.value);
-
-    } else {
-
-        montoPrincipal = parseFloat(
-            txtMonto.textContent.replace(/[^\d]/g, "")
-        );
-
-        plazoPrincipal = parseInt(
-            txtPlazo.textContent.replace(/[^\d]/g, "")
-        );
-    }
-
-    propuestas.push({
-        monto: montoPrincipal,
-        plazoMeses: plazoPrincipal,
-        esRecomendada: true
-    });
-                let opcionRepetida = false;
-
-    document.querySelectorAll(".fila-opcion").forEach(fila => {
-
-        let monto = fila.querySelector(".input-monto").value
-            .replace(/[^\d]/g, "");
-
-        let plazo = fila.querySelector(".select-plazo").value;
-
-        if (
-            parseFloat(monto) === montoPrincipal &&
-            parseInt(plazo) === plazoPrincipal
-        ) {
-            opcionRepetida = true;
-        }
-
-        propuestas.push({
-            monto: parseFloat(monto),
-            plazoMeses: parseInt(plazo),
-            esRecomendada: false
-        });
-
-            if (opcionRepetida) {
-
-        Swal.fire({
-            icon: "warning",
-            title: "Opción repetida",
-            text: "Existe una opción adicional igual a la propuesta principal."
-        });
-
-        return;
-    }
-
-        });
-            const comentarioActual = document
-    .getElementById("editorComentarios")
-    .innerText.trim();
-
-        fetch("/Analista/EnviarEvaluacion", {
-
-            method: "POST",
-
-            headers: {
-                "Content-Type": "application/json"
-            },
-
-            body: JSON.stringify({
-
-                idSolicitud: idSolicitudActual,
-                propuestas: propuestas,
-                comentario: comentarioActual
-
-            })
-
-        })
-        .then(response => response.json())
-        .then(data => {
-
-            if (data.success) {
-
-                        Swal.fire({
-        icon: "success",
-        title: "Enviado",
-        text: "Las propuestas fueron enviadas al usuario.",
-        confirmButtonColor: "#6d28d9"
-    }).then(() => {
-
-        window.location.href = "/Analista/SolicitudesPendientes";
-
-    });
-
-            }
-            else {
-
-                Swal.fire({
-                    icon: "error",
-                    title: "Error",
-                    text: data.mensaje
-                });
-
-            }
-
-        });
-
-    }
-
-        });
-
-    });
-
-        btnAgregarOpcion.addEventListener("click", function () {
-
-        const fila = document.createElement("div");
-
-        fila.className = "fila-opcion";
-
-        fila.innerHTML = `
-            <div class="grupo-monto">
-                <label>Monto:</label>
-
-                <input type="text"
-                       class="input-monto"
-                       placeholder="S/ 1,000">
-            </div>
-
-            <div class="grupo-plazo">
-                <label>Plazo:</label>
-
-    <select class="select-plazo">
-        <option value="">Seleccione</option>
-
-        <option value="12">12 meses</option>
-        <option value="18">18 meses</option>
-        <option value="24">24 meses</option>
-        <option value="30">30 meses</option>
-        <option value="36">36 meses</option>
-        <option value="48">48 meses</option>
-        <option value="60">60 meses</option>
-        <option value="72">72 meses</option>
-    </select>
-            </div>
-
-            <button type="button" class="btnEliminarOpcion">
-                🗑
-            </button>
-        `;
-
-        contenedorOpciones.appendChild(fila);
-                const nuevoMonto = fila.querySelector(".input-monto");
-
-    nuevoMonto.addEventListener("input", function () {
-
-        let valor = this.value.replace(/\D/g, "");
-
-        if (valor === "") {
-            this.value = "";
-            return;
-        }
-
-        valor = parseInt(valor);
-
-        if (valor > 50000) {
-            valor = 50000;
-        }
-
-        this.value = "S/ " + valor.toLocaleString('es-PE');
-
-    });
-
-    });
-            contenedorOpciones.addEventListener("click", function (e) {
-
-        if (e.target.classList.contains("btnEliminarOpcion")) {
-
-            e.target.closest(".fila-opcion").remove();
-
-        }
-
-    });
-            function validarOpcionesCredito() {
-
-        const filas = document.querySelectorAll(".fila-opcion");
-
-        for (const fila of filas) {
-
-            const inputMonto = fila.querySelector(".input-monto");
-            const plazo = fila.querySelector(".select-plazo");
-
-            let montoTexto = inputMonto.value.trim();
-
-            if (montoTexto === "") {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Monto requerido",
-                    text: "Debe ingresar un monto."
-                });
-
-                return false;
-            }
-
-            let monto = parseInt(
-                montoTexto.replace(/[^\d]/g, "")
-            );
-
-            if (monto < 1000 || monto > 50000) {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Monto inválido",
-                    text: "El monto debe estar entre S/ 1,000 y S/ 50,000."
-                });
-
-                return false;
-            }
-
-            if (plazo.value === "") {
-
-                Swal.fire({
-                    icon: "warning",
-                    title: "Plazo requerido",
-                    text: "Debe seleccionar un plazo."
-                });
-
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-
-            if (btnRegresarModal) {
-
-        btnRegresarModal.addEventListener("click", function () {
-
-            console.log("CLICK REGRESAR");
-
-            const cantidad =
-                contenedorOpciones.querySelectorAll(".fila-opcion").length;
-
-            if (cantidad > 0) {
-
-                Swal.fire({
-                    title: "¿Está seguro?",
-                    text: "Se perderán todas las opciones agregadas.",
-                    icon: "warning",
-                    showCancelButton: true,
-                    confirmButtonText: "Sí",
-                    cancelButtonText: "No"
-                }).then((result) => {
-
-                    if (result.isConfirmed) {
-
-                        contenedorOpciones.innerHTML = "";
-
-                        modalEvaluacion.style.display = "none";
-                    }
-
-                });
-
-            } else {
-
-                modalEvaluacion.style.display = "none";
-            }
-
-        });
-
-    }
-
-    window.addEventListener("click", function (e) {
-
-        if (e.target === modalEvaluacion) {
-            modalEvaluacion.style.display = "none";
-        }
-
-    });
-    inputMonto.addEventListener("input", function () {
-        let valor = this.value.replace(/\D/g, "");
-
-
-        if (valor === "") {
-
-            this.value = "";
-
-            return;
-
-        }
-
-
-
-        valor = parseInt(valor);
-
-
-
-        if (valor > 50000) {
-
-            valor = 50000;
-
-        }
-
-
-
-        this.value = valor.toLocaleString('es-PE');
-
-    });
-            function abrirReporte(idSolicitud) {
-
-        document.getElementById("modalReporte").style.display = "flex";
-        document.getElementById("contenidoReporte").innerHTML = "Cargando reporte...";
-
-        fetch('/Analista/ObtenerReportePropuestas?idSolicitud=' + idSolicitud)
-            .then(response => response.json())
-            .then(data => {
-
-                let html = "";
-
-                if (!data.ok || data.propuestas.length === 0) {
-                    html = `
-                        <div class="sin-reporte">
-                            📭 Sin reporte para esta solicitud.
-                        </div>`;
-                }
-                else {
-                    data.propuestas.forEach((p, index) => {
-
-                        html += `
-                            <div class="reporte-card">
-                                <h4>${p.esRecomendada ? "⭐ Propuesta recomendada" : "Opción " + (index + 1)}</h4>
-                                <p><b>Monto:</b> S/ ${Number(p.monto).toLocaleString('es-PE')}</p>
-                                <p><b>Plazo:</b> ${p.plazoMeses} meses</p>
-                            </div>
-                        `;
-
-                    });
-                }
-
-                document.getElementById("contenidoReporte").innerHTML = html;
-            })
-            .catch(() => {
-                document.getElementById("contenidoReporte").innerHTML = `
-                    <div class="sin-reporte">
-                        ❌ Error al cargar el reporte.
-                    </div>`;
-            });
-    }
-
-    function cerrarReporte() {
-        document.getElementById("modalReporte").style.display = "none";
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-        var abrirMensaje = '@ViewBag.AbrirMensaje'.toLowerCase();
-
-        if (abrirMensaje === 'true') {
-            setTimeout(function () {
-                var botonMensaje = document.querySelector("#btnMensaje");
-
-                if (botonMensaje) {
-                    botonMensaje.click();
-                }
-            }, 500);
-        }
-    });
-</script>
-
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@* <!DOCTYPE html>
+<html>
+
+<head>
+	<title>Ver Solicitud</title> *@
+
+	<style>
+		body {
+			margin: 0;
+			font-family: 'Segoe UI';
+			background: #faf8ff;
+		}
+
+		.contenedor {
+			background: white;
+			border-radius: 25px;
+			padding: 25px;
+			box-shadow: 0 10px 25px rgba(124,58,237,.08);
+		}
+
+		h1 {
+			color: #4c1d95;
+			font-size: 40px;
+			font-weight: 800;
+			margin-bottom: 25px;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+		}
+
+		th {
+			background: #f3e8ff;
+			color: #5b21b6;
+			padding: 15px;
+			text-align: left;
+		}
+
+		td {
+			padding: 10px 15px;
+			border-bottom: 1px solid #eee;
+		}
+
+		.btn-ver {
+			background: #6d28d9;
+			color: white;
+			text-decoration: none;
+			padding: 10px 15px;
+			border-radius: 10px;
+		}
+
+		/* .layout {
+			display: flex;
+			min-height: 100vh;
+		}
+
+		.sidebar {
+			width: 240px;
+			background: linear-gradient( 180deg, #240046, #3c096c, #5a189a );
+			color: white;
+			padding: 20px;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.content {
+			flex: 1;
+			padding: 35px;
+		}
+
+		.logo {
+			font-size: 28px;
+			font-weight: 800;
+			margin-bottom: 10px;
+		}
+
+		.role {
+			color: #d8b4fe;
+			margin-bottom: 40px;
+			font-size: 14px;
+		}
+
+		.menu {
+			margin-top: 15px;
+		}
+
+			.menu a {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				color: white;
+				text-decoration: none;
+				padding: 10px 18px;
+				border-radius: 14px;
+				margin-bottom: 8px;
+				transition: .3s;
+			}
+
+				.menu a:hover,
+				.menu a.active {
+					background: rgba(255,255,255,.12);
+				}
+
+		.section-title {
+			margin-top: 25px;
+			margin-bottom: 15px;
+			color: #c4b5fd;
+			font-size: 12px;
+			font-weight: bold;
+			text-transform: uppercase;
+		}
+
+		.help-card {
+			margin-top: auto;
+			background: rgba(255,255,255,.08);
+			border: 1px solid rgba(255,255,255,.10);
+			border-radius: 18px;
+			padding: 20px;
+		}
+
+			.help-card h4 {
+				font-size: 18px;
+				font-weight: 700;
+				margin-bottom: 10px;
+			}
+
+			.help-card p {
+				color: #d8b4fe;
+				font-size: 14px;
+				margin-bottom: 15px;
+				line-height: 1.5;
+			}
+
+		.btn-help {
+			width: 100%;
+			box-sizing: border-box;
+			border: 1px solid rgba(255,255,255,.15);
+			background: rgba(255,255,255,.05);
+			color: white;
+			border-radius: 12px;
+			padding: 12px;
+			text-decoration: none;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+		}
+
+			.btn-help:hover {
+				background: rgba(255,255,255,.12);
+				color: white;
+			}
+ */
+		.top-bar {
+			display: flex;
+			align-items: center;
+			gap: 15px;
+			margin-bottom: 20px;
+		}
+
+		.btn-regresar {
+			background: #e5e7eb;
+			color: #374151;
+			border: none;
+			padding: 10px 18px;
+			border-radius: 10px;
+			cursor: pointer;
+			font-weight: 600;
+		}
+
+		.titulo-solicitud {
+			color: #4c1d95;
+			font-size: 42px;
+			font-weight: 800;
+			margin: 0;
+		}
+
+		.estado {
+			color: #555;
+			margin-bottom: 25px;
+		}
+
+		.grid-solicitud {
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr;
+			gap: 20px;
+		}
+
+		.card-info {
+			background: white;
+			border-radius: 18px;
+			padding: 20px;
+			box-shadow: 0 3px 12px rgba(0,0,0,.08);
+		}
+
+			.card-info h3 {
+				margin-top: 0;
+				margin-bottom: 15px;
+			}
+
+		.foto-cliente {
+			width: 90px;
+			height: 90px;
+			border-radius: 12px;
+			background: #eee;
+			margin: auto;
+			margin-bottom: 15px;
+		}
+
+		.acciones {
+			margin-top: 30px;
+		}
+
+		.btn-validar {
+			background: #6d28d9;
+			color: white;
+			border: none;
+			padding: 14px 35px;
+			border-radius: 10px;
+			font-size: 16px;
+			font-weight: bold;
+			cursor: pointer;
+		}
+
+		.fila-superior {
+			display: flex;
+			gap: 20px;
+			align-items: flex-start;
+		}
+
+		.card {
+			background: white;
+			border-radius: 15px;
+			padding: 15px;
+			box-shadow: 0 2px 8px rgba(0,0,0,.10);
+		}
+
+			.card h3 {
+				margin-top: 0;
+				font-size: 20px;
+			}
+
+		.card-personal {
+			width: 280px;
+			min-height: 370px;
+		}
+
+		.card-financiero {
+			width: 300px;
+			min-height: 130px;
+		}
+
+		.card-derecha {
+			width: 260px;
+		}
+
+		.foto-usuario {
+			width: 90px;
+			height: 90px;
+			display: block;
+			margin: auto;
+			margin-bottom: 15px;
+		}
+
+		.titulo-principal {
+			color: #4c1d95;
+			font-size: 28px;
+			font-weight: 800;
+			margin-bottom: 0;
+		}
+
+		.estado {
+			color: #555;
+			margin-bottom: 20px;
+		}
+
+		.btn-validar {
+			background: #6d28d9;
+			color: white;
+			border: none;
+			border-radius: 8px;
+			padding: 12px 25px;
+			font-weight: bold;
+			cursor: pointer;
+		}
+
+		.btn-regresar {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			text-decoration: none;
+			background: #e5e7eb;
+			color: #374151;
+			padding: 12px 20px;
+			border-radius: 10px;
+			font-weight: 600;
+			transition: .3s;
+		}
+
+			.btn-regresar:hover {
+				background: #d1d5db;
+			}
+
+		.perfil-editable {
+			width: 450px;
+			padding: 20px;
+		}
+
+		.titulo-perfil {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 15px;
+		}
+
+		.btn-lapiz {
+			border: none;
+			background: #f3e8ff;
+			color: #6d28d9;
+			border-radius: 8px;
+			padding: 8px 12px;
+			cursor: pointer;
+			font-size: 16px;
+		}
+
+		.perfil-financiero-modern {
+			width: 420px;
+			padding: 20px;
+		}
+
+		.header-perfil {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 15px;
+		}
+
+			.header-perfil h3 {
+				margin: 0;
+				color: #5b21b6;
+				font-size: 22px;
+				font-weight: 700;
+			}
+
+		.btn-editar {
+			width: 42px;
+			height: 42px;
+			border: none;
+			border-radius: 12px;
+			background: #efe7ff;
+			cursor: pointer;
+			font-size: 18px;
+		}
+
+			.btn-editar:hover {
+				background: #e3d5ff;
+			}
+
+		.item-perfil {
+			display: flex;
+			align-items: center;
+			padding: 14px;
+			border: 1px solid #eee;
+			border-bottom: none;
+		}
+
+			.item-perfil:last-child {
+				border-bottom: 1px solid #eee;
+			}
+
+		.icono {
+			width: 40px;
+			height: 40px;
+			border-radius: 10px;
+			background: #f3e8ff;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin-right: 12px;
+			font-size: 18px;
+		}
+
+		.texto {
+			flex: 1;
+		}
+
+		.valor {
+			font-weight: 600;
+			color: #374151;
+		}
+
+		.btn-editar {
+			position: absolute;
+			top: 18px;
+			right: 18px;
+			width: 42px;
+			height: 42px;
+			border: none;
+			border-radius: 12px;
+			background: #efe7ff;
+			cursor: pointer;
+			font-size: 18px;
+		}
+
+		.perfil-financiero-modern {
+			width: 420px;
+			padding: 20px;
+			position: relative;
+		}
+
+		.btn-editar:hover {
+			background: #e3d5ff;
+		}
+
+
+		.btn-guardar-perfil:hover {
+			background: #15803d;
+		}
+
+		.input-editar {
+			width: 140px;
+			padding: 8px 12px;
+			border: 2px solid #d8b4fe;
+			border-radius: 10px;
+			font-size: 14px;
+			font-weight: 600;
+			color: #4c1d95;
+			background: #faf5ff;
+			outline: none;
+			transition: .3s;
+		}
+
+			.input-editar:focus {
+				border-color: #7c3aed;
+				box-shadow: 0 0 8px rgba(124,58,237,.2);
+			}
+
+		.select-editar {
+			width: 140px;
+			padding: 8px 12px;
+			border: 2px solid #d8b4fe;
+			border-radius: 10px;
+			font-size: 14px;
+			font-weight: 600;
+			color: #4c1d95;
+			background: #faf5ff;
+			cursor: pointer;
+			outline: none;
+			transition: .3s;
+		}
+
+			.select-editar:focus {
+				border-color: #7c3aed;
+				box-shadow: 0 0 8px rgba(124,58,237,.2);
+			}
+
+		.acciones-perfil {
+			margin-top: 20px;
+			display: flex;
+			gap: 12px;
+		}
+
+		.btn-editar-perfil {
+			background: #6d28d9;
+			color: white;
+			border: none;
+			padding: 12px 24px;
+			border-radius: 10px;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+			.btn-editar-perfil:hover {
+				background: #5b21b6;
+			}
+
+
+		.btn-cancelar-perfil {
+			background: #dc2626;
+			color: white;
+			border: none;
+			padding: 12px 22px;
+			border-radius: 10px;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		.icono-header {
+			width: 45px;
+			height: 45px;
+			background: #f3e8ff;
+			border-radius: 12px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 20px;
+		}
+
+		.acciones-inferiores {
+			margin-top: 20px;
+			display: flex;
+			justify-content: center;
+			gap: 12px;
+		}
+
+		.btn-editar-perfil {
+			background: #6d28d9;
+			color: white;
+			border: none;
+			padding: 12px 25px;
+			border-radius: 10px;
+			cursor: pointer;
+			font-weight: bold;
+		}
+
+		#grupoAcciones {
+			display: flex;
+			gap: 12px;
+			justify-content: center;
+			align-items: center;
+		}
+
+		.btn-guardar-perfil {
+			background: #16a34a;
+			color: white;
+			border: none;
+			padding: 12px 24px;
+			border-radius: 10px;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		.btn-cancelar-perfil {
+			background: #dc2626;
+			color: white;
+			border: none;
+			padding: 12px 24px;
+			border-radius: 10px;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		.resumen-financiero-modern {
+			width: 420px;
+			padding: 20px;
+		}
+
+			.resumen-financiero-modern h3 {
+				color: #5b21b6;
+				margin-bottom: 18px;
+			}
+
+		.item-resumen {
+			display: flex;
+			align-items: center;
+			border: 1px solid #eee;
+			border-radius: 12px;
+			padding: 14px;
+			margin-bottom: 12px;
+		}
+
+		.icono-resumen {
+			width: 42px;
+			height: 42px;
+			background: #f3e8ff;
+			border-radius: 10px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin-right: 12px;
+		}
+
+		.valor-verde {
+			color: #16a34a;
+			font-weight: 700;
+		}
+
+		.valor-rojo {
+			color: #dc2626;
+			font-weight: 700;
+		}
+
+		.valor-azul {
+			color: #2563eb;
+			font-weight: 700;
+		}
+
+		.valor-morado {
+			color: #7c3aed;
+			font-weight: 700;
+		}
+
+		.resumen-financiero-modern {
+			width: 420px;
+			padding: 20px;
+		}
+
+		.deuda-crediticia {
+			width: 720px;
+			padding: 20px;
+		}
+
+		.header-deuda {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 20px;
+		}
+
+			.header-deuda h3 {
+				margin: 0;
+				color: #5b21b6;
+				font-weight: 800;
+			}
+
+		.btn-editar-deuda {
+			border: none;
+			background: #f3e8ff;
+			color: #6d28d9;
+			width: 40px;
+			height: 40px;
+			border-radius: 10px;
+			cursor: pointer;
+		}
+
+		.contenido-deuda {
+			display: flex;
+			gap: 25px;
+		}
+
+		.lado-izquierdo {
+			flex: 1;
+		}
+
+		.lado-derecho {
+			flex: 1;
+		}
+
+		.fila-deuda {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 20px;
+		}
+
+		.badge-si {
+			background: #16a34a;
+			color: white;
+			padding: 5px 14px;
+			border-radius: 8px;
+			font-weight: bold;
+		}
+
+		.badge-no {
+			background: #dc2626;
+			color: white;
+			padding: 5px 14px;
+			border-radius: 8px;
+			font-weight: bold;
+		}
+
+		.historial {
+			margin-bottom: 20px;
+			color: #374151;
+		}
+
+		.btn-historial {
+			background: #6d28d9;
+			color: white;
+			border: none;
+			border-radius: 10px;
+			padding: 12px 18px;
+			cursor: pointer;
+			font-weight: 600;
+		}
+
+			.btn-historial:hover {
+				background: #5b21b6;
+			}
+
+		.dato {
+			display: flex;
+			justify-content: space-between;
+			margin-bottom: 15px;
+		}
+
+		.verde {
+			color: #16a34a;
+			font-weight: 700;
+		}
+
+		.naranja {
+			color: #f97316;
+			font-weight: 700;
+		}
+
+		.amarillo {
+			color: #eab308;
+			font-weight: 700;
+		}
+
+		.rojo {
+			color: #dc2626;
+			font-weight: 700;
+		}
+
+		.footer-deuda {
+			margin-top: auto;
+			padding: 12px;
+			background: #f8fafc;
+			border-radius: 10px;
+			color: #64748b;
+			font-size: 13px;
+		}
+
+		#evaluacionFinanciera {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 20px;
+		}
+
+		.modalHistorialCredito {
+			display: none;
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0,0,0,.5);
+			justify-content: center;
+			align-items: center;
+			z-index: 9999;
+		}
+
+		.contenidoHistorial {
+			background: white;
+			width: 1400px;
+			max-width: 95%;
+			max-height: 80vh;
+			overflow: auto;
+			border-radius: 20px;
+			padding: 25px;
+		}
+
+		.estado-activa {
+			background: #dc2626;
+			color: white;
+			padding: 6px 12px;
+			border-radius: 8px;
+			font-weight: bold;
+		}
+
+		.estado-pagada {
+			background: #16a34a;
+			color: white;
+			padding: 6px 12px;
+			border-radius: 8px;
+			font-weight: bold;
+		}
+
+		.estado-vencida {
+			background: #f97316;
+			color: white;
+			padding: 6px 12px;
+			border-radius: 8px;
+			font-weight: bold;
+		}
+
+		.btnCerrarHistorial {
+			background: #6d28d9;
+			color: white;
+			border: none;
+			padding: 10px 20px;
+			border-radius: 10px;
+			cursor: pointer;
+			font-weight: bold;
+		}
+
+			.btnCerrarHistorial:hover {
+				background: #5b21b6;
+			}
+
+		.estado-activa,
+		.estado-pagada,
+		.estado-vencida {
+			display: inline-block;
+			min-width: 110px;
+			text-align: center;
+			padding: 8px 12px;
+			border-radius: 8px;
+			color: white;
+			font-weight: bold;
+		}
+
+		.scoring-card {
+			width: 420px;
+			background: white;
+			border-radius: 18px;
+			padding: 20px;
+			box-shadow: 0 3px 12px rgba(0,0,0,.08);
+		}
+
+		.scoring-title {
+			color: #5b21b6;
+			font-size: 28px;
+			font-weight: 800;
+			text-align: center;
+			margin-bottom: 20px;
+		}
+
+
+
+		.medidor::after {
+			content: '';
+			position: absolute;
+			bottom: -70px;
+			left: 50%;
+			transform: translateX(-50%);
+			width: 180px;
+			height: 180px;
+			background: white;
+			border-radius: 50%;
+		}
+
+
+
+		.resultado-riesgo {
+			margin-top: 25px;
+			text-align: center;
+		}
+
+			.resultado-riesgo span {
+				padding: 10px 30px;
+				border-radius: 12px;
+				font-weight: 800;
+				font-size: 22px;
+			}
+
+
+
+		.info-scoring {
+			margin-top: 20px;
+			background: #f8fafc;
+			border-radius: 12px;
+			padding: 15px;
+			color: #64748b;
+			text-align: center;
+			font-size: 14px;
+		}
+
+		.fila-deuda-scoring {
+			display: flex;
+			gap: 20px;
+			width: 100%;
+			align-items: flex-start;
+		}
+
+		.deuda-crediticia {
+			flex: 1;
+			min-height: 345px;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.scoring-card {
+			width: 680px;
+			min-width: 680px;
+			background: white;
+			border-radius: 25px;
+			padding: 25px;
+			box-shadow: 0 4px 15px rgba(0,0,0,.08);
+		}
+
+		.scoring-title {
+			text-align: center;
+			color: #5b21b6;
+			font-size: 22px;
+			font-weight: 900;
+			margin-bottom: 20px;
+		}
+
+		.medidor {
+			position: relative;
+			width: 340px;
+			height: 170px;
+			margin: auto;
+			overflow: hidden;
+		}
+
+			/* MEDIO CIRCULO */
+			.medidor::before {
+				content: '';
+				position: absolute;
+				width: 340px;
+				height: 340px;
+				border-radius: 50%;
+				background: conic-gradient( #22c55e 0deg 45deg, /* Verde */
+				#facc15 45deg 90deg, /* Amarillo */
+				#f97316 90deg 135deg, /* Naranja */
+				#ef4444 135deg 180deg /* Rojo */
+				);
+				transform: rotate(-90deg);
+			}
+
+
+			.medidor::after {
+				content: '';
+				position: absolute;
+				width: 95px;
+				height: 95px;
+				background: white;
+				border-radius: 50%;
+			}
+
+		/* Aguja */
+		.aguja {
+			position: absolute;
+			bottom: 0;
+			left: 50%;
+			width: 5px;
+			height: 100px;
+			background: linear-gradient( to top, #1e293b, #0f172a );
+			background: #1e293b;
+			transform-origin: bottom center;
+			z-index: 10;
+			box-shadow: 0 0 10px rgba(0,0,0,.25);
+			border-radius: 20px;
+		}
+
+			/* Punta de la aguja */
+			.aguja::before {
+				content: '';
+				position: absolute;
+				top: -12px;
+				left: 50%;
+				transform: translateX(-50%);
+				width: 0;
+				height: 0;
+				border-left: 8px solid transparent;
+				border-right: 8px solid transparent;
+				border-bottom: 16px solid #1e293b;
+			}
+
+		.centro {
+			position: absolute;
+			width: 28px;
+			height: 28px;
+			background: radial-gradient( circle, #475569, #0f172a );
+			border-radius: 50%;
+			bottom: -14px;
+			left: 50%;
+			transform: translateX(-50%);
+			z-index: 11;
+			border: 3px solid white;
+		}
+
+		.resultado-riesgo {
+			margin-top: 20px;
+			text-align: center;
+		}
+
+			.resultado-riesgo span {
+				padding: 10px 30px;
+				border-radius: 12px;
+				font-size: 18px;
+				font-weight: 800;
+			}
+
+		.bajo {
+			background: #dcfce7;
+			color: #16a34a;
+		}
+
+		.medio {
+			background: #fef3c7;
+			color: #ca8a04;
+		}
+
+		.alto {
+			background: #ffedd5;
+			color: #ea580c;
+		}
+
+		.critico {
+			background: #fee2e2;
+			color: #dc2626;
+		}
+
+		.info-scoring {
+			margin-top: 18px;
+			background: #f8fafc;
+			border-radius: 12px;
+			padding: 15px;
+			text-align: center;
+			color: #64748b;
+			font-size: 14px;
+		}
+
+		#evaluacionFinanciera {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 20px;
+		}
+
+		.fila-cards {
+			display: flex;
+			gap: 20px;
+			margin-bottom: 20px;
+			align-items: flex-start;
+		}
+
+		.fila-resumen-analisis {
+			display: flex;
+			gap: 20px;
+			align-items: flex-start;
+		}
+
+		.resumen-financiero-modern {
+			width: 420px;
+		}
+
+		.comentarios-analisis {
+			width: 500px;
+			min-height: 320px;
+		}
+
+			.comentarios-analisis h3 {
+				color: #5b21b6;
+				margin-bottom: 15px;
+			}
+
+		.txt-analisis {
+			width: 100%;
+			height: 220px;
+			resize: none;
+			border: 1px solid #ddd;
+			border-radius: 10px;
+			padding: 15px;
+			font-size: 14px;
+			box-sizing: border-box;
+		}
+
+		.nivel-recomendacion {
+			margin-top: 15px;
+		}
+
+		.badge-manual {
+			background: #facc15;
+			color: #444;
+			padding: 8px 14px;
+			border-radius: 8px;
+			font-weight: bold;
+			margin-left: 10px;
+		}
+
+		.toolbar-analisis {
+			display: flex;
+			gap: 8px;
+			padding: 10px;
+			border: 1px solid #ddd;
+			border-bottom: none;
+			border-radius: 10px 10px 0 0;
+			background: #fafafa;
+		}
+
+			.toolbar-analisis button {
+				border: none;
+				background: transparent;
+				cursor: pointer;
+				padding: 5px 8px;
+				color: #4b5563;
+				font-size: 14px;
+			}
+
+				.toolbar-analisis button:hover {
+					background: #f3f4f6;
+					border-radius: 6px;
+				}
+
+		.txt-analisis {
+			width: 100%;
+			height: 220px;
+			resize: none;
+			border: 1px solid #ddd;
+			border-top: none;
+			padding: 15px;
+			box-sizing: border-box;
+			border-radius: 0 0 10px 10px;
+		}
+
+		.recomendacion-footer {
+			margin-top: 32px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.badge-manual {
+			background: #fcd34d;
+			color: #444;
+			padding: 8px 14px;
+			border-radius: 8px;
+			font-weight: 700;
+			margin-left: 10px;
+		}
+
+		.selector-riesgo {
+			width: 170px;
+			padding: 8px 12px;
+			border: 1px solid #ddd;
+			border-radius: 10px;
+			cursor: pointer;
+		}
+
+		.txt-analisis {
+			width: 100%;
+			height: 220px;
+			border: 1px solid #ddd;
+			border-top: none;
+			min-height: 120px;
+			padding: 10px;
+			box-sizing: border-box;
+			border-radius: 0 0 10px 10px;
+			overflow-y: auto;
+			outline: none;
+			background: white;
+		}
+
+		.acciones-evaluacion {
+			display: flex;
+			gap: 20px;
+			margin-top: 25px;
+			width: 100%;
+		}
+
+			.acciones-evaluacion button {
+				flex: 1;
+				border: none;
+				height: 55px;
+				border-radius: 8px;
+				color: white;
+				font-weight: 700;
+				cursor: pointer;
+				transition: .3s;
+			}
+
+		.btn-no-validar {
+			background: #5b21b6;
+		}
+
+			.btn-no-validar:hover {
+				background: #4c1d95;
+			}
+
+		.btn-rechazar {
+			background: #ef4444;
+		}
+
+			.btn-rechazar:hover {
+				background: #dc2626;
+			}
+
+		.btn-aprobar {
+			background: #16a34a;
+		}
+
+			.btn-aprobar:hover {
+				background: #15803d;
+			}
+
+		.btn-evaluacion {
+			background: #2563eb;
+		}
+
+			.btn-evaluacion:hover {
+				background: #1d4ed8;
+			}
+
+		.btn-no-validar {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+		}
+
+		.icono-no-validar {
+			font-size: 22px;
+			filter: brightness(0) invert(1);
+		}
+
+		.editor-comentarios {
+			min-height: 120px;
+			padding: 12px;
+			border: 1px solid #d1d5db;
+			border-radius: 8px;
+			outline: none;
+			position: relative;
+			cursor: text;
+		}
+
+			.editor-comentarios:before {
+				content: attr(data-placeholder);
+				color: #9ca3af;
+				pointer-events: none;
+				position: absolute;
+			}
+
+			.editor-comentarios:not(:empty):before {
+				content: "";
+			}
+
+		.btn-aprobar:disabled,
+		.btn-rechazar:disabled,
+		.btn-evaluacion:disabled {
+			background-color: #9ca3af !important; /* gris */
+			color: #ffffff;
+			cursor: not-allowed;
+			opacity: 0.7;
+		}
+
+			.btn-aprobar:disabled:hover,
+			.btn-rechazar:disabled:hover,
+			.btn-evaluacion:disabled:hover {
+				transform: none;
+				box-shadow: none;
+			}
+
+		.acciones-evaluacion {
+			display: flex;
+			gap: 15px;
+			margin-top: 20px;
+		}
+
+			.acciones-evaluacion button {
+				flex: 1;
+				height: 52px;
+				border: none;
+				border-radius: 14px;
+				font-weight: 700;
+				font-size: 14px;
+				color: white;
+				transition: .25s;
+				cursor: pointer;
+			}
+
+				.acciones-evaluacion button:hover {
+					transform: translateY(-2px);
+					box-shadow: 0 8px 20px rgba(0,0,0,.15);
+				}
+
+		.btn-mensaje {
+			background: linear-gradient(135deg,#8b5cf6,#7c3aed);
+		}
+
+		.btn-mensaje {
+			background: #7c3aed;
+			color: white;
+			border: none;
+			border-radius: 12px;
+			padding: 10px 16px;
+			font-weight: 700;
+			cursor: pointer;
+			transition: .25s;
+		}
+
+
+			.btn-mensaje:hover {
+				background: #6d28d9 !important;
+			}
+
+		#modalChat {
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0,0,.55);
+			display: none;
+			justify-content: center;
+			align-items: center;
+			z-index: 5000;
+		}
+
+		.chat-contenido {
+			width: 850px;
+			height: 650px;
+			background: white;
+			border-radius: 22px;
+			overflow: hidden;
+			display: flex;
+			flex-direction: column;
+		}
+
+		.chat-header {
+			background: linear-gradient(135deg,#7c3aed,#5b21b6);
+			color: white;
+			padding: 18px 25px;
+		}
+
+		.chat-titulo {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			font-size: 22px;
+			font-weight: 800;
+		}
+
+		.chat-subtitulo {
+			margin-top: 6px;
+			font-size: 14px;
+			color: #ede9fe;
+		}
+
+		#chatMensajes {
+			flex: 1;
+			overflow-y: auto;
+			background: #faf8ff;
+			padding: 20px;
+		}
+
+		.chat-footer {
+			border-top: 1px solid #e5e7eb;
+			padding: 14px;
+			display: flex;
+			gap: 10px;
+		}
+
+			.chat-footer input {
+				flex: 1;
+				border: 2px solid #ddd6fe;
+				border-radius: 14px;
+				padding: 12px;
+			}
+
+		.btn-enviar-chat {
+			border: none;
+			background: #7c3aed;
+			color: white;
+			padding: 14px 24px;
+			border-radius: 14px;
+			cursor: pointer;
+		}
+
+		.mensaje-cliente {
+			display: flex;
+			justify-content: flex-start;
+			margin-bottom: 15px;
+		}
+
+		.mensaje-analista {
+			display: flex;
+			justify-content: flex-end;
+			margin-bottom: 15px;
+		}
+
+		.burbuja-cliente {
+			background: white;
+			padding: 12px 16px;
+			border-radius: 16px;
+			max-width: 70%;
+		}
+
+		.burbuja-analista {
+			background: #7c3aed;
+			color: white;
+			padding: 12px 16px;
+			border-radius: 16px;
+			max-width: 70%;
+		}
+
+
+
+		.chat-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.chat-footer {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+			.chat-footer input[type=text] {
+				flex: 1;
+			}
+
+		.btn-chat-icon {
+			width: 50px;
+			min-width: 50px;
+			height: 50px;
+		}
+
+		.btn-enviar-chat {
+			min-width: 100px;
+			height: 50px;
+		}
+
+		.btn-cerrar-chat {
+			border: none;
+			background: transparent !important;
+			color: white;
+			font-size: 24px;
+			cursor: pointer;
+			padding: 0;
+			width: auto;
+			height: auto;
+			box-shadow: none;
+		}
+
+		.chat-vacio {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			text-align: center;
+			opacity: .18;
+		}
+
+			.chat-vacio i {
+				font-size: 85px;
+				color: #7c3aed;
+				margin-bottom: 15px;
+			}
+
+			.chat-vacio h4 {
+				color: #7c3aed;
+				font-size: 20px;
+				font-weight: 800;
+			}
+
+			.chat-vacio p {
+				color: #6b7280;
+			}
+
+		.btn-chat-icon {
+			width: 46px;
+			height: 46px;
+			border: none;
+			border-radius: 14px;
+			background: #f3e8ff;
+			color: #7c3aed;
+			font-size: 20px;
+			cursor: pointer;
+			box-shadow: 0 6px 15px rgba(124,58,237,.15);
+		}
+
+			.btn-chat-icon:hover {
+				background: #e9d5ff;
+			}
+
+		.swal2-container {
+			z-index: 200000 !important;
+		}
+
+		.avatar-chat {
+			font-size: 40px;
+			color: #8b5cf6;
+			margin: 0 10px;
+		}
+
+		.nombre-chat {
+			font-size: 13px;
+			font-weight: 700;
+			color: #7c3aed;
+			margin-bottom: 4px;
+		}
+
+		.Apellido-chat {
+			font-size: 13px;
+			font-weight: 700;
+			color: #7c3aed;
+			margin-bottom: 4px;
+		}
+
+		.nombre-derecha {
+			text-align: right;
+		}
+
+		.Apellido-derecha {
+			text-align: right;
+		}
+
+		.fecha-chat {
+			font-size: 11px;
+			color: #9ca3af;
+			margin-top: 5px;
+		}
+
+		.fecha-derecha {
+			text-align: right;
+			width: 100%;
+		}
+
+		.mensaje-cliente {
+			display: flex;
+			align-items: flex-start;
+			margin-bottom: 18px;
+		}
+
+		.mensaje-analista {
+			display: flex;
+			justify-content: flex-end;
+			align-items: flex-start;
+			margin-bottom: 18px;
+		}
+
+		.chat-derecha {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+		}
+
+		.cabecera-derecha {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin-bottom: 4px;
+		}
+
+		.imagen-contenedor {
+			margin-top: 8px;
+		}
+
+		.imagen-chat {
+			max-width: 280px;
+			border-radius: 12px;
+			cursor: pointer;
+			display: block;
+		}
+
+		.archivo-seleccionado {
+			font-size: 13px;
+			color: #7c3aed;
+			font-weight: 600;
+			margin-bottom: 8px;
+			padding-left: 5px;
+		}
+
+		.archivo-preview {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			color: #7c3aed;
+			font-size: 13px;
+			margin-bottom: 8px;
+		}
+
+			.archivo-preview button {
+				border: none;
+				background: #ef4444;
+				color: white;
+				width: 22px;
+				height: 22px;
+				border-radius: 50%;
+				cursor: pointer;
+			}
+
+		.imagen-contenedor {
+			background: transparent;
+			padding: 0;
+		}
+
+		.imagen-chat {
+			max-width: 280px;
+			border-radius: 12px;
+			display: block;
+			cursor: pointer;
+			background: transparent;
+		}
+
+		.burbuja-analista img,
+		.burbuja-cliente img {
+			background: transparent;
+		}
+
+		.texto-chat {
+			margin-top: 8px;
+		}
+
+		.imagen-contenedor {
+			background: none !important;
+			padding: 0 !important;
+			box-shadow: none !important;
+			border: none !important;
+		}
+
+		.imagen-chat {
+			max-width: 280px;
+			border-radius: 12px;
+			display: block;
+			cursor: pointer;
+		}
+
+		.modal-evaluacion {
+			display: none; /* oculto al iniciar */
+			position: fixed;
+			inset: 0;
+			z-index: 99999;
+			background: rgba(0,0,0,.45);
+			justify-content: center;
+			align-items: center;
+		}
+
+
+		.modal-contenido {
+			background: white;
+			width: 800px;
+			min-height: 500px;
+			border-radius: 20px;
+			overflow: hidden;
+			display: flex;
+			flex-direction: column;
+			max-width: 90%;
+		}
+
+		.modal-header {
+			padding: 25px;
+			border-bottom: 1px solid #ddd;
+			text-align: center;
+		}
+
+			.modal-header h4 {
+				margin: 0;
+				color: #6d28d9;
+				font-weight: 600;
+			}
+
+		.cerrar-modal {
+			font-size: 28px;
+			cursor: pointer;
+		}
+
+		.modal-body {
+			flex: 1;
+			padding: 30px;
+		}
+
+
+		.btn-mas {
+			width: 70px;
+			height: 70px;
+			border-radius: 50%;
+			border: 2px solid #7b2cbf;
+			background: white;
+			color: #7b2cbf;
+			font-size: 40px;
+			cursor: pointer;
+		}
+
+
+
+		.btn-regresar-modal {
+			padding: 10px 25px;
+			border: 1px solid #ccc;
+			background: white;
+			border-radius: 10px;
+		}
+
+		.btn-enviar-modal {
+			padding: 10px 30px;
+			background: #6d28d9;
+			color: white;
+			border: none;
+			border-radius: 10px;
+		}
+
+
+		.btn-regresar-modal,
+		.btn-enviar-modal {
+			pointer-events: auto !important;
+			cursor: pointer !important;
+			position: relative;
+			z-index: 10001;
+		}
+
+
+		.grupo-monto,
+		.grupo-plazo {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.input-monto {
+			width: 120px;
+			padding: 8px;
+			border: 1px solid #d1d5db;
+			border-radius: 8px;
+		}
+
+		.select-plazo {
+			padding: 8px;
+			border: 1px solid #d1d5db;
+			border-radius: 8px;
+		}
+
+		.btnEliminarOpcion {
+			border: none;
+			background: #ef4444;
+			color: white;
+			width: 35px;
+			height: 35px;
+			border-radius: 8px;
+			cursor: pointer;
+		}
+
+		#contenedorOpciones {
+			display: flex;
+			flex-direction: column;
+			gap: 20px;
+		}
+
+
+
+		.btn-mas {
+			width: 70px;
+			height: 70px;
+			border-radius: 50%;
+			border: 2px solid #7c3aed;
+			background: white;
+			color: #7c3aed;
+			font-size: 40px;
+			cursor: pointer;
+		}
+
+			.btn-mas:hover {
+				background: #f5f3ff;
+			}
+
+		.modal-body {
+			flex: 1;
+			padding: 30px;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+		}
+
+		#contenedorOpciones {
+			display: flex;
+			flex-direction: column;
+			gap: 20px;
+		}
+
+		.fila-opcion {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 20px;
+			margin-bottom: 20px;
+		}
+
+		.grupo-monto,
+		.grupo-plazo {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.input-monto {
+			width: 140px;
+			padding: 10px;
+			border: 1px solid #d1d5db;
+			border-radius: 8px;
+		}
+
+		.select-plazo {
+			padding: 10px;
+			border: 1px solid #d1d5db;
+			border-radius: 8px;
+		}
+
+		.btnEliminarOpcion {
+			width: 35px;
+			height: 35px;
+			border: none;
+			border-radius: 8px;
+			background: #ef4444;
+			color: white;
+			cursor: pointer;
+		}
+
+		.contenedor-mas {
+			display: flex;
+			justify-content: center;
+			margin-top: 30px;
+		}
+
+		.btn-mas {
+			width: 70px;
+			height: 70px;
+			border-radius: 50%;
+			border: 2px solid #7c3aed;
+			background: white;
+			color: #7c3aed;
+			font-size: 40px;
+			cursor: pointer;
+		}
+
+			.btn-mas:hover {
+				background: #f5f3ff;
+			}
+
+		.acciones-modal {
+			display: flex;
+			justify-content: space-between;
+			padding: 25px 30px;
+		}
+
+		.btn-regresar-modal {
+			padding: 10px 25px;
+			border: 1px solid #ccc;
+			background: white;
+			border-radius: 10px;
+			cursor: pointer;
+		}
+
+		.btn-enviar-modal {
+			padding: 10px 30px;
+			border: none;
+			background: #6d28d9;
+			color: white;
+			border-radius: 10px;
+			cursor: pointer;
+		}
+
+		#btnRegresarModal,
+		#btnEnviarModal {
+			position: relative;
+			z-index: 99999;
+		}
+
+		.btn-reporte {
+			background: #f97316;
+			color: white;
+			border: none;
+			border-radius: 14px;
+			padding: 16px 35px;
+			font-weight: bold;
+		}
+
+			.btn-reporte:hover {
+				background: #ea580c;
+			}
+
+		.modal-reporte {
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0,0,.55);
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			z-index: 99999;
+		}
+
+		.reporte-box {
+			width: 520px;
+			background: white;
+			border-radius: 22px;
+			box-shadow: 0 20px 60px rgba(0,0,0,.25);
+			overflow: hidden;
+		}
+
+		.reporte-header {
+			background: #f97316;
+			color: white;
+			padding: 18px 22px;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+			.reporte-header h3 {
+				margin: 0;
+				font-weight: 800;
+			}
+
+			.reporte-header button {
+				background: none;
+				border: none;
+				color: white;
+				font-size: 22px;
+				cursor: pointer;
+			}
+
+		.reporte-body {
+			padding: 22px;
+		}
+
+		.reporte-card {
+			background: #fff7ed;
+			border: 2px solid #fed7aa;
+			border-radius: 16px;
+			padding: 18px;
+			margin-bottom: 15px;
+		}
+
+			.reporte-card h4 {
+				color: #c2410c;
+				font-weight: 800;
+				margin-bottom: 10px;
+			}
+
+			.reporte-card p {
+				margin: 6px 0;
+				font-size: 16px;
+			}
+
+		.sin-reporte {
+			text-align: center;
+			padding: 30px;
+			color: #6b7280;
+			font-weight: 700;
+		} 
+	</style>
+	@* <link rel="stylesheet"
+		  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+</head>
+
+<body> *@
+	<div class="layout">
+		@* <div class="sidebar">
+
+			<div class="logo">🛡 CrediPlus</div>
+			<div class="role">Analista de Riesgo</div>
+
+
+			<div class="menu">
+
+				<div class="section-title">Principal</div>
+
+				<a>
+					🏠 Inicio
+				</a>
+
+				<div class="section-title">Evaluaciones</div>
+
+				<a class="active">
+					📄 Solicitudes Pendientes
+				</a>
+
+				<a>
+					🕘 Historial Evaluaciones
+				</a>
+
+				<div class="section-title">Seguimiento</div>
+
+
+				<a>
+					📅 Calendario Revisiones
+				</a>
+
+				<a
+				   style="display:flex; justify-content:space-between; align-items:center;">
+					<span>🔔 Alertas y Notificaciones</span>
+					@{
+						var totalNoLeidos = ViewBag.TotalNoLeidos as int?;
+					}
+					@if (totalNoLeidos > 0)
+					{
+						<span style="background:#ef4444; color:white; border-radius:50%;
+								width:22px; height:22px; font-size:12px; font-weight:700;
+								display:flex; align-items:center; justify-content:center;">
+							@totalNoLeidos
+						</span>
+					}
+				</a>
+				<a>
+					💰 Gestión de Pagos
+				</a>
+
+				<div class="section-title">Retroalimentación</div>
+
+				<a>
+					⭐ Calificaciones del Servicio
+				</a>
+
+				<div class="section-title">Herramientas</div>
+
+				<a>
+					🛡️ Políticas de Riesgo
+				</a>
+
+				<div class="section-title">Mi Cuenta</div>
+
+				<a>
+					👤 Perfil
+				</a>
+
+				<a>
+					🚪 Cerrar Sesión
+				</a>
+
+			</div>
+			<div class="help-card">
+
+				<h4>¿Necesitas ayuda?</h4>
+
+				<p>
+					Comunícate con el administrador
+					del sistema
+				</p>
+
+				<a href="#" class="btn-help">
+					<i class="fas fa-headset"></i>
+					Contactar Soporte
+				</a>
+
+			</div>
+
+		</div> *@
+		<div class="content">
+
+			<div class="contenedor">
+				<div class="top-bar">
+
+					<a id="btnRegresar"
+					   href="@Url.Action("SolicitudesPendientes", "Analista")"
+					   class="btn-regresar">
+						← Regresar
+					</a>
+
+				</div>
+
+				<h2 class="titulo-principal">
+					Detalle de Solicitud - SOL-@Model.Id_Solicitud.ToString("D5")
+				</h2>
+
+				<div class="estado">
+					Estado: @Model.Estado
+				</div>
+
+				<div class="fila-superior">
+
+					<div class="card card-personal">
+
+						<h3>DATOS PERSONALES</h3>
+
+						@if (Model.USUARIO.Genero == "Femenino")
+						{
+							<img src="https://cdn-icons-png.flaticon.com/512/6997/6997662.png"
+								 class="foto-usuario" />
+						}
+						else
+						{
+							<img src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+								 class="foto-usuario" />
+						}
+
+						<p>
+							<b>Nombre Completo:</b>
+							@Model.USUARIO.Nombre @Model.USUARIO.Apellido
+						</p>
+
+						<p>
+							<b>DNI:</b>
+							@Model.USUARIO.Dni
+						</p>
+
+						<p>
+							<b>Teléfono:</b>
+							@Model.USUARIO.Celular
+						</p>
+
+						<p>
+							<b>Email:</b>
+							@Model.USUARIO.Correo
+						</p>
+						<p>
+							<b>Género:</b>
+							@Model.USUARIO.Genero
+						</p>
+
+						<p>
+							<b>Fecha de Evaluación:</b>
+							@Model.FechaSolicitud.ToString("dd/MM/yyyy")
+						</p>
+
+					</div>
+
+					<div style="display:flex; flex-direction:column; gap:20px;">
+
+						<div class="card card-financiero"
+							 style="position:relative;">
+
+							<h3>PERFIL FINANCIERO</h3>
+
+							<p>
+								<b>Monto</b>
+								<span style="float:right">
+									S/ @Model.MontoSolicitado.ToString("N0")
+								</span>
+							</p>
+
+							<p>
+								<b>Plazo</b>
+								<span style="float:right">
+									@Model.PlazoMeses meses
+								</span>
+							</p>
+
+							<p>
+								<b>Motivo</b>
+								<span style="float:right">
+									@Model.PERFIL_FINANCIERO.MotivoPrestamo
+								</span>
+							</p>
+							<p>
+								<b>Ocupación</b>
+								<span style="float:right">
+									@Model.PERFIL_FINANCIERO.Ocupacion
+								</span>
+							</p>
+
+
+						</div>
+
+						<div class="card card-financiero">
+
+							<h3>RESUMEN FINANCIERO</h3>
+
+							<p>
+								<b>Ingresos mensuales:</b>
+								<span style="float:right">
+									S/ @Model.PERFIL_FINANCIERO.IngresoMensual.ToString("N2")
+								</span>
+							</p>
+
+							<p>
+								<b>Egresos mensuales:</b>
+								<span style="float:right">
+									S/ @Model.PERFIL_FINANCIERO.EgresoMensual.ToString("N2")
+								</span>
+							</p>
+
+						</div>
+
+					</div>
+
+					<div class="card card-derecha">
+
+						<h3>OTROS CRÉDITOS</h3>
+
+						<p>
+							<b>¿Tiene otros créditos?</b>
+							<span style="float:right">
+								@(Model.PERFIL_FINANCIERO.OtrosCreditos ? "Sí" : "No")
+							</span>
+						</p>
+
+					</div>
+
+				</div>
+				<div class="acciones">
+
+					<button id="btnValidar"
+							class="btn-validar">
+						VALIDAR CLIENTE
+					</button>
+
+				</div>
+				<div id="evaluacionFinanciera" style="display:none;">
+					<div class="fila-cards">
+						<div class="card perfil-financiero-modern">
+
+							<div class="header-perfil">
+								<h3>PERFIL FINANCIERO</h3>
+
+								<div id="iconoEstado" class="icono-header">
+									✏️
+								</div>
+							</div>
+
+							<div class="item-perfil">
+								<div class="icono">💲</div>
+
+								<div class="texto">
+									<strong>Monto solicitado:</strong>
+								</div>
+
+								<span id="txtMonto" style="float:right">
+									S/ @Model.MontoSolicitado.ToString("N0")
+								</span>
+								<input type="text"
+									   id="inputMonto"
+									   class="input-editar"
+									   value="@Model.MontoSolicitado.ToString("N0")"
+									   style="display:none;" />
+							</div>
+
+							<div class="item-perfil">
+								<div class="icono">📅</div>
+
+								<div class="texto">
+									<strong>Plazo:</strong>
+								</div>
+
+								<span id="txtPlazo" style="float:right">
+									@Model.PlazoMeses meses
+								</span>
+								<select id="inputPlazo"
+										class="select-editar"
+										style="display:none;">
+									<option value="12">12 meses</option>
+									<option value="18">18 meses</option>
+									<option value="24">24 meses</option>
+									<option value="30">30 meses</option>
+									<option value="36">36 meses</option>
+									<option value="48">48 meses</option>
+									<option value="60">60 meses</option>
+									<option value="72">72 meses</option>
+								</select>
+
+							</div>
+
+							<div class="item-perfil">
+								<div class="icono">📄</div>
+
+								<div class="texto">
+									<strong>Motivo:</strong>
+								</div>
+
+								<div class="valor">
+									@Model.PERFIL_FINANCIERO.MotivoPrestamo
+								</div>
+							</div>
+
+							<div class="item-perfil">
+								<div class="icono">💼</div>
+
+								<div class="texto">
+									<strong>Ocupación:</strong>
+								</div>
+
+								<div class="valor">
+									@Model.PERFIL_FINANCIERO.Ocupacion
+								</div>
+							</div>
+							<div class="acciones-inferiores">
+
+								<button id="btnIniciarEdicion"
+										class="btn-editar-perfil">
+									✏️ Editar Perfil Financiero
+								</button>
+
+								<div id="grupoAcciones" style="display:none;">
+
+									<button type="button"
+											id="btnGuardarPerfil"
+											class="btn-guardar-perfil">
+										💾 Guardar
+									</button>
+
+									<button type="button"
+											id="btnCancelarPerfil"
+											class="btn-cancelar-perfil">
+										❌ Cancelar
+									</button>
+
+								</div>
+
+							</div>
+
+
+
+						</div>
+
+						<div class="card resumen-financiero-modern">
+
+							<h3>RESUMEN FINANCIERO</h3>
+
+							<div class="item-resumen">
+								<div class="icono-resumen">📈</div>
+
+								<div class="texto">
+									<strong>Ingresos mensuales:</strong>
+								</div>
+
+								<div class="valor-verde">
+									S/ @Model.PERFIL_FINANCIERO.IngresoMensual.ToString("N2")
+								</div>
+							</div>
+
+							<div class="item-resumen">
+								<div class="icono-resumen">📉</div>
+
+								<div class="texto">
+									<strong>Egresos mensuales:</strong>
+								</div>
+
+								<div class="valor-rojo">
+									S/ @Model.PERFIL_FINANCIERO.EgresoMensual.ToString("N2")
+								</div>
+							</div>
+
+							<div class="item-resumen">
+								<div class="icono-resumen">📊</div>
+
+								<div class="texto">
+									<strong>Capacidad de pago (30%):</strong>
+								</div>
+
+								<div class="valor-azul">
+									S/ @capacidadPago.ToString("N2")
+								</div>
+							</div>
+
+							<div class="item-resumen">
+								<div class="icono-resumen">💸</div>
+
+								<div class="texto">
+									<strong>Disponible para préstamo:</strong>
+								</div>
+
+								<div class="valor-morado">
+									S/ @disponiblePrestamo.ToString("N2")
+								</div>
+							</div>
+
+						</div>
+						<div class="card comentarios-analisis">
+
+							<h3>COMENTARIOS DEL SISTEMA Y ANÁLISIS</h3>
+
+							<div class="toolbar-analisis">
+								<button type="button" onclick="formatText('bold')"><b>B</b></button>
+
+								<button type="button" onclick="formatText('italic')">
+									<i>I</i>
+								</button>
+
+								<button type="button" onclick="formatText('underline')">
+									<u>U</u>
+								</button>
+
+								<button type="button" onclick="formatText('insertUnorderedList')">
+									☰
+								</button>
+
+								<button type="button" onclick="formatText('justifyLeft')">
+									≡
+								</button>
+
+								<button type="button" onclick="formatText('justifyCenter')">
+									≣
+								</button>
+
+								<button type="button" onclick="formatText('justifyRight')">
+									☷
+								</button>
+							</div>
+
+							<div id="editorComentarios"
+								 class="editor-comentarios"
+								 contenteditable="true"
+								 data-placeholder="Escriba un comentario sobre la evaluación...">
+							</div>
+
+							<div class="recomendacion-footer">
+
+								<div class="nivel-recomendacion">
+									<strong>Nivel de recomendación:</strong>
+
+								<span id="badgeNivel" class="badge-manual">
+									Manual
+								</span>
+								</div>
+
+							<select id="selectorRiesgo" class="selector-riesgo">
+								<option value="" selected>Manual</option>
+								<option value="critico">Crítico</option>
+								<option value="alto">Alto</option>
+								<option value="medio">Medio</option>
+								<option value="bajo">Bajo</option>
+							</select>
+
+							</div>
+
+						</div>
+					</div>
+					<div class="fila-cards">
+						<div class="card deuda-crediticia">
+
+							<div class="header-deuda">
+								<h3>DEUDA ACTUAL Y DEUDOR</h3>
+
+								<button class="btn-editar-deuda">
+									✏️
+								</button>
+							</div>
+
+							<div class="contenido-deuda">
+
+								<div class="lado-izquierdo">
+
+									<div class="fila-deuda">
+										<strong>¿Tiene otros créditos Activos?</strong>
+
+										@if (tieneOtrosCreditos)
+										{
+											<span class="badge-si">Sí</span>
+										}
+										else
+										{
+											<span class="badge-no">No</span>
+										}
+									</div>
+
+									<div class="historial">
+										<strong>Historial crediticio:</strong><br />
+										<span id="txtDeudasEncontradas">
+											@deudasEncontradas deudas encontradas
+										</span>
+										<div id="sinHistorial"
+											 style="display:none;
+											 color:#64748b;
+											 margin-top:8px;
+										     font-size:14px;">
+											No cuenta con historial crediticio.
+										</div>
+									</div>
+
+									<button class="btnHistorialCredito btn-historial"
+											data-id="@Model.Id_Solicitud">
+
+										👁 Ver historial crediticio
+									</button>
+									<div id="modalHistorialCredito"
+										 class="modalHistorialCredito">
+
+										<div class="contenidoHistorial">
+
+											<h2>Historial Crediticio</h2>
+
+
+											<div id="datosCliente"></div>
+
+											<table class="table">
+
+												<thead>
+													<tr>
+														<th>Nombre</th>
+														<th>Apellido</th>
+														<th>DNI</th>
+														<th>Entidad</th>
+														<th>Tipo Crédito</th>
+														<th>Monto</th>
+														<th>Plazo</th>
+														<th>Cuotas Pagadas</th>
+														<th>Estado</th>
+														<th>Fecha Inicio</th>
+														<th>Fecha Fin</th>
+													</tr>
+												</thead>
+
+												<tbody id="tablaHistorial">
+												</tbody>
+
+											</table>
+
+											<button id="cerrarHistorial"
+													class="btnCerrarHistorial">
+												Cerrar
+											</button>
+
+										</div>
+
+									</div>
+
+								</div>
+
+								<div class="lado-derecho">
+									<div class="dato">
+										<span>Deudas activas:</span>
+										<strong id="txtActivas" class="rojo">@activas</strong>
+									</div>
+
+									<div class="dato">
+										<span>Deudas pagadas:</span>
+										<strong id="txtPagadas" class="verde">@pagadas</strong>
+									</div>
+
+									<div class="dato">
+										<span>Deudas vencidas:</span>
+										<strong id="txtVencidas" class="naranja">@vencidas</strong>
+									</div>
+
+
+									<div class="dato">
+										<span>Última actualización:</span>
+										<strong id="txtUltimaActualizacion">
+											@ultimaActualizacion?.ToString("dd/MM/yyyy")
+										</strong>
+									</div>
+
+								</div>
+
+							</div>
+
+							<div class="footer-deuda">
+								ℹ La información mostrada es referencial y generada automáticamente.
+							</div>
+
+
+
+						</div>
+
+						<div class="card scoring-card">
+
+							<div class="scoring-title">
+								PUNTAJE DE RIESGO (SCORING)
+							</div>
+
+							<div class="medidor">
+
+								<div class="aguja"
+									 style="transform:translateX(-50%) rotate(@posicionAguja);">
+								</div>
+
+								<div class="centro"></div>
+
+							</div>
+
+							<div class="resultado-riesgo">
+								<span class="@claseColor">
+									@nivelRiesgo
+								</span>
+							</div>
+
+							<div class="info-scoring">
+								El puntaje se calcula en base al comportamiento financiero del cliente y su capacidad de pago.
+							</div>
+
+						</div>
+					</div>
+					<div class="acciones-evaluacion">
+
+						<button id="btnNoValidar" class="btn-no-validar">
+							<span class="icono-no-validar">👤</span>
+							NO VALIDAR CLIENTE
+						</button>
+
+						<button id="btnRechazar" class="btn-rechazar">
+							✖ RECHAZAR
+						</button>
+
+						<button id="btnAprobar" class="btn-aprobar">
+							✔ APROBAR
+						</button>
+
+						@if (!estaEnEvaluacion)
+						{
+							<button id="btnEvaluacion" class="btn-evaluacion">
+								🕒 EN EVALUACIÓN
+							</button>
+						}
+						else
+						{
+							<button id="btnReporte"
+									type="button"
+									class="btn-reporte"
+									onclick="abrirReporte(@Model.Id_Solicitud)">
+								📄 REPORTE
+							</button>
+						}
+						<button id="btnMensaje"
+								type="button"
+								class="btn-mensaje"
+								onclick="abrirChat(@Model.Id_Solicitud)">
+							<i class="fas fa-comments"></i>
+							MENSAJE
+						</button>
+
+					</div>
+
+
+				</div>
+
+			</div>
+
+		</div>
+
+	</div>
+	<div id="modalChat" style="display:none;">
+
+		<div class="chat-contenido">
+
+			<div class="chat-header">
+
+				<div>
+
+					<div class="chat-titulo">
+						<i class="fas fa-comments"></i>
+						<span id="tituloSolicitud">
+							Mensajes
+						</span>
+					</div>
+
+					<div class="chat-subtitulo">
+
+						Cliente:
+						<span id="chatCliente">
+							-
+						</span>
+						&nbsp; • &nbsp;
+
+						Estado:
+						<span id="chatEstado">-</span>
+
+					</div>
+
+				</div>
+
+				<button class="btn-cerrar-chat"
+						onclick="cerrarChat()">
+					<i class="fas fa-times"></i>
+				</button>
+
+			</div>
+
+			<div id="chatMensajes">
+
+				<div class="chat-vacio">
+
+					<i class="fas fa-comments"></i>
+
+					<h4>No hay mensajes</h4>
+
+					<p>
+						Inicia una conversación con el Usuario.
+					</p>
+
+				</div>
+
+			</div>
+
+			<div class="chat-footer">
+
+				<div id="nombreArchivoSeleccionado" class="archivo-seleccionado"></div>
+				<input type="text"
+					   id="txtMensaje"
+					   placeholder="Escribe tu mensaje..." />
+
+				<input type="file"
+					   id="fileImagen"
+					   accept="image/*"
+					   style="display:none">
+
+				<button class="btn-chat-icon"
+						onclick="document.getElementById('fileImagen').click()">
+					<i class="far fa-image"></i>
+				</button>
+
+				<button class="btn-enviar-chat"
+						onclick="enviarMensaje()">
+
+					<i class="fas fa-paper-plane"></i>
+
+					Enviar
+
+				</button>
+
+			</div>
+
+		</div>
+
+
+	</div>
+	<div id="modalReporte" class="modal-reporte" style="display:none;">
+		<div class="reporte-box">
+
+			<div class="reporte-header">
+				<h3>📄 Reporte de propuestas</h3>
+				<button type="button" onclick="cerrarReporte()">✕</button>
+			</div>
+
+			<div id="contenidoReporte" class="reporte-body">
+			</div>
+
+		</div>
+	</div> 
+	<div id="modalEvaluacion" class="modal-evaluacion">
+
+		<div class="modal-contenido">
+
+			<div class="modal-header">
+				<h4>¿Desea agregar otras opciones de crédito?</h4>
+			</div>
+
+			<div class="modal-body">
+
+				<div id="contenedorOpciones"></div>
+
+			</div>
+
+			<div class="contenedor-mas">
+				<button type="button"
+						id="btnAgregarOpcion"
+						class="btn-mas">
+					+
+				</button>
+			</div>
+
+			<div class="acciones-modal">
+				<button type="button"
+						id="btnRegresarModal"
+						class="btn-regresar-modal">
+
+					Regresar
+
+				</button>
+
+				<button type="button"
+						id="btnEnviarModal"
+						class="btn-enviar-modal">
+
+					Enviar
+
+				</button>
+
+			</div>
+
+
+		</div>
+
+	</div>
+
+	<script>
+		const idSolicitudActual = @Model.Id_Solicitud;
+						function formatText(command) {
+			document.getElementById("editorComentarios").focus();
+			document.execCommand(command, false, null);
+		}
+				const editor = document.getElementById("editorComentarios");
+
+		editor.addEventListener("focus", function () {
+			if (editor.innerHTML === "<br>") {
+				editor.innerHTML = "";
+			}
+		});
+
+		editor.addEventListener("blur", function () {
+			if (editor.innerText.trim() === "") {
+				editor.innerHTML = "";
+			}
+		});
+
+
+		document.getElementById("btnNoValidar")
+		.addEventListener("click", function(){
+
+					document.getElementById("evaluacionFinanciera")
+		.style.display = "none";
+
+		document.getElementById("btnValidar")
+		.style.display = "inline-block";
+
+		document.getElementById("btnRegresar")
+		.style.display = "inline-flex";
+		});
+				document.getElementById("selectorRiesgo")
+		.addEventListener("change", function(){
+
+			const badge =
+			document.getElementById("badgeNivel");
+
+			badge.innerText =
+			this.options[this.selectedIndex].text;
+
+		});
+		const modalEvaluacion = document.getElementById("modalEvaluacion");
+		const cerrarModal = document.querySelector(".cerrar-modal");
+		const btnRegresarModal = document.getElementById("btnRegresarModal");
+		const btnEnviarModal = document.getElementById("btnEnviarModal");
+		const btnEvaluacion = document.getElementById("btnEvaluacion");
+		const contenedorOpciones = document.getElementById("contenedorOpciones");
+		const btnAgregarOpcion = document.getElementById("btnAgregarOpcion");
+
+
+		if (btnEvaluacion) {
+
+			btnEvaluacion.addEventListener("click", function () {
+
+				const comentario = document
+					.getElementById("editorComentarios")
+					.innerText.trim();
+
+				const nivelRiesgo = document
+					.querySelector(".resultado-riesgo span")
+					.innerText.trim()
+					.toUpperCase();
+
+				const nivelRecomendacion = document
+					.getElementById("badgeNivel")
+					.innerText.trim();
+		console.log("Nivel riesgo:", "[" + nivelRiesgo + "]");
+		console.log("Perfil modificado:", perfilModificado);
+				if (!perfilModificado &&
+					(nivelRiesgo === "ALTO" || nivelRiesgo === "MEDIO")) {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Perfil financiero pendiente",
+						text: "Debe editar y guardar los cambios del perfil financiero.",
+						confirmButtonText: "Entendido"
+					});
+
+					return;
+				}
+
+				if (!perfilModificado && nivelRiesgo === "BAJO") {
+
+					Swal.fire({
+						title: "Perfil financiero",
+						text: "¿Harás algún cambio en el perfil financiero (monto o plazo)?",
+						icon: "question",
+						showCancelButton: true,
+						confirmButtonText: "Sí",
+						cancelButtonText: "No"
+					}).then((result) => {
+
+						if (result.isConfirmed) {
+
+							Swal.fire({
+								icon: "warning",
+								title: "Perfil financiero pendiente",
+								text: "Debe editar y guardar los cambios del perfil financiero.",
+								confirmButtonText: "Entendido"
+							});
+
+						} else {
+
+							perfilModificado = true;
+							btnEvaluacion.click();
+
+						}
+
+					});
+
+					return;
+				}
+
+				if (comentario === "") {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Comentario obligatorio",
+						text: "Debe escribir un comentario para continuar.",
+						confirmButtonText: "Entendido"
+					});
+
+					return;
+				}
+
+				if (nivelRecomendacion === "Manual") {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Nivel de recomendación",
+						text: "Debe seleccionar un nivel de recomendación.",
+						confirmButtonText: "Entendido"
+					});
+
+					return;
+				}
+
+				modalEvaluacion.style.display = "flex";
+
+			});
+
+		}
+								const btnRechazar = document.getElementById("btnRechazar");
+
+		if (btnRechazar) {
+
+			btnRechazar.addEventListener("click", function () {
+
+				const comentario = document
+					.getElementById("editorComentarios")
+					.innerText.trim();
+
+				const nivel = document
+					.getElementById("badgeNivel")
+					.innerText.trim();
+
+				if (comentario === "") {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Comentario requerido",
+						text: "Debe registrar un comentario antes de continuar.",
+						confirmButtonColor: "#7c3aed"
+					});
+
+					return;
+				}
+
+				if (nivel === "Manual") {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Nivel de recomendación",
+						text: "Debe seleccionar un nivel de recomendación.",
+						confirmButtonColor: "#7c3aed"
+					});
+
+					return;
+				}
+
+				Swal.fire({
+					title: "¿Está seguro de rechazar al cliente?",
+					text: "La solicitud será Rechazada.",
+					icon: "question",
+					showCancelButton: true,
+					confirmButtonColor: "#16a34a",
+					cancelButtonColor: "#6b7280",
+					confirmButtonText: "SI",
+					cancelButtonText: "NO"
+				}).then((result) => {
+
+					if (result.isConfirmed) {
+
+						Swal.fire({
+							icon: "success",
+							title: "Solicitud Aprobada",
+							text: "El usuario fue rechazado correctamente.",
+							confirmButtonColor: "#dc2626"
+						});
+
+					}
+							if (result.isConfirmed) {
+
+			fetch('/Analista/RechazarSolicitud', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded'
+				},
+				body:
+					'idSolicitud=@Model.Id_Solicitud'
+					+ '&comentario=' + encodeURIComponent(comentario)
+					+ '&nivelRiesgo=' + encodeURIComponent(nivel)
+			})
+			.then(response => response.json())
+			.then(data => {
+
+				if (data.success) {
+
+							Swal.fire({
+			icon: "success",
+			title: "Solicitud rechazada",
+			text: "El usuario fue rechazado correctamente.",
+			confirmButtonColor: "#dc2626"
+		}).then(() => {
+
+			window.location.href = '/Analista/SolicitudesPendientes';
+
+		});
+
+				}
+				else {
+
+					Swal.fire({
+						icon: "error",
+						title: "Error",
+						text: data.mensaje
+					});
+
+				}
+
+			})
+			.catch(error => {
+
+				console.error(error);
+
+				Swal.fire({
+					icon: "error",
+					title: "Error",
+					text: "Ocurrió un error al rechazar la solicitud."
+				});
+
+			});
+
+		}
+
+				});
+
+			});
+
+		}
+		const btnAprobar = document.getElementById("btnAprobar");
+
+		if (btnAprobar) {
+
+			btnAprobar.addEventListener("click", function () {
+
+				const comentario = document
+					.getElementById("editorComentarios")
+					.innerText.trim();
+
+				const nivel = document
+					.getElementById("badgeNivel")
+					.innerText.trim();
+
+		if (!perfilModificado) {
+
+			Swal.fire({
+				title: "Perfil financiero",
+				text: "¿Seguirás con los mismos datos de monto y plazo?",
+				footer: "Si selecciona 'No', deberá editar y guardar el perfil financiero.",
+				icon: "question",
+				showCancelButton: true,
+				confirmButtonText: "Sí",
+				cancelButtonText: "No"
+			}).then((result) => {
+
+				if (result.isConfirmed) {
+
+					perfilModificado = true;
+					btnAprobar.click();
+				}
+				else {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Perfil financiero pendiente",
+						text: "Debe editar y guardar los cambios del perfil financiero para continuar."
+					});
+
+				}
+
+			});
+
+			return;
+		}
+
+				if (comentario === "") {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Comentario requerido",
+						text: "Debe registrar un comentario antes de continuar.",
+						confirmButtonColor: "#7c3aed"
+					});
+
+					return;
+				}
+				if (nivel === "Manual") {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Nivel de recomendación",
+						text: "Debe seleccionar un nivel de recomendación.",
+						confirmButtonColor: "#7c3aed"
+					});
+
+					return;
+				}
+
+				Swal.fire({
+					title: "¿Está seguro de aprobar el crédito al usuario?",
+					text: "La solicitud será aprobada.",
+					icon: "question",
+					showCancelButton: true,
+					confirmButtonColor: "#16a34a",
+					cancelButtonColor: "#6b7280",
+					confirmButtonText: "SI",
+					cancelButtonText: "NO"
+				}).then((result) => {
+
+					if (result.isConfirmed) {
+
+						fetch('/Analista/AprobarSolicitud', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/x-www-form-urlencoded'
+							},
+							body:
+								'idSolicitud=@Model.Id_Solicitud'
+								+ '&comentario=' + encodeURIComponent(comentario)
+								+ '&nivelRiesgo=' + encodeURIComponent(nivel)
+						})
+						.then(response => response.json())
+						.then(data => {
+
+							if (data.success) {
+
+								Swal.fire({
+									icon: "success",
+									title: "Solicitud aprobada",
+									text: "El usuario fue aprobado correctamente.",
+									confirmButtonColor: "#16a34a"
+								}).then(() => {
+
+									window.location.href = '/Analista/SolicitudesPendientes';
+
+								});
+
+							}
+							else {
+
+								Swal.fire({
+									icon: "error",
+									title: "Error",
+									text: data.mensaje
+								});
+
+							}
+
+						})
+						.catch(error => {
+
+							console.error(error);
+
+							Swal.fire({
+								icon: "error",
+								title: "Error",
+								text: "Ocurrió un error al aprobar la solicitud."
+							});
+
+						});
+
+					}
+
+				});
+
+			});
+
+		}
+	
+			const btnValidar = document.getElementById("btnValidar");
+			const btnRegresar = document.getElementById("btnRegresar");
+			const evaluacionFinanciera = document.getElementById("evaluacionFinanciera");
+					const btnHistorial =
+		document.querySelector(".btn-historial");
+
+		console.log("btnValidar =", btnValidar);
+
+					btnValidar.addEventListener("click", function () {
+
+			console.log("Botón presionado");
+			console.log("Id Solicitud:", @Model.Id_Solicitud);
+
+					fetch('/Analista/ValidarCliente?idSolicitud=@Model.Id_Solicitud', {
+			method: 'POST'
+		})
+		.then(async response => {
+
+			if (!response.ok) {
+				const mensaje = await response.text();
+				throw new Error(mensaje);
+			}
+
+			return response.json();
+		})
+		.then(data =>{
+
+
+
+		console.log(data);
+
+		const mensajeSinHistorial =
+			document.getElementById("sinHistorial");
+
+			if (
+				data.activas == 0 &&
+				data.pagadas == 0 &&
+				data.vencidas == 0
+			) {
+				btnHistorial.style.display = "none";
+				mensajeSinHistorial.style.display = "block";
+			}
+			else {
+				btnHistorial.style.display = "block";
+				mensajeSinHistorial.style.display = "none";
+			}
+
+			document.getElementById("txtActivas").innerText = data.activas;
+			document.getElementById("txtPagadas").innerText = data.pagadas;
+			document.getElementById("txtVencidas").innerText = data.vencidas;
+					if (
+			data.activas == 0 &&
+			data.pagadas == 0 &&
+			data.vencidas == 0
+		)
+		{
+			document.getElementById("txtUltimaActualizacion")
+				.innerText = "No tiene historial";
+		}
+		else
+		{
+			document.getElementById("txtUltimaActualizacion")
+				.innerText = data.ultimaFecha;
+		}
+
+			document.getElementById("txtDeudasEncontradas").innerText =
+				(data.activas + data.vencidas) + " deudas encontradas";
+						let nivel = "";
+		let clase = "";
+		let aguja = "";
+
+		if (data.vencidas > 0) {
+			nivel = "CRÍTICO";
+			clase = "critico";
+			aguja = "70deg";
+		}
+		else if (data.activas > 0 && data.pagadas > 0) {
+			nivel = "ALTO";
+			clase = "alto";
+			aguja = "35deg";
+		}
+		else if (data.pagadas > 0) {
+			nivel = "BAJO";
+			clase = "bajo";
+			aguja = "-70deg";
+		}
+		else {
+			nivel = "MEDIO";
+			clase = "medio";
+			aguja = "-20deg";
+		}
+
+		document.querySelector(".resultado-riesgo span").innerText = nivel;
+		document.querySelector(".resultado-riesgo span").className = clase;
+
+		document.querySelector(".aguja").style.transform =
+			`translateX(-50%) rotate(${aguja})`;
+							const btnAprobar = document.getElementById("btnAprobar");
+		const btnRechazar = document.getElementById("btnRechazar");
+		const btnEvaluacion = document.getElementById("btnEvaluacion");
+
+		const estaEnEvaluacion = @estaEnEvaluacion.ToString().ToLower();
+
+		if (estaEnEvaluacion) {
+
+			btnAprobar.disabled = false;
+			btnRechazar.disabled = false;
+
+			if (btnEvaluacion) {
+				btnEvaluacion.disabled = true;
+			}
+
+		}
+		else {
+
+			// Pendiente: mantener la lógica actual
+			if (nivel === "CRÍTICO") {
+
+				btnAprobar.disabled = true;
+				btnRechazar.disabled = false;
+
+				if (btnEvaluacion) btnEvaluacion.disabled = false;
+			}
+			else if (nivel === "ALTO") {
+
+				btnAprobar.disabled = true;
+				btnRechazar.disabled = true;
+
+				if (btnEvaluacion) btnEvaluacion.disabled = false;
+			}
+			else if (nivel === "MEDIO") {
+
+				btnAprobar.disabled = true;
+				btnRechazar.disabled = true;
+
+				if (btnEvaluacion) btnEvaluacion.disabled = false;
+			}
+			else if (nivel === "BAJO") {
+
+				btnAprobar.disabled = false;
+				btnRechazar.disabled = true;
+
+				if (btnEvaluacion) btnEvaluacion.disabled = false;
+			}
+		}
+
+					btnRegresar.style.display = "none";
+		btnValidar.style.display = "none";
+
+		document.getElementById("btnNoValidar").style.display = "flex";
+
+		evaluacionFinanciera.style.display = "flex";
+		})
+		.catch(error => {
+			console.error(error);
+			alert(error.message);
+		});
+
+		});
+			const btnIniciarEdicion =
+			document.getElementById("btnIniciarEdicion");
+
+			const btnGuardarPerfil =
+			document.getElementById("btnGuardarPerfil");
+
+			const btnCancelarPerfil =
+			document.getElementById("btnCancelarPerfil");
+
+			const grupoAcciones =
+			document.getElementById("grupoAcciones");
+
+			const textoMonto =
+			document.getElementById("txtMonto");
+
+			const textoPlazo =
+			document.getElementById("txtPlazo");
+
+			const inputMonto =
+			document.getElementById("inputMonto");
+
+
+			const inputPlazo =
+			document.getElementById("inputPlazo");
+			inputPlazo.value = "@Model.PlazoMeses";
+
+			let montoOriginal;
+			let plazoOriginal;
+					let decisionPerfil = null;     // null, "si" o "no"
+		let perfilModificado = false;
+
+			btnIniciarEdicion.addEventListener("click", function () {
+				document.getElementById("iconoEstado").innerHTML = "💾";
+
+				montoOriginal = inputMonto.value;
+				plazoOriginal = inputPlazo.value;
+
+				textoMonto.style.display = "none";
+				textoPlazo.style.display = "none";
+
+				inputMonto.style.display = "inline-block";
+				inputPlazo.style.display = "inline-block";
+
+				btnIniciarEdicion.style.display = "none";
+				grupoAcciones.style.display = "inline-flex";
+			});
+
+			btnGuardarPerfil.addEventListener("click", function () {
+				document.getElementById("iconoEstado").innerHTML = "✏️";
+						if (
+			montoOriginal != inputMonto.value ||
+			plazoOriginal != inputPlazo.value
+		) {
+			perfilModificado = true;
+		}
+							const montoNumerico = parseInt(
+			inputMonto.value.replace(/[^\d]/g, "")
+		);
+
+		textoMonto.innerText =
+			"S/ " + montoNumerico.toLocaleString('es-PE');
+
+				textoPlazo.innerText =
+		inputPlazo.value;
+
+				textoMonto.style.display = "inline";
+				textoPlazo.style.display = "inline";
+
+				inputMonto.style.display = "none";
+				inputPlazo.style.display = "none";
+
+				grupoAcciones.style.display = "none";
+				btnIniciarEdicion.style.display = "inline-block";
+
+			});
+
+			btnCancelarPerfil.addEventListener("click", function () {
+				document.getElementById("iconoEstado").innerHTML = "✏️";
+				inputMonto.value = montoOriginal;
+				inputPlazo.value = plazoOriginal;
+
+				textoMonto.style.display = "inline";
+				textoPlazo.style.display = "inline";
+
+				inputMonto.style.display = "none";
+				inputPlazo.style.display = "none";
+
+				grupoAcciones.style.display = "none";
+				btnIniciarEdicion.style.display = "inline-block";
+
+			});
+					document.querySelectorAll(".btnHistorialCredito")
+		.forEach(btn => {
+
+			btn.addEventListener("click", async () => {
+
+				const id = btn.dataset.id;
+
+					const response =
+					await fetch(`/Analista/ObtenerHistorialCredito?idSolicitud=${id}`);
+
+				const data = await response.json();
+
+				if (!data.ok)
+					return;
+
+
+
+				let filas = "";
+
+				data.historial.forEach(h => {
+
+							filas += `
+		<tr>
+			<td>${data.nombre}</td>
+			<td>${data.apellido}</td>
+			<td>${data.dni}</td>
+			<td>${h.banco}</td>
+			<td>${h.tipoCredito}</td>
+			<td>S/ ${Number(h.monto).toLocaleString('es-PE')}</td>
+			<td>${h.plazoMeses}</td>
+			<td>${h.cuotasPagadas}</td>
+					<td>
+			<span class="${
+				h.estadoCredito === 'ACTIVA'
+					? 'estado-activa'
+					: h.estadoCredito === 'PAGADA'
+					? 'estado-pagada'
+					: 'estado-vencida'
+			}">
+				${h.estadoCredito}
+			</span>
+		</td>
+			<td>${h.fechaInicio}</td>
+			<td>${h.fechaFin}</td>
+		</tr>
+		`;
+				});
+
+				document.getElementById("tablaHistorial")
+				.innerHTML = filas;
+
+				document.getElementById("modalHistorialCredito")
+				.style.display = "flex";
+
+			});
+
+		});
+
+		document.getElementById("cerrarHistorial")
+		.addEventListener("click", () => {
+
+			document.getElementById("modalHistorialCredito")
+			.style.display = "none";
+
+		});
+						function mostrarAviso(texto)
+		{
+			Swal.fire({
+				icon: 'warning',
+				title: 'Atención',
+				text: texto,
+				confirmButtonText: 'Entendido',
+				confirmButtonColor: '#6d28d9',
+				allowOutsideClick: false,
+
+				didOpen: () => {
+					const swal = document.querySelector('.swal2-container');
+					if (swal) {
+						swal.style.zIndex = '999999999';
+					}
+				}
+			});
+		}
+						let solicitudActual = 0;
+
+								function abrirChat(idSolicitud)
+		{
+			console.log("Solicitud:", idSolicitud);
+			solicitudActual = idSolicitud;
+
+			document.getElementById("modalChat").style.display = "flex";
+
+			cargarInfoSolicitud(idSolicitud);
+
+			cargarMensajes(idSolicitud);
+		}
+						function cargarInfoSolicitud(idSolicitud)
+		{
+			fetch('/Analista/ObtenerInfoSolicitud?idSolicitud=' + idSolicitud)
+			.then(r => r.json())
+			.then(data => {
+				 console.log(data);
+				document.getElementById("tituloSolicitud").innerHTML =
+					"Mensajes - Solicitud " + data.numeroSolicitud;
+
+				document.getElementById("chatCliente").innerHTML =
+					data.cliente;
+
+				document.getElementById("chatEstado").innerHTML =
+					data.estado;
+			});
+		}
+			let imagenSeleccionada = null;
+				document.getElementById("fileImagen")
+		.addEventListener("change", function () {
+
+				if(this.files.length > 0)
+		{
+			imagenSeleccionada = this.files[0];
+
+			document.getElementById("nombreArchivoSeleccionado")
+				.innerHTML =
+						`
+		<div class="archivo-preview">
+			📷 ${imagenSeleccionada.name}
+			<button type="button" onclick="quitarImagen()">✕</button>
+		</div>
+		`;
+		}
+
+		});
+				function quitarImagen()
+		{
+			imagenSeleccionada = null;
+
+			document.getElementById("fileImagen").value = "";
+
+			document.getElementById("nombreArchivoSeleccionado").innerHTML = "";
+		}
+								function enviarMensaje()
+		{
+			let mensaje = document.getElementById("txtMensaje").value.trim();
+
+			if(mensaje === "" && imagenSeleccionada == null)
+			{
+				mostrarAviso(
+					"Debe escribir un mensaje o adjuntar una imagen."
+				);
+				return;
+			}
+
+			let formData = new FormData();
+
+			formData.append("idSolicitud", solicitudActual);
+			formData.append("mensaje", mensaje);
+
+			if(imagenSeleccionada != null)
+			{
+				formData.append("imagen", imagenSeleccionada);
+			}
+
+			fetch('/Analista/EnviarMensaje', {
+				method: 'POST',
+				body: formData
+			})
+			.then(r => r.json())
+			.then(data => {
+
+				document.getElementById("txtMensaje").value = "";
+				document.getElementById("fileImagen").value = "";
+				  document.getElementById("nombreArchivoSeleccionado")
+		.innerHTML = "";
+				imagenSeleccionada = null;
+
+				cargarMensajes(solicitudActual);
+
+			})
+			.catch(error => {
+
+				console.error(error);
+				alert("Error al enviar mensaje");
+
+			});
+		}
+				function verImagen(url)
+		{
+			Swal.fire({
+				imageUrl: url,
+				imageAlt: 'Imagen',
+				showConfirmButton: false,
+				showCloseButton: true,
+				width: '80%'
+			});
+		}
+
+						function cargarMensajes(idSolicitud)
+		{
+			fetch('/Analista/ObtenerMensajes?idSolicitud=' + idSolicitud)
+			.then(r => r.json())
+			.then(data => {
+
+				let html = "";
+
+				if(data.length === 0)
+				{
+					html = `
+					<div class="chat-vacio">
+						<i class="fas fa-comments"></i>
+						<h4>No hay mensajes todavía</h4>
+						<p>Inicia una conversación con el Usuario</p>
+					</div>`;
+				}
+				else
+				{
+					data.forEach(m => {
+					console.log(m);
+					if (m.tipoUsuario === "Analista") {
+
+			html += `
+		<div class="mensaje-analista">
+
+			<div class="chat-derecha">
+
+				<div class="cabecera-derecha">
+					<span class="nombre-chat">
+						${m.nombre}
+					</span>
+
+					<div class="avatar-chat">
+						<i class="fas fa-user-circle"></i>
+					</div>
+				</div>
+
+			<div class="${m.imagen ? 'imagen-contenedor' : 'burbuja-analista'}">
+
+			${m.imagen
+				? `<img src="${m.imagen}"
+				   class="imagen-chat"
+				   onclick="verImagen('${m.imagen}')">`
+				: ''
+			}
+
+			${m.mensaje != "[Imagen]"
+				? `<div class="texto-chat">${m.mensaje}</div>`
+				: ''
+			}
+
+		</div>
+
+				<div class="fecha-chat fecha-derecha">
+					${m.fecha}
+				</div>
+
+			</div>
+
+		</div>`;
+		}
+		else {
+
+			html += `
+		<div class="mensaje-cliente">
+
+			<div class="avatar-chat">
+				<i class="fas fa-user-circle"></i>
+			</div>
+
+			<div>
+				<div class="nombre-chat">
+					${m.nombre}
+				</div>
+
+							<div class="${m.imagen ? 'imagen-contenedor' : 'burbuja-cliente'}">
+
+			${m.imagen
+				? `<img src="${m.imagen}"
+				   class="imagen-chat"
+				   onclick="verImagen('${m.imagen}')">`
+				: ''
+			}
+
+			${m.mensaje != "[Imagen]"
+				? `<div class="texto-chat">${m.mensaje}</div>`
+				: ''
+			}
+
+		</div>
+
+				<div class="fecha-chat">
+					${m.fecha}
+				</div>
+			</div>
+
+		</div>`;
+		}
+
+		});
+				}
+
+				document.getElementById("chatMensajes").innerHTML = html;
+
+			});
+		}
+
+		function cerrarChat()
+		{
+			document.getElementById("modalChat").style.display = "none";
+		}
+
+
+				btnEnviarModal.addEventListener("click", function () {
+
+			const cantidadOpciones =
+				contenedorOpciones.querySelectorAll(".fila-opcion").length;
+
+		if (cantidadOpciones === 0) {
+
+			Swal.fire({
+				title: "¿Está seguro?",
+				text: "¿Está seguro que desea enviar la opción actual al usuario?",
+				icon: "question",
+				showCancelButton: true,
+				confirmButtonText: "Sí",
+				cancelButtonText: "No",
+				confirmButtonColor: "#6d28d9"
+			}).then((result) => {
+
+				if (result.isConfirmed) {
+
+					const propuestas = [];
+
+							let montoPrincipal;
+		let plazoPrincipal;
+
+		const inputMonto = document.getElementById("inputMonto");
+		const inputPlazo = document.getElementById("inputPlazo");
+
+		const txtMonto = document.getElementById("txtMonto");
+		const txtPlazo = document.getElementById("txtPlazo");
+
+		if (inputMonto.style.display !== "none") {
+
+		montoPrincipal = parseFloat(
+			inputMonto.value.replace(/[^\d]/g, "")
+		);
+
+			plazoPrincipal = parseInt(inputPlazo.value);
+
+		} else {
+
+			montoPrincipal = parseFloat(
+				txtMonto.textContent.replace(/[^\d]/g, "")
+			);
+
+			plazoPrincipal = parseInt(
+				txtPlazo.textContent.replace(/[^\d]/g, "")
+			);
+		}
+
+		propuestas.push({
+			monto: montoPrincipal,
+			plazoMeses: plazoPrincipal,
+			esRecomendada: true
+		});
+			const comentarioActual = document
+		.getElementById("editorComentarios")
+		.innerText.trim();
+
+					fetch("/Analista/EnviarEvaluacion", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({
+							idSolicitud: idSolicitudActual,
+							propuestas: propuestas,
+							comentario: comentarioActual
+
+						})
+					})
+					.then(response => response.json())
+					.then(data => {
+
+						if (data.success) {
+
+							Swal.fire({
+								icon: "success",
+								title: "Enviado",
+								text: "La propuesta fue enviada al usuario.",
+								confirmButtonColor: "#6d28d9"
+							}).then(() => {
+
+								window.location.href = "/Analista/SolicitudesPendientes";
+
+							});
+
+						} else {
+
+							Swal.fire({
+								icon: "error",
+								title: "Error",
+								text: data.mensaje
+							});
+
+						}
+
+					});
+
+				}
+
+			});
+
+			return;
+		}
+
+
+			if (!validarOpcionesCredito()) {
+				return;
+			}
+
+			Swal.fire({
+				title: "¿Desea enviar estas opciones de crédito al usuario?",
+				icon: "warning",
+				showCancelButton: true,
+				confirmButtonText: "Sí",
+				cancelButtonText: "No",
+				confirmButtonColor: "#6d28d9"
+			}).then((result) => {
+
+						if (result.isConfirmed) {
+
+			const propuestas = [];
+
+					let montoPrincipal;
+		let plazoPrincipal;
+
+		const inputMonto = document.getElementById("inputMonto");
+		const inputPlazo = document.getElementById("inputPlazo");
+
+		const txtMonto = document.getElementById("txtMonto");
+		const txtPlazo = document.getElementById("txtPlazo");
+
+		if (inputMonto.style.display !== "none") {
+
+					montoPrincipal = parseFloat(
+			inputMonto.value.replace(/[^\d]/g, "")
+		);
+
+			plazoPrincipal = parseInt(inputPlazo.value);
+
+		} else {
+
+			montoPrincipal = parseFloat(
+				txtMonto.textContent.replace(/[^\d]/g, "")
+			);
+
+			plazoPrincipal = parseInt(
+				txtPlazo.textContent.replace(/[^\d]/g, "")
+			);
+		}
+
+		propuestas.push({
+			monto: montoPrincipal,
+			plazoMeses: plazoPrincipal,
+			esRecomendada: true
+		});
+					let opcionRepetida = false;
+
+		document.querySelectorAll(".fila-opcion").forEach(fila => {
+
+			let monto = fila.querySelector(".input-monto").value
+				.replace(/[^\d]/g, "");
+
+			let plazo = fila.querySelector(".select-plazo").value;
+
+			if (
+				parseFloat(monto) === montoPrincipal &&
+				parseInt(plazo) === plazoPrincipal
+			) {
+				opcionRepetida = true;
+			}
+
+			propuestas.push({
+				monto: parseFloat(monto),
+				plazoMeses: parseInt(plazo),
+				esRecomendada: false
+			});
+
+				if (opcionRepetida) {
+
+			Swal.fire({
+				icon: "warning",
+				title: "Opción repetida",
+				text: "Existe una opción adicional igual a la propuesta principal."
+			});
+
+			return;
+		}
+
+			});
+				const comentarioActual = document
+		.getElementById("editorComentarios")
+		.innerText.trim();
+
+			fetch("/Analista/EnviarEvaluacion", {
+
+				method: "POST",
+
+				headers: {
+					"Content-Type": "application/json"
+				},
+
+				body: JSON.stringify({
+
+					idSolicitud: idSolicitudActual,
+					propuestas: propuestas,
+					comentario: comentarioActual
+
+				})
+
+			})
+			.then(response => response.json())
+			.then(data => {
+
+				if (data.success) {
+
+							Swal.fire({
+			icon: "success",
+			title: "Enviado",
+			text: "Las propuestas fueron enviadas al usuario.",
+			confirmButtonColor: "#6d28d9"
+		}).then(() => {
+
+			window.location.href = "/Analista/SolicitudesPendientes";
+
+		});
+
+				}
+				else {
+
+					Swal.fire({
+						icon: "error",
+						title: "Error",
+						text: data.mensaje
+					});
+
+				}
+
+			});
+
+		}
+
+			});
+
+		});
+			
+			btnAgregarOpcion.addEventListener("click", function () {
+
+			const fila = document.createElement("div");
+
+			fila.className = "fila-opcion";
+
+			fila.innerHTML = `
+				<div class="grupo-monto">
+					<label>Monto:</label>
+
+					<input type="text"
+						   class="input-monto"
+						   placeholder="S/ 1,000">
+				</div>
+
+				<div class="grupo-plazo">
+					<label>Plazo:</label>
+
+		<select class="select-plazo">
+			<option value="">Seleccione</option>
+
+			<option value="12">12 meses</option>
+			<option value="18">18 meses</option>
+			<option value="24">24 meses</option>
+			<option value="30">30 meses</option>
+			<option value="36">36 meses</option>
+			<option value="48">48 meses</option>
+			<option value="60">60 meses</option>
+			<option value="72">72 meses</option>
+		</select>
+				</div>
+
+				<button type="button" class="btnEliminarOpcion">
+					🗑
+				</button>
+			`;
+
+			contenedorOpciones.appendChild(fila);
+					const nuevoMonto = fila.querySelector(".input-monto");
+
+		nuevoMonto.addEventListener("input", function () {
+
+			let valor = this.value.replace(/\D/g, "");
+
+			if (valor === "") {
+				this.value = "";
+				return;
+			}
+
+			valor = parseInt(valor);
+
+			if (valor > 50000) {
+				valor = 50000;
+			}
+
+			this.value = "S/ " + valor.toLocaleString('es-PE');
+
+		});
+
+		});
+				contenedorOpciones.addEventListener("click", function (e) {
+
+			if (e.target.classList.contains("btnEliminarOpcion")) {
+
+				e.target.closest(".fila-opcion").remove();
+
+			}
+
+		});
+				function validarOpcionesCredito() {
+
+			const filas = document.querySelectorAll(".fila-opcion");
+
+			for (const fila of filas) {
+
+				const inputMonto = fila.querySelector(".input-monto");
+				const plazo = fila.querySelector(".select-plazo");
+
+				let montoTexto = inputMonto.value.trim();
+
+				if (montoTexto === "") {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Monto requerido",
+						text: "Debe ingresar un monto."
+					});
+
+					return false;
+				}
+
+				let monto = parseInt(
+					montoTexto.replace(/[^\d]/g, "")
+				);
+
+				if (monto < 1000 || monto > 50000) {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Monto inválido",
+						text: "El monto debe estar entre S/ 1,000 y S/ 50,000."
+					});
+
+					return false;
+				}
+
+				if (plazo.value === "") {
+
+					Swal.fire({
+						icon: "warning",
+						title: "Plazo requerido",
+						text: "Debe seleccionar un plazo."
+					});
+
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+
+				if (btnRegresarModal) {
+
+			btnRegresarModal.addEventListener("click", function () {
+
+				console.log("CLICK REGRESAR");
+
+				const cantidad =
+					contenedorOpciones.querySelectorAll(".fila-opcion").length;
+
+				if (cantidad > 0) {
+
+					Swal.fire({
+						title: "¿Está seguro?",
+						text: "Se perderán todas las opciones agregadas.",
+						icon: "warning",
+						showCancelButton: true,
+						confirmButtonText: "Sí",
+						cancelButtonText: "No"
+					}).then((result) => {
+
+						if (result.isConfirmed) {
+
+							contenedorOpciones.innerHTML = "";
+
+							modalEvaluacion.style.display = "none";
+						}
+
+					});
+
+				} else {
+
+					modalEvaluacion.style.display = "none";
+				}
+
+			});
+
+		}
+
+		window.addEventListener("click", function (e) {
+
+			if (e.target === modalEvaluacion) {
+				modalEvaluacion.style.display = "none";
+			}
+
+		});
+		inputMonto.addEventListener("input", function () {
+			let valor = this.value.replace(/\D/g, "");
+
+
+			if (valor === "") {
+
+				this.value = "";
+
+				return;
+
+			}
+
+
+
+			valor = parseInt(valor);
+
+
+
+			if (valor > 50000) {
+
+				valor = 50000;
+
+			}
+
+
+
+			this.value = valor.toLocaleString('es-PE');
+
+		});
+				function abrirReporte(idSolicitud) {
+
+			document.getElementById("modalReporte").style.display = "flex";
+			document.getElementById("contenidoReporte").innerHTML = "Cargando reporte...";
+
+			fetch('/Analista/ObtenerReportePropuestas?idSolicitud=' + idSolicitud)
+				.then(response => response.json())
+				.then(data => {
+
+					let html = "";
+
+					if (!data.ok || data.propuestas.length === 0) {
+						html = `
+							<div class="sin-reporte">
+								📭 Sin reporte para esta solicitud.
+							</div>`;
+					}
+					else {
+						data.propuestas.forEach((p, index) => {
+
+							html += `
+								<div class="reporte-card">
+									<h4>${p.esRecomendada ? "⭐ Propuesta recomendada" : "Opción " + (index + 1)}</h4>
+									<p><b>Monto:</b> S/ ${Number(p.monto).toLocaleString('es-PE')}</p>
+									<p><b>Plazo:</b> ${p.plazoMeses} meses</p>
+								</div>
+							`;
+
+						});
+					}
+
+					document.getElementById("contenidoReporte").innerHTML = html;
+				})
+				.catch(() => {
+					document.getElementById("contenidoReporte").innerHTML = `
+						<div class="sin-reporte">
+							❌ Error al cargar el reporte.
+						</div>`;
+				});
+		}
+
+		function cerrarReporte() {
+			document.getElementById("modalReporte").style.display = "none";
+		}
+
+		document.addEventListener("DOMContentLoaded", function () {
+			var abrirMensaje = '@ViewBag.AbrirMensaje'.toLowerCase();
+
+			if (abrirMensaje === 'true') {
+				setTimeout(function () {
+					var botonMensaje = document.querySelector("#btnMensaje");
+
+					if (botonMensaje) {
+						botonMensaje.click();
+					}
+				}, 500);
+			}
+		});
+	</script>
+
+
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+	@* <link rel="stylesheet"
+		  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+</body>
+
+</html> *@

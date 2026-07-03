@@ -47,16 +47,17 @@ namespace trabajo.Controllers
         }
         public async Task<IActionResult> CerrarSesion()
         {
-            string dni = User.FindFirst("Dni")?.Value;
+            string? dni = User.FindFirst("Dni")?.Value;
 
             var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
 
-            if (usuario != null && usuario.Rol == "Cliente")
+            if (usuario != null)
             {
                 usuario.EstadoActivo = false;
                 usuario.UltimaConexion = DateTime.Now;
                 _Context.SaveChanges();
             }
+
             await HttpContext.SignOutAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme
             );
@@ -167,7 +168,7 @@ namespace trabajo.Controllers
                 return View();
             }
 
-            Usuario usuarioEncontrado = _Context.Usuario.FirstOrDefault(x =>
+            Usuario? usuarioEncontrado = _Context.Usuario.FirstOrDefault(x =>
                 x.Dni == dni &&
                 x.clave == utilidades.EncriptarClave(clave)
             );
@@ -180,16 +181,20 @@ namespace trabajo.Controllers
 
             List<Claim> claims = new List<Claim>()
             {
-             new Claim(ClaimTypes.Name, usuarioEncontrado.Nombre),
-             new Claim("Apellido", usuarioEncontrado.Apellido),
-             new Claim("Dni", usuarioEncontrado.Dni),
-             new Claim("Celular", usuarioEncontrado.Celular),
-             new Claim("Correo", usuarioEncontrado.Correo),
-             new Claim(ClaimTypes.Role, usuarioEncontrado.Rol)
-
+                new Claim(ClaimTypes.NameIdentifier, usuarioEncontrado.Id.ToString()),
+                new Claim(ClaimTypes.Name, usuarioEncontrado.Nombre),
+                new Claim(ClaimTypes.Email, usuarioEncontrado.Correo),
+                new Claim("Apellido", usuarioEncontrado.Apellido),
+                new Claim("Dni", usuarioEncontrado.Dni),
+                new Claim("Celular", usuarioEncontrado.Celular),
+                new Claim("Correo", usuarioEncontrado.Correo),
+                new Claim(ClaimTypes.Role, usuarioEncontrado.Rol)
             };
 
-            ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            ClaimsIdentity claimsIdentity = new ClaimsIdentity(
+                claims,
+                CookieAuthenticationDefaults.AuthenticationScheme
+            );
 
             AuthenticationProperties properties = new AuthenticationProperties()
             {
@@ -197,21 +202,17 @@ namespace trabajo.Controllers
             };
 
             await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(claimsIdentity),
-            properties
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity),
+                properties
             );
-            if (usuarioEncontrado.Rol == "Cliente")
-            {
-                usuarioEncontrado.EstadoActivo = true;
-                usuarioEncontrado.UltimaConexion = DateTime.Now;
-                _Context.SaveChanges();
-            }
-            if (usuarioEncontrado.Rol == "Analista")
-            {
-                return RedirectToAction("ProgramaAnalista", "Analista");
-            }
-            else if (usuarioEncontrado.Rol == "Administrador")
+
+            // Marca como conectado a cualquier usuario que inicie sesión:
+            // Cliente, Analista o Administrador.
+            usuarioEncontrado.EstadoActivo = true;
+            usuarioEncontrado.UltimaConexion = DateTime.Now;
+
+            if (usuarioEncontrado.Rol == "Administrador")
             {
                 _Context.ACTIVIDAD_ADMINISTRADOR.Add(new ActividadAdministrador
                 {
@@ -220,14 +221,20 @@ namespace trabajo.Controllers
                     Descripcion = $"El administrador {usuarioEncontrado.Nombre} {usuarioEncontrado.Apellido} inició sesión correctamente.",
                     Fecha = DateTime.Now
                 });
+            }
 
-                _Context.SaveChanges();
+            _Context.SaveChanges();
 
+            if (usuarioEncontrado.Rol == "Analista")
+            {
+                return RedirectToAction("ProgramaAnalista", "Analista");
+            }
+            else if (usuarioEncontrado.Rol == "Administrador")
+            {
                 return RedirectToAction("ProgramaAdministrador", "Administrador");
             }
 
             return RedirectToAction("DashboardCliente", "Login");
-
         }
 
         [HttpGet]
@@ -852,29 +859,13 @@ string titularCuenta
                 ViewData["CorreoIntentado"] = usuarioEditado.Correo;
                 return View(usuario);
             }
-            string correoAnterior = usuario.Correo;
+
             usuario.Nombre = usuarioEditado.Nombre;
             usuario.Apellido = usuarioEditado.Apellido;
             usuario.Dni = usuarioEditado.Dni;
             usuario.Celular = usuarioEditado.Celular;
             usuario.Correo = usuarioEditado.Correo;
             usuario.Genero = usuarioEditado.Genero;
-            if (correoAnterior != usuarioEditado.Correo)
-            {
-                var idsSolicitudes = _Context.SOLICITUD_CREDITO
-                    .Where(x => x.Usuario_Id_Usuario == usuario.Id)
-                    .Select(x => x.Id_Solicitud)
-                    .ToList();
-
-                var cronogramas = _Context.CRONOGRAMA
-                    .Where(x => idsSolicitudes.Contains(x.SOLICITUD_CREDITO_Id_Solicitud))
-                    .ToList();
-
-                foreach (var c in cronogramas)
-                {
-                    c.CorreoDestino = usuarioEditado.Correo;
-                }
-            }
 
             if (!string.IsNullOrWhiteSpace(usuarioEditado.clave))
             {

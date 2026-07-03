@@ -30,8 +30,7 @@ namespace trabajo.Models
         public DbSet<MetodoPagoSolicitud> METODO_PAGO_SOLICITUD { get; set; }
         public DbSet<ReporteGenerado> REPORTE_GENERADO { get; set; }
         public DbSet<ActividadAdministrador> ACTIVIDAD_ADMINISTRADOR { get; set; }
-        public DbSet<NotificacionAdmin> NOTIFICACION_ADMIN { get; set; }
-        public DbSet<PlantillaNotificacion> PLANTILLA_NOTIFICACION { get; set; }
+        public DbSet<MensajeAdminAnalista> MENSAJE_ADMIN_ANALISTA { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -56,8 +55,7 @@ namespace trabajo.Models
             modelBuilder.Entity<CancelacionEvaluacion>().ToTable("cancelacion_evaluacion");
             modelBuilder.Entity<ReporteGenerado>().ToTable("reporte_generado");
             modelBuilder.Entity<ActividadAdministrador>().ToTable("actividad_administrador");
-            modelBuilder.Entity<NotificacionAdmin>().ToTable("notificacion_admin");
-            modelBuilder.Entity<PlantillaNotificacion>().ToTable("plantilla_notificacion");
+            modelBuilder.Entity<MensajeAdminAnalista>().ToTable("mensaje_admin_analista");
         }
     }
 

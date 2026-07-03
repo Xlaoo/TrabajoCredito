@@ -7,10 +7,6 @@ using trabajo.Models;
 using trabajo.Models.ViewModels;
 using trabajo.Service;
 using trabajo.Models.DTOs;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
-using ClosedXML.Excel;
 
 namespace trabajo.Controllers
 {
@@ -33,18 +29,35 @@ namespace trabajo.Controllers
 
         public IActionResult ProgramaAnalista()
         {
+            string dni = User.FindFirst("Dni")?.Value ?? "";
+            string idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+
+            int.TryParse(idClaim, out int idUsuarioClaim);
+
+            var analista = _context.Usuario
+                .FirstOrDefault(x =>
+                    x.Rol == "Analista" &&
+                    (
+                        (idUsuarioClaim > 0 && x.Id == idUsuarioClaim) ||
+                        x.Dni == dni
+                    ));
+
+            if (analista == null)
+            {
+                return RedirectToAction("IniciarSesion", "Login");
+            }
+
+            analista.EstadoActivo = true;
+            analista.UltimaConexion = DateTime.Now;
+            _context.SaveChanges();
+
+            ViewBag.Analista = analista;
+
             var solicitudes = _context.SOLICITUD_CREDITO
                 .Include(x => x.PERFIL_FINANCIERO)
                 .Include(x => x.USUARIO)
                 .Include(x => x.HISTORIAL_ESTADOS)
                 .ToList();
-
-            string dni = User.FindFirst("Dni")?.Value;
-
-            var analista = _context.Usuario
-                .FirstOrDefault(x => x.Dni == dni);
-
-            ViewBag.Analista = analista;
 
             ActualizarReporteDashboard();
             DateTime hoy = DateTime.Today;
@@ -86,20 +99,21 @@ namespace trabajo.Controllers
 
             if (criticasHoy > 0 || tiposActivos >= 2)
             {
-                ViewBag.ColorNotificacion = "#ef4444"; 
+                ViewBag.ColorNotificacion = "#ef4444";
             }
             else if (mensajesNuevos > 0)
             {
-                ViewBag.ColorNotificacion = "#2563eb"; 
+                ViewBag.ColorNotificacion = "#2563eb";
             }
             else if (calificacionesHoy > 0)
             {
-                ViewBag.ColorNotificacion = "#7c3aed"; 
+                ViewBag.ColorNotificacion = "#7c3aed";
             }
             else
             {
                 ViewBag.ColorNotificacion = "#ef4444";
             }
+
             return View(solicitudes);
         }
         public IActionResult SolicitudesPendientes()
@@ -1295,233 +1309,6 @@ _context.HISTORIAL_CREDITO
                 propuestas = propuestas
             });
         }
-        public IActionResult CronogramaEvaluacionPdf(int idSolicitud)
-        {
-            var solicitud = _context.SOLICITUD_CREDITO
-                .Include(x => x.USUARIO)
-                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Estado == "Aprobado");
-
-            if (solicitud == null)
-                return NotFound();
-
-            var cuotas = _context.CUOTA
-                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
-                .OrderBy(x => x.FechaLimitePago)
-                .ToList();
-
-            if (!cuotas.Any())
-                return BadRequest("No existen cuotas para esta solicitud.");
-
-            var pagos = _context.PAGO_CUOTA.ToList();
-
-            DateTime hoy = DateTime.Today;
-
-            int idCuotaActual = cuotas
-                .Where(c =>
-                    c.FechaLimitePago.Date >= hoy &&
-                    !pagos.Any(p => p.Id_Cuota == c.Id_Cuota && p.Estado == "Aprobado"))
-                .OrderBy(c => c.FechaLimitePago)
-                .Select(c => c.Id_Cuota)
-                .FirstOrDefault();
-
-            var pdf = Document.Create(container =>
-            {
-                container.Page(page =>
-                {
-                    page.Margin(30);
-                    page.Size(PageSizes.A4);
-
-                    page.Header().Column(col =>
-                    {
-                        col.Item().Text("CREDIPLUS")
-                            .FontSize(24)
-                            .Bold()
-                            .FontColor("#6D28D9");
-
-                        col.Item().Text("Cronograma de Pagos")
-                            .FontSize(16)
-                            .Bold();
-
-                        col.Item().PaddingTop(10).Text($"Cliente: {solicitud.USUARIO.Nombre} {solicitud.USUARIO.Apellido}");
-                        col.Item().Text($"DNI: {solicitud.USUARIO.Dni}");
-                        col.Item().Text($"Solicitud: SOL-{solicitud.Id_Solicitud:D5}");
-                        col.Item().Text($"Monto aprobado: S/ {solicitud.MontoSolicitado:N2}");
-                    });
-
-                    page.Content().PaddingTop(20).Table(table =>
-                    {
-                        table.ColumnsDefinition(columns =>
-                        {
-                            columns.ConstantColumn(40);
-                            columns.RelativeColumn();
-                            columns.RelativeColumn();
-                            columns.RelativeColumn();
-                        });
-
-                        table.Header(header =>
-                        {
-                            header.Cell().Text("N°").Bold();
-                            header.Cell().Text("Fecha límite").Bold();
-                            header.Cell().Text("Monto").Bold();
-                            header.Cell().Text("Estado").Bold();
-                        });
-
-                        int numero = 1;
-
-                        foreach (var cuota in cuotas)
-                        {
-                            bool pagado = pagos.Any(p => p.Id_Cuota == cuota.Id_Cuota && p.Estado == "Aprobado");
-
-                            string estado;
-                            string color;
-
-                            if (pagado)
-                            {
-                                estado = "Pagado";
-                                color = "#DCFCE7"; // verde
-                            }
-                            else if (cuota.FechaLimitePago.Date < hoy)
-                            {
-                                estado = "Mora";
-                                color = "#FEE2E2"; // rojo
-                            }
-                            else if (cuota.Id_Cuota == idCuotaActual)
-                            {
-                                estado = "Cuota actual";
-                                color = "#FDE047"; // amarillo fuerte
-                            }
-                            else
-                            {
-                                estado = "Pendiente futuro";
-                                color = "#FB923C"; // naranja más fuerte
-                            }
-
-                            table.Cell().Background(color).Padding(6).Text(numero.ToString());
-                            table.Cell().Background(color).Padding(6).Text(cuota.FechaLimitePago.ToString("dd/MM/yyyy"));
-                            table.Cell().Background(color).Padding(6).Text($"S/ {(cuota.MontoCuota ?? 0):N2}");
-                            table.Cell().Background(color).Padding(6).Text(estado);
-
-                            numero++;
-                        }
-                    });
-
-                    page.Footer().AlignCenter().Text("Generado por CrediPlus");
-                });
-            });
-
-            return File(pdf.GeneratePdf(), "application/pdf");
-        }
-        public IActionResult CronogramaEvaluacionExcel(int idSolicitud)
-        {
-            var solicitud = _context.SOLICITUD_CREDITO
-                .Include(x => x.USUARIO)
-                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Estado == "Aprobado");
-
-            if (solicitud == null)
-                return NotFound();
-
-            var cuotas = _context.CUOTA
-                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
-                .OrderBy(x => x.FechaLimitePago)
-                .ToList();
-
-            if (!cuotas.Any())
-                return BadRequest("No existen cuotas para esta solicitud.");
-
-            var pagos = _context.PAGO_CUOTA.ToList();
-
-            DateTime hoy = DateTime.Today;
-
-            int idCuotaActual = cuotas
-                .Where(c =>
-                    c.FechaLimitePago.Date >= hoy &&
-                    !pagos.Any(p => p.Id_Cuota == c.Id_Cuota && p.Estado == "Aprobado"))
-                .OrderBy(c => c.FechaLimitePago)
-                .Select(c => c.Id_Cuota)
-                .FirstOrDefault();
-
-            using var workbook = new XLWorkbook();
-            var hoja = workbook.Worksheets.Add("Cronograma");
-
-            hoja.Cell(1, 1).Value = "CREDIPLUS - CRONOGRAMA DE PAGOS";
-            hoja.Range("A1:E1").Merge();
-            hoja.Cell(1, 1).Style.Font.Bold = true;
-            hoja.Cell(1, 1).Style.Font.FontSize = 16;
-            hoja.Cell(1, 1).Style.Font.FontColor = XLColor.FromHtml("#6D28D9");
-
-            hoja.Cell(3, 1).Value = "Cliente:";
-            hoja.Cell(3, 2).Value = $"{solicitud.USUARIO.Nombre} {solicitud.USUARIO.Apellido}";
-            hoja.Cell(4, 1).Value = "DNI:";
-            hoja.Cell(4, 2).Value = solicitud.USUARIO.Dni;
-            hoja.Cell(5, 1).Value = "Solicitud:";
-            hoja.Cell(5, 2).Value = $"SOL-{solicitud.Id_Solicitud:D5}";
-            hoja.Cell(6, 1).Value = "Monto aprobado:";
-            hoja.Cell(6, 2).Value = $"S/ {solicitud.MontoSolicitado:N2}";
-
-            hoja.Cell(8, 1).Value = "N°";
-            hoja.Cell(8, 2).Value = "Fecha límite";
-            hoja.Cell(8, 3).Value = "Monto cuota";
-            hoja.Cell(8, 4).Value = "Estado";
-            hoja.Cell(8, 5).Value = "Leyenda";
-
-            hoja.Range("A8:E8").Style.Font.Bold = true;
-            hoja.Range("A8:E8").Style.Fill.BackgroundColor = XLColor.FromHtml("#6D28D9");
-            hoja.Range("A8:E8").Style.Font.FontColor = XLColor.White;
-
-            int fila = 9;
-            int numero = 1;
-
-            foreach (var cuota in cuotas)
-            {
-                bool pagado = pagos.Any(p => p.Id_Cuota == cuota.Id_Cuota && p.Estado == "Aprobado");
-
-                string estado;
-                string color;
-
-                if (pagado)
-                {
-                    estado = "Pagado";
-                    color = "#DCFCE7"; // verde
-                }
-                else if (cuota.FechaLimitePago.Date < hoy)
-                {
-                    estado = "Mora";
-                    color = "#FEE2E2"; // rojo
-                }
-                else if (cuota.Id_Cuota == idCuotaActual)
-                {
-                    estado = "Cuota actual";
-                    color = "#FDE047"; // amarillo fuerte
-                }
-                else
-                {
-                    estado = "Pendiente futuro";
-                    color = "#FB923C"; // naranja más fuerte
-                }
-
-                hoja.Cell(fila, 1).Value = numero;
-                hoja.Cell(fila, 2).Value = cuota.FechaLimitePago.ToString("dd/MM/yyyy");
-                hoja.Cell(fila, 3).Value = cuota.MontoCuota ?? 0;
-                hoja.Cell(fila, 4).Value = estado;
-                hoja.Cell(fila, 5).Value = estado;
-
-                hoja.Range(fila, 1, fila, 5).Style.Fill.BackgroundColor = XLColor.FromHtml(color);
-
-                fila++;
-                numero++;
-            }
-
-            hoja.Columns().AdjustToContents();
-
-            using var stream = new MemoryStream();
-            workbook.SaveAs(stream);
-
-            return File(
-                stream.ToArray(),
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Cronograma_SOL-{solicitud.Id_Solicitud:D5}.xlsx"
-            );
-        }
         public IActionResult HistorialEvaluaciones()
         {
             var historial = _context.SOLICITUD_CREDITO
@@ -2246,18 +2033,236 @@ _context.HISTORIAL_CREDITO
 
             return View();
         }
-        public IActionResult ContactarSoporte()
+        [HttpGet]
+        public async Task<JsonResult> EstadoAdministrador(int idAdministrador)
         {
-            string nombre = User.FindFirst(ClaimTypes.Name)?.Value ?? "";
-            string apellido = User.FindFirst("Apellido")?.Value ?? "";
-            string correo = User.FindFirst("Correo")?.Value ?? "";
+            DateTime limiteActivo = DateTime.Now.AddMinutes(-2);
 
-            ViewBag.NombreAnalista = $"{nombre} {apellido}".Trim();
-            ViewBag.CorreoAnalista = correo;
+            var administrador = await _context.Usuario
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Id == idAdministrador &&
+                    x.Rol == "Administrador");
+
+            if (administrador == null)
+            {
+                return Json(new
+                {
+                    conectado = false,
+                    texto = "Sin administrador",
+                    ultimaConexion = ""
+                });
+            }
+
+            bool conectado =
+                administrador.EstadoActivo == true &&
+                administrador.UltimaConexion != null &&
+                administrador.UltimaConexion >= limiteActivo;
+
+            return Json(new
+            {
+                conectado = conectado,
+                texto = conectado ? "Activo" : "Inactivo",
+                ultimaConexion = administrador.UltimaConexion == null
+                    ? "Sin conexión"
+                    : administrador.UltimaConexion.Value.ToString("dd/MM/yyyy hh:mm tt")
+            });
+        }
+
+        [HttpGet]
+        public async Task<JsonResult> ChatAdminNoLeidos()
+        {
+            string dni = User.FindFirst("Dni")?.Value ?? "";
+            string idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+            string correoClaim =
+                User.FindFirst(ClaimTypes.Email)?.Value ??
+                User.FindFirst("Correo")?.Value ??
+                "";
+
+            int.TryParse(idClaim, out int idUsuarioClaim);
+
+            var analista = await _context.Usuario
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Rol == "Analista" &&
+                    (
+                        (idUsuarioClaim > 0 && x.Id == idUsuarioClaim) ||
+                        x.Dni == dni ||
+                        x.Correo == correoClaim
+                    ));
+
+            if (analista == null)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    total = 0
+                });
+            }
+
+            int total = await _context.MENSAJE_ADMIN_ANALISTA
+                .AsNoTracking()
+                .CountAsync(x =>
+                    x.IdAnalista == analista.Id &&
+                    x.RemitenteRol == "Administrador" &&
+                    !x.Leido);
+
+            var ultimo = await _context.MENSAJE_ADMIN_ANALISTA
+                .AsNoTracking()
+                .Where(x =>
+                    x.IdAnalista == analista.Id &&
+                    x.RemitenteRol == "Administrador" &&
+                    !x.Leido)
+                .OrderByDescending(x => x.FechaEnvio)
+                .Select(x => new
+                {
+                    mensaje = x.Mensaje,
+                    fecha = x.FechaEnvio.ToString("dd/MM/yyyy hh:mm tt")
+                })
+                .FirstOrDefaultAsync();
+
+            return Json(new
+            {
+                ok = true,
+                total,
+                ultimo
+            });
+        }
+
+        [HttpPost]
+        public async Task<JsonResult> MarcarChatAdminLeido()
+        {
+            string dni = User.FindFirst("Dni")?.Value ?? "";
+            string idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+            string correoClaim =
+                User.FindFirst(ClaimTypes.Email)?.Value ??
+                User.FindFirst("Correo")?.Value ??
+                "";
+
+            int.TryParse(idClaim, out int idUsuarioClaim);
+
+            var analista = await _context.Usuario
+                .FirstOrDefaultAsync(x =>
+                    x.Rol == "Analista" &&
+                    (
+                        (idUsuarioClaim > 0 && x.Id == idUsuarioClaim) ||
+                        x.Dni == dni ||
+                        x.Correo == correoClaim
+                    ));
+
+            if (analista == null)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    total = 0
+                });
+            }
+
+            var mensajesNoLeidos = await _context.MENSAJE_ADMIN_ANALISTA
+                .Where(x =>
+                    x.IdAnalista == analista.Id &&
+                    x.RemitenteRol == "Administrador" &&
+                    !x.Leido)
+                .ToListAsync();
+
+            foreach (var mensaje in mensajesNoLeidos)
+            {
+                mensaje.Leido = true;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Json(new
+            {
+                ok = true,
+                total = 0
+            });
+        }
+
+        public async Task<IActionResult> ContactarSoporte()
+        {
+            string dni = User.FindFirst("Dni")?.Value ?? "";
+            string idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0";
+            string nombreClaim = User.FindFirst(ClaimTypes.Name)?.Value ?? "";
+            string apellidoClaim = User.FindFirst("Apellido")?.Value ?? "";
+            string correoClaim =
+                User.FindFirst(ClaimTypes.Email)?.Value ??
+                User.FindFirst("Correo")?.Value ??
+                "";
+
+            int.TryParse(idClaim, out int idUsuarioClaim);
+
+            var analista = await _context.Usuario
+                .FirstOrDefaultAsync(x =>
+                    x.Rol == "Analista" &&
+                    (
+                        (idUsuarioClaim > 0 && x.Id == idUsuarioClaim) ||
+                        x.Dni == dni ||
+                        x.Correo == correoClaim
+                    ));
+
+            if (analista == null)
+            {
+                return RedirectToAction("IniciarSesion", "Login");
+            }
+
+            analista.EstadoActivo = true;
+            analista.UltimaConexion = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            ViewBag.NombreAnalista = $"{analista.Nombre} {analista.Apellido}";
+            ViewBag.CorreoAnalista = analista.Correo;
+            ViewBag.IdAnalista = analista.Id;
+
+            var administrador = await _context.Usuario
+                .AsNoTracking()
+                .Where(x => x.Rol == "Administrador")
+                .OrderBy(x => x.Id)
+                .FirstOrDefaultAsync();
+
+            ViewBag.IdAdministrador = administrador?.Id ?? 0;
+            ViewBag.NombreAdministrador = administrador == null
+                ? "Administrador"
+                : $"{administrador.Nombre} {administrador.Apellido}";
+
+            var mensajes = new List<AdminAnalistaMensajeViewModel>();
+
+            if (administrador != null)
+            {
+                mensajes = await _context.MENSAJE_ADMIN_ANALISTA
+                    .AsNoTracking()
+                    .Where(x =>
+                        x.IdAdministrador == administrador.Id &&
+                        x.IdAnalista == analista.Id)
+                    .OrderBy(x => x.FechaEnvio)
+                    .Select(x => new AdminAnalistaMensajeViewModel
+                    {
+                        IdMensaje = x.IdMensaje,
+                        RemitenteRol = x.RemitenteRol,
+                        Mensaje = x.Mensaje,
+                        FechaEnvio = x.FechaEnvio
+                    })
+                    .ToListAsync();
+            }
+
+            int mensajesAdminNoLeidos = 0;
+
+            if (administrador != null)
+            {
+                mensajesAdminNoLeidos = await _context.MENSAJE_ADMIN_ANALISTA
+                    .AsNoTracking()
+                    .CountAsync(x =>
+                        x.IdAdministrador == administrador.Id &&
+                        x.IdAnalista == analista.Id &&
+                        x.RemitenteRol == "Administrador" &&
+                        !x.Leido);
+            }
+
+            ViewBag.ChatAdminMensajes = mensajes;
+            ViewBag.MensajesAdminNoLeidos = mensajesAdminNoLeidos;
 
             return View();
         }
-
-
     }
 }
