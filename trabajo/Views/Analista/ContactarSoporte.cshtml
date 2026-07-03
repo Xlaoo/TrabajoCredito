@@ -6,520 +6,407 @@
     ViewData["ActivePage"] = "ContactarSoporte";
 }
 
-@* <!DOCTYPE html>
-<html>
-<head>
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
- *@
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+<style>
+    .content {
+        flex: 1;
+        padding: 35px 45px;
+    }
+
+    .top-soporte {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 30px;
+    }
+
+    h1 {
+        color: #4c1d95;
+        font-size: 42px;
+        font-weight: 900;
+    }
+
+    .top-soporte p {
+        color: #6b7280;
+        margin-top: 8px;
+        font-size: 15px;
+    }
+
+    .perfil-analista {
+        background: white;
+        border-radius: 20px;
+        padding: 16px 22px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        box-shadow: 0 12px 30px rgba(124,58,237,.10);
+    }
+
+    .perfil-avatar {
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        background: #7c3aed;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+    }
+
+    .perfil-analista strong {
+        color: #241041;
+        font-size: 15px;
+    }
+
+    .perfil-analista span {
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .contact-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 22px;
+        margin-bottom: 28px;
+    }
+
+    .contact-card {
+        background: white;
+        border-radius: 22px;
+        padding: 28px;
+        min-height: 170px;
+        display: flex;
+        gap: 18px;
+        align-items: flex-start;
+        box-shadow: 0 12px 30px rgba(124,58,237,.08);
+        border: 1px solid #eee;
+    }
+
+    .contact-icon {
+        width: 62px;
+        height: 62px;
+        border-radius: 50%;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        flex-shrink: 0;
+    }
+
+        .contact-icon.email {
+            background: #7c3aed;
         }
 
-        body {
-            background: #faf8ff;
-            font-family: 'Segoe UI', sans-serif;
-            color: #241041;
+        .contact-icon.whatsapp {
+            background: #22c55e;
         }
 
-        /* .layout {
-            display: flex;
-            min-height: 100vh;
+        .contact-icon.horario {
+            background: #2563eb;
         }
 
-        .sidebar {
-            width: 280px;
-            min-width: 280px;
-            height: 100vh;
-            position: sticky;
-            top: 0;
-            overflow-y: auto;
-            background: linear-gradient(180deg, #240046, #3c096c, #5a189a);
+        .contact-icon.telefono {
+            background: #f59e0b;
+        }
+
+    .contact-card h3 {
+        color: #4c1d95;
+        font-size: 18px;
+        margin-bottom: 10px;
+    }
+
+    .contact-card p {
+        color: #374151;
+        line-height: 1.6;
+        font-weight: 600;
+    }
+
+    .contact-card small {
+        display: block;
+        color: #6d28d9;
+        margin-top: 18px;
+        font-weight: 900;
+    }
+
+    .soporte-grid {
+        display: grid;
+        grid-template-columns: 1.15fr .95fr;
+        gap: 28px;
+    }
+
+    .panel {
+        background: white;
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 12px 30px rgba(124,58,237,.08);
+    }
+
+    .panel-title {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 24px;
+    }
+
+        .panel-title i {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #6d28d9;
             color: white;
-            padding: 25px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .logo {
-            font-size: 28px;
-            font-weight: 800;
-            margin-bottom: 10px;
-        }
-
-        .role {
-            color: #d8b4fe;
-            margin-bottom: 40px;
-            font-size: 14px;
-        }
-
-        .menu a {
             display: flex;
             align-items: center;
-            gap: 12px;
-            color: white;
-            text-decoration: none;
-            padding: 15px 18px;
-            border-radius: 14px;
-            margin-bottom: 10px;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .panel-title h2 {
+            color: #4c1d95;
+            font-size: 22px;
+        }
+
+        .panel-title p {
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+    label {
+        display: block;
+        color: #241041;
+        font-weight: 800;
+        margin-bottom: 8px;
+        margin-top: 14px;
+    }
+
+    input,
+    select,
+    textarea {
+        width: 100%;
+        border: 1px solid #ddd6fe;
+        border-radius: 12px;
+        padding: 14px;
+        outline: none;
+        font-size: 14px;
+        font-family: 'Segoe UI';
+    }
+
+    textarea {
+        height: 135px;
+        resize: none;
+    }
+
+    .contador {
+        text-align: right;
+        color: #6b7280;
+        font-size: 13px;
+        margin-top: 6px;
+    }
+
+    .btn-enviar {
+        margin: 20px auto 0;
+        border: none;
+        background: linear-gradient(135deg, #6d28d9, #4c1d95);
+        color: white;
+        border-radius: 12px;
+        padding: 15px 48px;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        box-shadow: 0 14px 28px rgba(109,40,217,.25);
+    }
+
+    .faq-item {
+        border: 1px solid #e5d4ff;
+        padding: 16px 18px;
+        border-radius: 14px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #241041;
+        font-weight: 700;
+        background: #fff;
+    }
+
+        .faq-item i {
+            color: #6d28d9;
+        }
+
+    .btn-faq {
+        margin: 18px auto 0;
+        display: flex;
+        border: 1px solid #c4b5fd;
+        background: white;
+        color: #5b21b6;
+        padding: 14px 35px;
+        border-radius: 12px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+    .bottom-soporte {
+        margin-top: 28px;
+        background: linear-gradient(135deg, #f5f3ff, #ffffff);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 12px 30px rgba(124,58,237,.08);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 35px;
+    }
+
+    .bottom-item {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .bottom-icon {
+        width: 86px;
+        height: 86px;
+        border-radius: 50%;
+        background: #ede9fe;
+        color: #6d28d9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 42px;
+    }
+
+    .bottom-item h3 {
+        color: #4c1d95;
+        font-size: 20px;
+    }
+
+    .bottom-item p {
+        color: #374151;
+        margin-top: 8px;
+        line-height: 1.6;
+    }
+
+    .mensaje-ok {
+        display: none;
+        margin-top: 18px;
+        background: #dcfce7;
+        color: #15803d;
+        border-radius: 12px;
+        padding: 14px;
+        font-weight: 900;
+        text-align: center;
+    }
+
+        .mensaje-ok.activo {
+            display: block;
+        }
+
+    .faq-list {
+        max-height: 430px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .faq-item {
+        border: 1px solid #e5d4ff;
+        padding: 0;
+        border-radius: 14px;
+        margin-bottom: 12px;
+        background: #fff;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
+    .faq-pregunta {
+        padding: 16px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #241041;
+        font-weight: 800;
+    }
+
+        .faq-pregunta i {
+            color: #6d28d9;
             transition: .3s;
         }
 
-            .menu a:hover,
-            .menu a.active {
-                background: rgba(255,255,255,.12);
-            }
+    .faq-respuesta {
+        display: none;
+        padding: 0 18px 16px;
+        color: #6b7280;
+        line-height: 1.5;
+        font-size: 14px;
+    }
 
-        .section-title {
-            margin-top: 25px;
-            margin-bottom: 15px;
-            color: #c4b5fd;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
+    .faq-item.abierto {
+        background: #faf5ff;
+        border-color: #c4b5fd;
+    }
+
+        .faq-item.abierto .faq-respuesta {
+            display: block;
         }
 
-        .help-card {
-            margin-top: auto;
-            background: rgba(255,255,255,.08);
-            border: 1px solid rgba(255,255,255,.1);
-            border-radius: 18px;
-            padding: 18px;
+        .faq-item.abierto .faq-pregunta i {
+            transform: rotate(90deg);
         }
 
-            .help-card h4 {
-                font-size: 20px;
-                margin-bottom: 10px;
-            }
+    .faq-extra {
+        display: none;
+    }
 
-            .help-card p {
-                color: #d8b4fe;
-                font-size: 14px;
-                margin-bottom: 15px;
-            }
+    .faq-list.mostrar-todo .faq-extra {
+        display: block;
+    }
 
-        .btn-help {
-            width: 100%;
-            border: 1px solid rgba(255,255,255,.15);
-            background: rgba(255,255,255,.05);
+    .soporte-persona {
+        position: relative;
+        width: 95px;
+        height: 95px;
+        min-width: 95px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ede9fe, #ffffff);
+        color: #6d28d9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 46px;
+        box-shadow: inset 0 0 0 8px rgba(124,58,237,.08);
+    }
+
+        .soporte-persona span {
+            position: absolute;
+            right: -4px;
+            top: 16px;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #a78bfa;
             color: white;
-            border-radius: 12px;
-            padding: 12px;
-            text-decoration: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-        }
-
-            .btn-help:hover {
-                background: rgba(255,255,255,.12);
-                color: white;
-            }
- */
-        .content {
-            flex: 1;
-            padding: 35px 45px;
-        }
-
-        .top-soporte {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 30px;
-        }
-
-        h1 {
-            color: #4c1d95;
-            font-size: 42px;
-            font-weight: 900;
-        }
-
-        .top-soporte p {
-            color: #6b7280;
-            margin-top: 8px;
             font-size: 15px;
         }
 
-        .perfil-analista {
-            background: white;
-            border-radius: 20px;
-            padding: 16px 22px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            box-shadow: 0 12px 30px rgba(124,58,237,.10);
-        }
+    .compromiso-pro {
+        background: linear-gradient(135deg, #ffffff, #f5f3ff);
+        border-radius: 22px;
+    }
 
-        .perfil-avatar {
-            width: 58px;
-            height: 58px;
-            border-radius: 50%;
-            background: #7c3aed;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 26px;
-        }
-
-        .perfil-analista strong {
-            color: #241041;
-            font-size: 15px;
-        }
-
-        .perfil-analista span {
-            color: #6b7280;
-            font-size: 13px;
-        }
-
-        .contact-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 22px;
-            margin-bottom: 28px;
-        }
-
-        .contact-card {
-            background: white;
-            border-radius: 22px;
-            padding: 28px;
-            min-height: 170px;
-            display: flex;
-            gap: 18px;
-            align-items: flex-start;
-            box-shadow: 0 12px 30px rgba(124,58,237,.08);
-            border: 1px solid #eee;
-        }
-
-        .contact-icon {
-            width: 62px;
-            height: 62px;
-            border-radius: 50%;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            flex-shrink: 0;
-        }
-
-            .contact-icon.email {
-                background: #7c3aed;
-            }
-
-            .contact-icon.whatsapp {
-                background: #22c55e;
-            }
-
-            .contact-icon.horario {
-                background: #2563eb;
-            }
-
-            .contact-icon.telefono {
-                background: #f59e0b;
-            }
-
-        .contact-card h3 {
-            color: #4c1d95;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-
-        .contact-card p {
-            color: #374151;
-            line-height: 1.6;
-            font-weight: 600;
-        }
-
-        .contact-card small {
+        .compromiso-pro small {
             display: block;
-            color: #6d28d9;
-            margin-top: 18px;
-            font-weight: 900;
-        }
-
-        .soporte-grid {
-            display: grid;
-            grid-template-columns: 1.15fr .95fr;
-            gap: 28px;
-        }
-
-        .panel {
-            background: white;
-            border-radius: 24px;
-            padding: 28px;
-            box-shadow: 0 12px 30px rgba(124,58,237,.08);
-        }
-
-        .panel-title {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 24px;
-        }
-
-            .panel-title i {
-                width: 50px;
-                height: 50px;
-                border-radius: 50%;
-                background: #6d28d9;
-                color: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 22px;
-            }
-
-            .panel-title h2 {
-                color: #4c1d95;
-                font-size: 22px;
-            }
-
-            .panel-title p {
-                color: #6b7280;
-                margin-top: 4px;
-            }
-
-        label {
-            display: block;
-            color: #241041;
-            font-weight: 800;
-            margin-bottom: 8px;
-            margin-top: 14px;
-        }
-
-        input,
-        select,
-        textarea {
-            width: 100%;
-            border: 1px solid #ddd6fe;
-            border-radius: 12px;
-            padding: 14px;
-            outline: none;
-            font-size: 14px;
-            font-family: 'Segoe UI';
-        }
-
-        textarea {
-            height: 135px;
-            resize: none;
-        }
-
-        .contador {
-            text-align: right;
-            color: #6b7280;
-            font-size: 13px;
-            margin-top: 6px;
-        }
-
-        .btn-enviar {
-            margin: 20px auto 0;
-            border: none;
-            background: linear-gradient(135deg, #6d28d9, #4c1d95);
-            color: white;
-            border-radius: 12px;
-            padding: 15px 48px;
-            font-weight: 900;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            box-shadow: 0 14px 28px rgba(109,40,217,.25);
-        }
-
-        .faq-item {
-            border: 1px solid #e5d4ff;
-            padding: 16px 18px;
-            border-radius: 14px;
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: #241041;
-            font-weight: 700;
-            background: #fff;
-        }
-
-            .faq-item i {
-                color: #6d28d9;
-            }
-
-        .btn-faq {
-            margin: 18px auto 0;
-            display: flex;
-            border: 1px solid #c4b5fd;
-            background: white;
-            color: #5b21b6;
-            padding: 14px 35px;
-            border-radius: 12px;
-            font-weight: 900;
-            cursor: pointer;
-        }
-
-        .bottom-soporte {
-            margin-top: 28px;
-            background: linear-gradient(135deg, #f5f3ff, #ffffff);
-            border-radius: 24px;
-            padding: 28px;
-            box-shadow: 0 12px 30px rgba(124,58,237,.08);
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 35px;
-        }
-
-        .bottom-item {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .bottom-icon {
-            width: 86px;
-            height: 86px;
-            border-radius: 50%;
-            background: #ede9fe;
-            color: #6d28d9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 42px;
-        }
-
-        .bottom-item h3 {
-            color: #4c1d95;
-            font-size: 20px;
-        }
-
-        .bottom-item p {
-            color: #374151;
             margin-top: 8px;
-            line-height: 1.6;
-        }
-
-        .mensaje-ok {
-            display: none;
-            margin-top: 18px;
-            background: #dcfce7;
-            color: #15803d;
-            border-radius: 12px;
-            padding: 14px;
-            font-weight: 900;
-            text-align: center;
-        }
-
-            .mensaje-ok.activo {
-                display: block;
-            }
-
-        .faq-list {
-            max-height: 430px;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-
-        .faq-item {
-            border: 1px solid #e5d4ff;
-            padding: 0;
-            border-radius: 14px;
-            margin-bottom: 12px;
-            background: #fff;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        .faq-pregunta {
-            padding: 16px 18px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: #241041;
+            color: #6d28d9;
             font-weight: 800;
         }
 
-            .faq-pregunta i {
-                color: #6d28d9;
-                transition: .3s;
-            }
-
-        .faq-respuesta {
-            display: none;
-            padding: 0 18px 16px;
-            color: #6b7280;
-            line-height: 1.5;
-            font-size: 14px;
-        }
-
-        .faq-item.abierto {
-            background: #faf5ff;
-            border-color: #c4b5fd;
-        }
-
-            .faq-item.abierto .faq-respuesta {
-                display: block;
-            }
-
-            .faq-item.abierto .faq-pregunta i {
-                transform: rotate(90deg);
-            }
-
-        .faq-extra {
-            display: none;
-        }
-
-        .faq-list.mostrar-todo .faq-extra {
-            display: block;
-        }
-
-        .soporte-persona {
-            position: relative;
-            width: 95px;
-            height: 95px;
-            min-width: 95px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #ede9fe, #ffffff);
-            color: #6d28d9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 46px;
-            box-shadow: inset 0 0 0 8px rgba(124,58,237,.08);
-        }
-
-            .soporte-persona span {
-                position: absolute;
-                right: -4px;
-                top: 16px;
-                width: 34px;
-                height: 34px;
-                border-radius: 50%;
-                background: #a78bfa;
-                color: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 15px;
-            }
-
-        .compromiso-pro {
-            background: linear-gradient(135deg, #ffffff, #f5f3ff);
-            border-radius: 22px;
-        }
-
-            .compromiso-pro small {
-                display: block;
-                margin-top: 8px;
-                color: #6d28d9;
-                font-weight: 800;
-            }
-
-        .seguridad-pro {
-            background: linear-gradient(135deg, #ffffff, #f8f5ff);
-            border-radius: 22px;
-        }
+    .seguridad-pro {
+        background: linear-gradient(135deg, #ffffff, #f8f5ff);
+        border-radius: 22px;
+    }
 
     .perfil-link {
         text-decoration: none;
@@ -539,66 +426,17 @@
             font-size: 12px;
             font-weight: 800;
         }
-    </style>
-    @* <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-</head>
+</style>
 
-<body> *@
-    <div class="layout">
+<div class="layout">
 
-       @*  <div class="sidebar">
-            <div class="logo">🛡 CrediPlus</div>
-            <div class="role">Analista de Riesgo</div>
+    <main class="content">
 
-            <div class="menu">
-                <div class="section-title">Principal</div>
-
-                <a href="@Url.Action("ProgramaAnalista", "Analista")">🏠 Inicio</a>
-
-                <div class="section-title">Evaluaciones</div>
-
-                <a href="@Url.Action("SolicitudesPendientes", "Analista")">📄 Solicitudes Pendientes</a>
-                <a href="@Url.Action("HistorialEvaluaciones", "Analista")">🕘 Historial Evaluaciones</a>
-
-                <div class="section-title">Seguimiento</div>
-
-                <a href="@Url.Action("CalendarioRevisiones", "Analista")">📅 Calendario Revisiones</a>
-                <a href="@Url.Action("AlertasNotificaciones", "Analista")">🔔 Alertas y Notificaciones</a>
-                <a href="@Url.Action("GestionDePago", "Analista")">💰 Gestión de Pagos</a>
-
-                <div class="section-title">Retroalimentación</div>
-
-                <a href="@Url.Action("CalificacionesServicio", "Analista")">⭐ Calificaciones del Servicio</a>
-
-                <div class="section-title">Herramientas</div>
-
-                <a href="@Url.Action("PoliticasRiesgo", "Analista")">🛡️ Políticas de Riesgo</a>
-
-                <div class="section-title">Mi Cuenta</div>
-
-                <a href="@Url.Action("PerfilAnalista", "Analista")">👤 Perfil</a>
-                <a href="@Url.Action("CerrarSesion", "Login")">🚪 Cerrar Sesión</a>
+        <div class="top-soporte">
+            <div>
+                <h1>Centro de Soporte</h1>
+                <p>Estamos aquí para ayudarte. Envía tu consulta o comunícate por nuestros canales.</p>
             </div>
-
-            <div class="help-card">
-                <h4>¿Necesitas ayuda?</h4>
-                <p>Comunícate con el administrador del sistema</p>
-
-                <a href="@Url.Action("ContactarSoporte", "Analista")" class="btn-help">
-                    <i class="fas fa-headset"></i>
-                    Contactar Soporte
-                </a>
-            </div>
-        </div> *@
-
-        <main class="content">
-
-            <div class="top-soporte">
-                <div>
-                    <h1>Centro de Soporte</h1>
-                    <p>Estamos aquí para ayudarte. Envía tu consulta o comunícate por nuestros canales.</p>
-                </div>
 
             <a href="@Url.Action("PerfilAnalista", "Analista")" class="perfil-analista perfil-link">
                 <div class="perfil-avatar">
@@ -610,287 +448,285 @@
                     <small>Ver perfil completo</small>
                 </div>
             </a>
+        </div>
+
+        <div class="contact-grid">
+
+            <div class="contact-card">
+                <div class="contact-icon email">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div>
+                    <h3>Correo Electrónico</h3>
+                    <p>soporte@crediplus.com</p>
+                    <small>Respuesta en menos de 24 horas.</small>
+                </div>
             </div>
 
-            <div class="contact-grid">
-
-                <div class="contact-card">
-                    <div class="contact-icon email">
-                        <i class="fas fa-envelope"></i>
-                    </div>
-                    <div>
-                        <h3>Correo Electrónico</h3>
-                        <p>soporte@crediplus.com</p>
-                        <small>Respuesta en menos de 24 horas.</small>
-                    </div>
+            <div class="contact-card">
+                <div class="contact-icon whatsapp">
+                    <i class="fab fa-whatsapp"></i>
                 </div>
-
-                <div class="contact-card">
-                    <div class="contact-icon whatsapp">
-                        <i class="fab fa-whatsapp"></i>
-                    </div>
-                    <div>
-                        <h3>WhatsApp</h3>
-                        <p>+51 987 654 321</p>
-                        <small>Lun a Vie de 8:00 am a 6:00 pm</small>
-                    </div>
+                <div>
+                    <h3>WhatsApp</h3>
+                    <p>+51 987 654 321</p>
+                    <small>Lun a Vie de 8:00 am a 6:00 pm</small>
                 </div>
-
-                <div class="contact-card">
-                    <div class="contact-icon horario">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div>
-                        <h3>Horario de Atención</h3>
-                        <p>Lunes a Viernes<br />8:00 am - 6:00 pm</p>
-                        <small>Sábados 8:00 am - 1:00 pm</small>
-                    </div>
-                </div>
-
-                <div class="contact-card">
-                    <div class="contact-icon telefono">
-                        <i class="fas fa-headset"></i>
-                    </div>
-                    <div>
-                        <h3>Llamada Telefónica</h3>
-                        <p>(01) 123 4567</p>
-                        <small>Lun a Vie de 8:00 am a 6:00 pm</small>
-                    </div>
-                </div>
-
             </div>
 
-            <div class="soporte-grid">
+            <div class="contact-card">
+                <div class="contact-icon horario">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    <h3>Horario de Atención</h3>
+                    <p>Lunes a Viernes<br />8:00 am - 6:00 pm</p>
+                    <small>Sábados 8:00 am - 1:00 pm</small>
+                </div>
+            </div>
 
-                <section class="panel">
-                    <div class="panel-title">
-                        <i class="fas fa-comments"></i>
-                        <div>
-                            <h2>Envía una solicitud de soporte</h2>
-                            <p>Completa el formulario y nuestro equipo te ayudará.</p>
-                        </div>
+            <div class="contact-card">
+                <div class="contact-icon telefono">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <div>
+                    <h3>Llamada Telefónica</h3>
+                    <p>(01) 123 4567</p>
+                    <small>Lun a Vie de 8:00 am a 6:00 pm</small>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="soporte-grid">
+
+            <section class="panel">
+                <div class="panel-title">
+                    <i class="fas fa-comments"></i>
+                    <div>
+                        <h2>Envía una solicitud de soporte</h2>
+                        <p>Completa el formulario y nuestro equipo te ayudará.</p>
                     </div>
+                </div>
 
-                    <form onsubmit="enviarSoporte(event)">
-                        <label>Asunto</label>
-                        <input type="text" id="asunto" placeholder="Escribe el asunto de tu consulta" required />
+                <form onsubmit="enviarSoporte(event)">
+                    <label>Asunto</label>
+                    <input type="text" id="asunto" placeholder="Escribe el asunto de tu consulta" required />
 
-                        <label>Tipo de consulta</label>
-                        <select id="tipoConsulta" required>
-                            <option value="">Selecciona una opción</option>
-                            <option>Error del sistema</option>
-                            <option>Problema con solicitudes</option>
-                            <option>Gestión de pagos</option>
-                            <option>Evaluación de riesgo</option>
-                            <option>Cuenta de usuario</option>
-                            <option>Otro</option>
-                        </select>
+                    <label>Tipo de consulta</label>
+                    <select id="tipoConsulta" required>
+                        <option value="">Selecciona una opción</option>
+                        <option>Error del sistema</option>
+                        <option>Problema con solicitudes</option>
+                        <option>Gestión de pagos</option>
+                        <option>Evaluación de riesgo</option>
+                        <option>Cuenta de usuario</option>
+                        <option>Otro</option>
+                    </select>
 
-                        <label>Mensaje</label>
-                        <textarea id="mensaje" maxlength="500" oninput="actualizarContador()" placeholder="Describe tu problema o consulta con el mayor detalle posible..." required></textarea>
-                        <div class="contador"><span id="contadorMensaje">0</span>/500</div>
+                    <label>Mensaje</label>
+                    <textarea id="mensaje" maxlength="500" oninput="actualizarContador()" placeholder="Describe tu problema o consulta con el mayor detalle posible..." required></textarea>
+                    <div class="contador"><span id="contadorMensaje">0</span>/500</div>
 
-                        <button type="submit" class="btn-enviar">
-                            <i class="fas fa-paper-plane"></i>
-                            Enviar Solicitud
-                        </button>
-
-                        <div id="mensajeOk" class="mensaje-ok">
-                            ✅ Solicitud enviada correctamente. Soporte revisará tu caso.
-                        </div>
-                    </form>
-                </section>
-
-                <section class="panel">
-                    <div class="panel-title">
-                        <i class="fas fa-question"></i>
-                        <div>
-                            <h2>Preguntas Frecuentes</h2>
-                            <p>Encuentra respuestas rápidas para el trabajo del analista.</p>
-                        </div>
-                    </div>
-
-                    <div class="faq-list">
-
-                        <div class="faq-item" onclick="toggleFaq(this)">
-                            <div class="faq-pregunta">
-                                <span>¿Cómo puedo restablecer mi contraseña?</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <p class="faq-respuesta">
-                                Ingresa a “Olvidé mi contraseña”, coloca tu DNI y registra una nueva clave. Si el DNI no existe, debes reportarlo al administrador.
-                            </p>
-                        </div>
-
-                        <div class="faq-item" onclick="toggleFaq(this)">
-                            <div class="faq-pregunta">
-                                <span>No puedo ver mis solicitudes pendientes</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <p class="faq-respuesta">
-                                Verifica que la solicitud tenga estado “Pendiente”. Si está “En Evaluación”, “Aprobado” o “Rechazado”, aparecerá en otra sección.
-                            </p>
-                        </div>
-
-                        <div class="faq-item" onclick="toggleFaq(this)">
-                            <div class="faq-pregunta">
-                                <span>Error al aprobar una evaluación</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <p class="faq-respuesta">
-                                Revisa que la solicitud tenga perfil financiero, usuario vinculado y datos completos. Luego vuelve a intentar la aprobación.
-                            </p>
-                        </div>
-
-                        <div class="faq-item" onclick="toggleFaq(this)">
-                            <div class="faq-pregunta">
-                                <span>Problemas con la carga de documentos</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <p class="faq-respuesta">
-                                Valida que el archivo no esté dañado y que el cliente haya completado todos los campos requeridos antes de enviar la solicitud.
-                            </p>
-                        </div>
-
-                        <div class="faq-item" onclick="toggleFaq(this)">
-                            <div class="faq-pregunta">
-                                <span>Métodos de pago no disponibles</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <p class="faq-respuesta">
-                                Verifica que el cliente haya registrado correctamente el método, entidad, número y titular en su solicitud de préstamo.
-                            </p>
-                        </div>
-
-                        <div class="faq-item faq-extra" onclick="toggleFaq(this)">
-                            <div class="faq-pregunta">
-                                <span>¿Cuándo debo rechazar una solicitud?</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <p class="faq-respuesta">
-                                Cuando el cliente presente riesgo crítico, información falsa, historial vencido grave o datos financieros inconsistentes.
-                            </p>
-                        </div>
-
-                        <div class="faq-item faq-extra" onclick="toggleFaq(this)">
-                            <div class="faq-pregunta">
-                                <span>¿Cuándo enviar una propuesta alternativa?</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <p class="faq-respuesta">
-                                Cuando el cliente no califica para el monto solicitado, pero sí puede asumir un monto menor o un plazo diferente.
-                            </p>
-                        </div>
-
-                        <div class="faq-item faq-extra" onclick="toggleFaq(this)">
-                            <div class="faq-pregunta">
-                                <span>¿Qué hago si el cliente registra datos incorrectos?</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <p class="faq-respuesta">
-                                Observa la solicitud o envía un mensaje solicitando corrección. No apruebes solicitudes con datos incompletos.
-                            </p>
-                        </div>
-
-                        <div class="faq-item faq-extra" onclick="toggleFaq(this)">
-                            <div class="faq-pregunta">
-                                <span>¿Cómo validar el pago de una cuota?</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <p class="faq-respuesta">
-                                Revisa método, entidad, código de operación, fecha y monto pagado. Si coincide, el pago puede aprobarse.
-                            </p>
-                        </div>
-
-                        <div class="faq-item faq-extra" onclick="toggleFaq(this)">
-                            <div class="faq-pregunta">
-                                <span>¿Qué pasa si apruebo por error?</span>
-                                <i class="fas fa-chevron-right"></i>
-                            </div>
-                            <p class="faq-respuesta">
-                                Reporta el caso a soporte o al administrador para revisar la solicitud y corregir el estado si corresponde.
-                            </p>
-                        </div>
-
-                    </div>
-
-                    <button type="button" class="btn-faq" onclick="mostrarMasFaq()">
-                        <span id="textoFaq">Ver todas las preguntas</span>
-                        <i class="fas fa-chevron-right" style="margin-left:12px;"></i>
+                    <button type="submit" class="btn-enviar">
+                        <i class="fas fa-paper-plane"></i>
+                        Enviar Solicitud
                     </button>
-                </section>
 
-            </div>
-
-            <div class="bottom-soporte">
-
-                <div class="bottom-item compromiso-pro">
-                    <div class="soporte-persona">
-                        <i class="fas fa-headset"></i>
-                        <span><i class="fas fa-comment-dots"></i></span>
+                    <div id="mensajeOk" class="mensaje-ok">
+                        ✅ Solicitud enviada correctamente. Soporte revisará tu caso.
                     </div>
+                </form>
+            </section>
 
+            <section class="panel">
+                <div class="panel-title">
+                    <i class="fas fa-question"></i>
                     <div>
-                        <h3>Nuestro compromiso</h3>
-                        <p>
-                            En CrediPlus nos esforzamos por brindarte la mejor atención.
-                            Nuestro equipo está disponible para ayudarte ante cualquier inconveniente.
+                        <h2>Preguntas Frecuentes</h2>
+                        <p>Encuentra respuestas rápidas para el trabajo del analista.</p>
+                    </div>
+                </div>
+
+                <div class="faq-list">
+
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-pregunta">
+                            <span>¿Cómo puedo restablecer mi contraseña?</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <p class="faq-respuesta">
+                            Ingresa a “Olvidé mi contraseña”, coloca tu DNI y registra una nueva clave. Si el DNI no existe, debes reportarlo al administrador.
                         </p>
-                        <small>Tu satisfacción y confianza son nuestra prioridad.</small>
                     </div>
+
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-pregunta">
+                            <span>No puedo ver mis solicitudes pendientes</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <p class="faq-respuesta">
+                            Verifica que la solicitud tenga estado “Pendiente”. Si está “En Evaluación”, “Aprobado” o “Rechazado”, aparecerá en otra sección.
+                        </p>
+                    </div>
+
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-pregunta">
+                            <span>Error al aprobar una evaluación</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <p class="faq-respuesta">
+                            Revisa que la solicitud tenga perfil financiero, usuario vinculado y datos completos. Luego vuelve a intentar la aprobación.
+                        </p>
+                    </div>
+
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-pregunta">
+                            <span>Problemas con la carga de documentos</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <p class="faq-respuesta">
+                            Valida que el archivo no esté dañado y que el cliente haya completado todos los campos requeridos antes de enviar la solicitud.
+                        </p>
+                    </div>
+
+                    <div class="faq-item" onclick="toggleFaq(this)">
+                        <div class="faq-pregunta">
+                            <span>Métodos de pago no disponibles</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <p class="faq-respuesta">
+                            Verifica que el cliente haya registrado correctamente el método, entidad, número y titular en su solicitud de préstamo.
+                        </p>
+                    </div>
+
+                    <div class="faq-item faq-extra" onclick="toggleFaq(this)">
+                        <div class="faq-pregunta">
+                            <span>¿Cuándo debo rechazar una solicitud?</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <p class="faq-respuesta">
+                            Cuando el cliente presente riesgo crítico, información falsa, historial vencido grave o datos financieros inconsistentes.
+                        </p>
+                    </div>
+
+                    <div class="faq-item faq-extra" onclick="toggleFaq(this)">
+                        <div class="faq-pregunta">
+                            <span>¿Cuándo enviar una propuesta alternativa?</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <p class="faq-respuesta">
+                            Cuando el cliente no califica para el monto solicitado, pero sí puede asumir un monto menor o un plazo diferente.
+                        </p>
+                    </div>
+
+                    <div class="faq-item faq-extra" onclick="toggleFaq(this)">
+                        <div class="faq-pregunta">
+                            <span>¿Qué hago si el cliente registra datos incorrectos?</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <p class="faq-respuesta">
+                            Observa la solicitud o envía un mensaje solicitando corrección. No apruebes solicitudes con datos incompletos.
+                        </p>
+                    </div>
+
+                    <div class="faq-item faq-extra" onclick="toggleFaq(this)">
+                        <div class="faq-pregunta">
+                            <span>¿Cómo validar el pago de una cuota?</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <p class="faq-respuesta">
+                            Revisa método, entidad, código de operación, fecha y monto pagado. Si coincide, el pago puede aprobarse.
+                        </p>
+                    </div>
+
+                    <div class="faq-item faq-extra" onclick="toggleFaq(this)">
+                        <div class="faq-pregunta">
+                            <span>¿Qué pasa si apruebo por error?</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+                        <p class="faq-respuesta">
+                            Reporta el caso a soporte o al administrador para revisar la solicitud y corregir el estado si corresponde.
+                        </p>
+                    </div>
+
                 </div>
 
-                <div class="bottom-item seguridad-pro">
-                    <div class="bottom-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <div>
-                        <h3>Seguridad y Confidencialidad</h3>
-                        <p>Tu información está protegida y será tratada de manera confidencial.</p>
-                    </div>
+                <button type="button" class="btn-faq" onclick="mostrarMasFaq()">
+                    <span id="textoFaq">Ver todas las preguntas</span>
+                    <i class="fas fa-chevron-right" style="margin-left:12px;"></i>
+                </button>
+            </section>
+
+        </div>
+
+        <div class="bottom-soporte">
+
+            <div class="bottom-item compromiso-pro">
+                <div class="soporte-persona">
+                    <i class="fas fa-headset"></i>
+                    <span><i class="fas fa-comment-dots"></i></span>
                 </div>
 
+                <div>
+                    <h3>Nuestro compromiso</h3>
+                    <p>
+                        En CrediPlus nos esforzamos por brindarte la mejor atención.
+                        Nuestro equipo está disponible para ayudarte ante cualquier inconveniente.
+                    </p>
+                    <small>Tu satisfacción y confianza son nuestra prioridad.</small>
+                </div>
             </div>
 
-        </main>
-    </div>
+            <div class="bottom-item seguridad-pro">
+                <div class="bottom-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div>
+                    <h3>Seguridad y Confidencialidad</h3>
+                    <p>Tu información está protegida y será tratada de manera confidencial.</p>
+                </div>
+            </div>
 
-    <script>
-        function actualizarContador() {
-            let mensaje = document.getElementById("mensaje").value;
-            document.getElementById("contadorMensaje").innerText = mensaje.length;
+        </div>
+
+    </main>
+</div>
+
+<script>
+    function actualizarContador() {
+        let mensaje = document.getElementById("mensaje").value;
+        document.getElementById("contadorMensaje").innerText = mensaje.length;
+    }
+
+    function enviarSoporte(event) {
+        event.preventDefault();
+
+        document.getElementById("mensajeOk").classList.add("activo");
+
+        document.getElementById("asunto").value = "";
+        document.getElementById("tipoConsulta").value = "";
+        document.getElementById("mensaje").value = "";
+        document.getElementById("contadorMensaje").innerText = "0";
+
+        setTimeout(() => {
+            document.getElementById("mensajeOk").classList.remove("activo");
+        }, 4000);
+    }
+            function toggleFaq(elemento) {
+        elemento.classList.toggle("abierto");
+    }
+
+    function mostrarMasFaq() {
+        let lista = document.querySelector(".faq-list");
+        let texto = document.getElementById("textoFaq");
+
+        lista.classList.toggle("mostrar-todo");
+
+        if (lista.classList.contains("mostrar-todo")) {
+            texto.innerText = "Ver menos preguntas";
+        } else {
+            texto.innerText = "Ver todas las preguntas";
         }
-
-        function enviarSoporte(event) {
-            event.preventDefault();
-
-            document.getElementById("mensajeOk").classList.add("activo");
-
-            document.getElementById("asunto").value = "";
-            document.getElementById("tipoConsulta").value = "";
-            document.getElementById("mensaje").value = "";
-            document.getElementById("contadorMensaje").innerText = "0";
-
-            setTimeout(() => {
-                document.getElementById("mensajeOk").classList.remove("activo");
-            }, 4000);
-        }
-                function toggleFaq(elemento) {
-            elemento.classList.toggle("abierto");
-        }
-
-        function mostrarMasFaq() {
-            let lista = document.querySelector(".faq-list");
-            let texto = document.getElementById("textoFaq");
-
-            lista.classList.toggle("mostrar-todo");
-
-            if (lista.classList.contains("mostrar-todo")) {
-                texto.innerText = "Ver menos preguntas";
-            } else {
-                texto.innerText = "Ver todas las preguntas";
-            }
-        }
-    </script>
-@* </body>
-</html> *@
+    }
+</script>

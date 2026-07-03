@@ -15,122 +15,7 @@
     ViewData["ActivePage"] = "HistorialEvaluaciones";
 }
 
-@* <!DOCTYPE html>
-<html>
-<head>
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <title>Historial Evaluaciones</title>
- *@
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: #faf8ff;
-            font-family: 'Segoe UI',sans-serif;
-            color: #241041;
-        }
-
-        .layout {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* SIDEBAR */
-
-        .sidebar {
-            width: 280px;
-            background: linear-gradient( 180deg, #240046, #3c096c, #5a189a );
-            color: white;
-            padding: 25px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .help-card {
-            margin-top: auto;
-            background: rgba(255,255,255,.08);
-            border: 1px solid rgba(255,255,255,.1);
-            border-radius: 18px;
-            padding: 18px;
-        }
-
-            .help-card h4 {
-                font-size: 20px;
-                font-weight: 700;
-                margin-bottom: 10px;
-            }
-
-            .help-card p {
-                color: #d8b4fe;
-                font-size: 14px;
-                margin-bottom: 15px;
-            }
-
-        .btn-help {
-            width: 100%;
-            border: 1px solid rgba(255,255,255,.15);
-            background: rgba(255,255,255,.05);
-            color: white;
-            border-radius: 12px;
-            padding: 12px;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-            .btn-help:hover {
-                background: rgba(255,255,255,.12);
-                color: white;
-            }
-
-        .logo {
-            font-size: 28px;
-            font-weight: 800;
-            margin-bottom: 10px;
-        }
-
-        .role {
-            color: #d8b4fe;
-            margin-bottom: 40px;
-            font-size: 14px;
-        }
-
-        .menu {
-            margin-top: 15px;
-        }
-
-            .menu a {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                color: white;
-                text-decoration: none;
-                padding: 15px 18px;
-                border-radius: 14px;
-                margin-bottom: 10px;
-                transition: .3s;
-            }
-
-                .menu a:hover,
-                .menu a.active {
-                    background: rgba(255,255,255,.12);
-                }
-
-        .section-title {
-            margin-top: 25px;
-            margin-bottom: 15px;
-            color: #c4b5fd;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
 
         /* CONTENT */
 
@@ -678,106 +563,7 @@
         }
 
       </style>
-    @* <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-</head> *@
-
-@* <body> *@
-    <div class="layout">
-
-        @* <div class="sidebar">
-
-            <div class="logo">🛡 CrediPlus</div>
-            <div class="role">Analista de Riesgo</div>
-
-
-            <div class="menu">
-
-                <div class="section-title">Principal</div>
-
-                <a href="@Url.Action("ProgramaAnalista", "Analista")">
-                    🏠 Inicio
-                </a>
-
-                <div class="section-title">Evaluaciones</div>
-
-                <a href="@Url.Action("SolicitudesPendientes", "Analista")">
-                    📄 Solicitudes Pendientes
-                </a>
-
-                <a href="@Url.Action("HistorialEvaluaciones", "Analista")"
-                   class="active">
-                    🕘 Historial Evaluaciones
-                </a>
-
-                <div class="section-title">Seguimiento</div>
-
-                <a href="@Url.Action("CalendarioRevisiones", "Analista")">
-                    📅 Calendario Revisiones
-                </a>
-
-                <a href="@Url.Action("AlertasNotificaciones", "Analista")"
-                   style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>🔔 Alertas y Notificaciones</span>
-                    @{
-                        int totalNoLeidos = ViewBag.TotalNoLeidos ?? 0;
-                        string colorBadge = ViewBag.ColorNotificacion ?? "#ef4444";
-                    }
-
-                    @if (totalNoLeidos > 0)
-                    {
-                        <span style="background:@colorBadge; color:white; border-radius:50%;
-                        width:22px; height:22px; font-size:12px; font-weight:700;
-                        display:flex; align-items:center; justify-content:center;">
-                            @totalNoLeidos
-                        </span>
-                    }
-                </a>
-                <a href="@Url.Action("GestionDePago", "Analista")">
-                    💰 Gestión de Pagos
-                </a>
-
-                <div class="section-title">Retroalimentación</div>
-
-                <a href="@Url.Action("CalificacionesServicio", "Analista")">
-                    ⭐ Calificaciones del Servicio
-                </a>
-
-                <div class="section-title">Herramientas</div>
-
-                <a href="@Url.Action("PoliticasRiesgo", "Analista")">
-                    🛡️ Políticas de Riesgo
-                </a>
-
-                <div class="section-title">Mi Cuenta</div>
-
-                <a href="@Url.Action("PerfilAnalista", "Analista")">
-                    👤 Perfil
-                </a>
-
-                <a href="@Url.Action("CerrarSesion", "Login")">
-                    🚪 Cerrar Sesión
-                </a>
-
-            </div>
-            <div class="help-card">
-
-                <h4>¿Necesitas ayuda?</h4>
-
-                <p>
-                    Comunícate con el administrador
-                    del sistema
-                </p>
-
-                <a href="@Url.Action("ContactarSoporte", "Analista")" class="btn-help">
-                    <i class="fas fa-headset"></i>
-                    Contactar Soporte
-                </a>
-
-            </div>
-
-        </div>
- *@
+    
         <div class="content">
             <div class="contenedor">
                 <h1>Solicitudes Aprobadas</h1>
@@ -957,7 +743,6 @@
             </div>
         </div>
 
-    </div>
 
     <div id="modalDetalle" class="modal-historial">
         <div class="modal-box">
@@ -1294,5 +1079,3 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-@* </body>
-</html> *@
