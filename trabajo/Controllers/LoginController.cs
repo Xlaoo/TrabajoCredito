@@ -20,6 +20,11 @@ namespace trabajo.Controllers
         private readonly UsuarioContext _Context;
         private static string codigoGlobal = "";
         private readonly EmailService _emailService = new EmailService();
+        private static string codigoLogin = "";
+        private static string dniLoginPendiente = "";
+
+        // Hora en la que vence el código de inicio de sesión
+        private static DateTime codigoLoginExpira = DateTime.MinValue;
 
         public LoginController(IusuarioServices usuarioService, UsuarioContext context)
         {
@@ -151,80 +156,95 @@ namespace trabajo.Controllers
         }
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> IniciarSesion(string dni, string clave)
+        public IActionResult IniciarSesion(string dni, string clave)
         {
-            if (string.IsNullOrWhiteSpace(dni) || !Regex.IsMatch(dni, @"^\d{8}$"))
+            try
             {
-                ViewData["Mensaje"] = "El DNI debe tener exactamente 8 números.";
-                return View();
-            }
+                // ==========================================
+                // VALIDAR DNI
+                // ==========================================
 
-            bool dniExiste = _Context.Usuario.Any(x => x.Dni == dni);
-
-            if (!dniExiste)
-            {
-                ViewData["Mensaje"] = "No estás registrado. Primero debes crear una cuenta.";
-                return View();
-            }
-
-            Usuario usuarioEncontrado = _Context.Usuario.FirstOrDefault(x =>
-                x.Dni == dni &&
-                x.clave == utilidades.EncriptarClave(clave)
-            );
-
-            if (usuarioEncontrado == null)
-            {
-                ViewData["Mensaje"] = "La contraseña es incorrecta.";
-                return View();
-            }
-
-            List<Claim> claims = new List<Claim>()
-            {
-             new Claim(ClaimTypes.Name, usuarioEncontrado.Nombre),
-             new Claim("Apellido", usuarioEncontrado.Apellido),
-             new Claim("Dni", usuarioEncontrado.Dni),
-             new Claim("Celular", usuarioEncontrado.Celular),
-             new Claim("Correo", usuarioEncontrado.Correo),
-             new Claim(ClaimTypes.Role, usuarioEncontrado.Rol)
-
-            };
-
-            ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-
-            AuthenticationProperties properties = new AuthenticationProperties()
-            {
-                AllowRefresh = true,
-            };
-
-            await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(claimsIdentity),
-            properties
-            );
-            usuarioEncontrado.EstadoActivo = true;
-            usuarioEncontrado.UltimaConexion = DateTime.Now;
-            _Context.SaveChanges();
-            if (usuarioEncontrado.Rol == "Analista")
-            {
-                return RedirectToAction("ProgramaAnalista", "Analista");
-            }
-            else if (usuarioEncontrado.Rol == "Administrador")
-            {
-                _Context.ACTIVIDAD_ADMINISTRADOR.Add(new ActividadAdministrador
+                if (string.IsNullOrWhiteSpace(dni) ||
+                    !Regex.IsMatch(dni, @"^\d{8}$"))
                 {
-                    IdUsuario = usuarioEncontrado.Id,
-                    Tipo = "Inicio de sesión",
-                    Descripcion = $"El administrador {usuarioEncontrado.Nombre} {usuarioEncontrado.Apellido} inició sesión correctamente.",
-                    Fecha = DateTime.Now
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El DNI debe tener exactamente 8 números."
+                    });
+                }
+
+
+                // ==========================================
+                // VERIFICAR SI EL DNI EXISTE
+                // ==========================================
+
+                bool dniExiste =
+                    _Context.Usuario.Any(x => x.Dni == dni);
+
+                if (!dniExiste)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No estás registrado. Primero debes crear una cuenta."
+                    });
+                }
+
+
+                // ==========================================
+                // VERIFICAR DNI + CONTRASEÑA
+                // ==========================================
+
+                string claveEncriptada =
+                    utilidades.EncriptarClave(clave);
+
+                Usuario usuarioEncontrado =
+                    _Context.Usuario.FirstOrDefault(x =>
+                        x.Dni == dni &&
+                        x.clave == claveEncriptada
+                    );
+
+
+                // ==========================================
+                // CONTRASEÑA INCORRECTA
+                // ==========================================
+
+                if (usuarioEncontrado == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La contraseña es incorrecta."
+                    });
+                }
+
+
+                // ==========================================
+                // DNI + CONTRASEÑA CORRECTOS
+                // ==========================================
+                // TODAVÍA NO INICIAMOS SESIÓN.
+                // Primero pedimos el código de seguridad.
+
+                dniLoginPendiente =
+                    usuarioEncontrado.Dni;
+
+
+                return Json(new
+                {
+                    ok = true,
+                    mostrarVerificacion = true,
+                    correo = usuarioEncontrado.Correo
                 });
-
-                _Context.SaveChanges();
-
-                return RedirectToAction("ProgramaAdministrador", "Administrador");
             }
-
-            return RedirectToAction("DashboardCliente", "Login");
-
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "Error del servidor: " + ex.Message
+                });
+            }
         }
 
         [HttpGet]
@@ -295,6 +315,215 @@ namespace trabajo.Controllers
             catch (Exception ex)
             {
                 return Json(new { ok = false, mensaje = ex.ToString() });
+            }
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> EnviarCodigoLogin()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dniLoginPendiente))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La sesión de verificación ha expirado."
+                    });
+                }
+
+                Usuario usuario = _Context.Usuario
+                    .FirstOrDefault(x => x.Dni == dniLoginPendiente);
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró el usuario."
+                    });
+                }
+
+                string caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+                Random random = new Random();
+
+                codigoLogin = new string(
+                    Enumerable.Repeat(caracteres, 6)
+                        .Select(s => s[random.Next(s.Length)])
+                        .ToArray()
+                );
+                // El código solamente será válido durante 1 minuto
+                codigoLoginExpira = DateTime.UtcNow.AddMinutes(1);
+                await _emailService.EnviarCodigoAsync(
+                    usuario.Correo,
+                    codigoLogin
+                );
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = "Código enviado correctamente.",
+                    correo = usuario.Correo
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "No se pudo enviar el código: " + ex.Message
+                });
+            }
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerificarCodigoLogin(string codigo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dniLoginPendiente))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La verificación ha expirado. Inicia sesión nuevamente."
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(codigo))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Ingresa el código de seguridad."
+                    });
+                }
+
+                // ==========================================
+                // VERIFICAR SI EL CÓDIGO YA EXPIRÓ
+                // ==========================================
+
+                if (DateTime.UtcNow > codigoLoginExpira)
+                {
+                    codigoLogin = "";
+
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = true,
+                        mensaje = "El código de seguridad ha expirado. Solicita un nuevo código."
+                    });
+                }
+                if (codigo != codigoLogin)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El código de seguridad es incorrecto."
+                    });
+                }
+
+                Usuario usuarioEncontrado = _Context.Usuario
+                    .FirstOrDefault(x => x.Dni == dniLoginPendiente);
+
+                if (usuarioEncontrado == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró el usuario."
+                    });
+                }
+
+                List<Claim> claims = new List<Claim>()
+        {
+            new Claim(ClaimTypes.Name, usuarioEncontrado.Nombre),
+            new Claim("Apellido", usuarioEncontrado.Apellido),
+            new Claim("Dni", usuarioEncontrado.Dni),
+            new Claim("Celular", usuarioEncontrado.Celular),
+            new Claim("Correo", usuarioEncontrado.Correo),
+            new Claim(ClaimTypes.Role, usuarioEncontrado.Rol)
+        };
+
+                ClaimsIdentity claimsIdentity =
+                    new ClaimsIdentity(
+                        claims,
+                        CookieAuthenticationDefaults.AuthenticationScheme
+                    );
+
+                AuthenticationProperties properties =
+                    new AuthenticationProperties()
+                    {
+                        AllowRefresh = true,
+                    };
+
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(claimsIdentity),
+                    properties
+                );
+
+                usuarioEncontrado.EstadoActivo = true;
+                usuarioEncontrado.UltimaConexion = DateTime.Now;
+
+                _Context.SaveChanges();
+
+                // Limpiar código utilizado
+                codigoLogin = "";
+                dniLoginPendiente = "";
+                codigoLoginExpira = DateTime.MinValue;
+                string url;
+
+                if (usuarioEncontrado.Rol == "Analista")
+                {
+                    url = Url.Action(
+                        "ProgramaAnalista",
+                        "Analista"
+                    );
+                }
+                else if (usuarioEncontrado.Rol == "Administrador")
+                {
+                    _Context.ACTIVIDAD_ADMINISTRADOR.Add(
+                        new ActividadAdministrador
+                        {
+                            IdUsuario = usuarioEncontrado.Id,
+                            Tipo = "Inicio de sesión",
+                            Descripcion =
+                                $"El administrador {usuarioEncontrado.Nombre} {usuarioEncontrado.Apellido} inició sesión correctamente.",
+                            Fecha = DateTime.Now
+                        }
+                    );
+
+                    _Context.SaveChanges();
+
+                    url = Url.Action(
+                        "ProgramaAdministrador",
+                        "Administrador"
+                    );
+                }
+                else
+                {
+                    url = Url.Action(
+                        "DashboardCliente",
+                        "Login"
+                    );
+                }
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = "Verificación correcta.",
+                    redirectUrl = url
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "Ocurrió un error al verificar el código: " + ex.Message
+                });
             }
         }
         public IActionResult DashboardCliente()
