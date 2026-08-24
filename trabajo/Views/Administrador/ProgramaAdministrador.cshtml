@@ -1,0 +1,507 @@
+
+@using trabajo.Models.ViewModels
+@model AdminDashboardViewModel
+
+
+@{
+    Layout = "~/Views/Shared/_LayoutAdministrador.cshtml";
+    ViewData["Title"] = "Panel de Administración";
+    ViewData["ActivePage"] = "Inicio";
+}
+
+<div class="top-navbar-view">
+
+    <div class="navbar-left">
+        <span class="navbar-welcome">Bienvenido Administrador</span>
+    </div>
+
+    <div class="navbar-right">
+
+
+        <div class="navbar-user-box">
+
+            <div class="profile-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+
+            <div class="profile-user-info">
+                <span class="user-name">@ViewBag.AdminNombre</span>
+                <span class="user-email">@ViewBag.AdminCorreo</span>
+            </div>
+
+            <i class="fas fa-chevron-down profile-chevron"></i>
+
+        </div>
+
+    </div>
+
+</div>
+@if (TempData["MensajeOk"] != null)
+{
+    <div class="mensaje-admin mensaje-ok">
+        <i class="fas fa-check-circle"></i>
+        <span>@TempData["MensajeOk"]</span>
+    </div>
+}
+
+@if (TempData["MensajeError"] != null)
+{
+    <div class="mensaje-admin mensaje-error">
+        <i class="fas fa-times-circle"></i>
+        <span>@TempData["MensajeError"]</span>
+    </div>
+}
+@if (ViewBag.MostrarRecordatorios == true && ((List<string>)ViewBag.RecordatoriosAdmin).Any())
+{
+    <div class="admin-recordatorios-card">
+
+        <div class="recordatorios-header">
+            <i class="fas fa-bell"></i>
+
+            <div>
+                <h3>Recordatorios del Administrador</h3>
+                <p>Estas son las tareas que requieren tu atención.</p>
+            </div>
+
+        </div>
+
+        @foreach (string aviso in ViewBag.RecordatoriosAdmin)
+        {
+            <div class="recordatorio-item">
+                <i class="fas fa-circle-exclamation"></i>
+                <span>@aviso</span>
+            </div>
+        }
+
+    </div>
+}
+@if (ViewBag.MostrarNotificacionesSistema == true && ((List<string>)ViewBag.NotificacionesSistemaAdmin).Any())
+{
+    <div class="admin-sistema-alertas-card">
+        <div class="sistema-alertas-header">
+            <i class="fas fa-bell"></i>
+            <div>
+                <h3>Notificaciones del Sistema</h3>
+                <p>Alertas internas generadas automáticamente.</p>
+            </div>
+        </div>
+
+        @foreach (string alerta in ViewBag.NotificacionesSistemaAdmin)
+        {
+            <div class="sistema-alerta-item">
+                <i class="fas fa-info-circle"></i>
+                <span>@alerta</span>
+            </div>
+        }
+    </div>
+}
+@if (ViewBag.NotificacionCorreoActiva == true && ((List<string>)ViewBag.AlertasCorreoAdmin).Any())
+{
+    <div class="admin-correo-card">
+        <div>
+            <h3><i class="fas fa-envelope"></i> Notificaciones por Correo</h3>
+            <p>Tienes alertas listas para enviar a tu correo administrativo.</p>
+        </div>
+
+        <form asp-controller="Administrador" asp-action="EnviarAlertasCorreoAdmin" method="post">
+            <button type="submit" class="btn-enviar-correo-admin">
+                <i class="fas fa-paper-plane"></i> Enviar alertas a mi correo
+            </button>
+        </form>
+    </div>
+}
+<section class="stats">
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon clientes-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div>
+                <div class="stat-title">Clientes Registrados</div>
+                <div class="stat-label">Total activos</div>
+            </div>
+        </div>
+        <div class="stat-value">@Model.TotalClientes</div>
+        <div class="stat-subtitle">
+            ↑ <span class="positive">@Model.ClientesEstesMes</span> este mes
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon creditos-icon">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div>
+                <div class="stat-title">Créditos Otorgados</div>
+                <div class="stat-label">Aprobados</div>
+            </div>
+        </div>
+        <div class="stat-value">@Model.TotalCreditosAprobados</div>
+        <div class="stat-subtitle">
+            Monto total: <strong>S/ @Model.MontoOtorgado.ToString("N2")</strong>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon evaluacion-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div>
+                <div class="stat-title">Créditos en Evaluación</div>
+                <div class="stat-label">Pendientes y en evaluación</div>
+            </div>
+        </div>
+        <div class="stat-value">@Model.TotalEnEvaluacion</div>
+        <div class="stat-subtitle">
+            Monto total: <strong>S/ @Model.MontoEnEvaluacion.ToString("N2")</strong>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon mora-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div>
+                <div class="stat-title">Pagos en Mora</div>
+                <div class="stat-label">Cuotas vencidas</div>
+            </div>
+        </div>
+        <div class="stat-value">@Model.TotalCuotasEnMora</div>
+        <div class="stat-subtitle">
+            Monto: <strong class="negative">S/ @Model.MontoEnMora.ToString("N2")</strong>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <div style="width:60px; height:60px; min-width:60px; border-radius:15px; background:linear-gradient(135deg,#1d8cf8,#0057d9); display:flex; align-items:center; justify-content:center; color:white; font-size:30px;">
+                <i class="fas fa-file-alt"></i>
+            </div>
+
+            <div>
+                <div class="stat-title">Reportes Generados</div>
+                <div class="stat-label">Este mes</div>
+            </div>
+        </div>
+
+        <div class="stat-value">@Model.TotalReportesGenerados</div>
+
+        <div class="stat-subtitle">
+            <span class="positive">↑ 20%</span>
+        </div>
+    </div>
+
+</section>
+<section class="admin-dashboard-grid">
+
+    <div class="admin-panel-card">
+        <h3><i class="far fa-clock"></i> Actividad Reciente</h3>
+
+        <div id="contenedorActividades" class="activities-container">
+
+            @if (!Model.ActividadesRecientes.Any())
+            {
+                <div class="quick-report-empty">
+                    <i class="fas fa-circle-info"></i>
+                    No hay actividades recientes.
+                </div>
+            }
+            else
+            {
+                @for (int i = 0; i < Model.ActividadesRecientes.Count; i++)
+                {
+                    var item = Model.ActividadesRecientes[i];
+
+                    <div class="activity-item @(i >= 3 ? "activity-hidden" : "")">
+                        <div class="activity-icon @item.Color">
+                            <i class="@item.Icono"></i>
+                        </div>
+
+                        <div class="activity-content">
+                            <strong>@item.Titulo</strong>
+                            <span>@item.Descripcion</span>
+                        </div>
+
+                        <div class="activity-date">
+                            @item.Fecha.ToString("dd/MM/yyyy hh:mm tt")
+                        </div>
+                    </div>
+                }
+            }
+
+        </div>
+
+        @if (Model.ActividadesRecientes.Count > 3)
+        {
+            <button type="button" class="btn-view-all" id="btnToggleActividades">
+                Ver todas las actividades <i class="fas fa-arrow-right"></i>
+            </button>
+        }
+    </div>
+
+    <div class="admin-panel-card">
+        <h3><i class="fas fa-chart-pie"></i> Resumen de Créditos</h3>
+
+        <div class="credit-summary-box">
+            <div class="donut-chart">
+                <div class="donut-center">
+                    <span>Total</span>
+                    <strong>@Model.TotalResumenCreditos</strong>
+                    <small>Créditos</small>
+                </div>
+            </div>
+
+            <div class="credit-legend">
+                <div><span class="legend green"></span> Aprobados <strong>@Model.CreditosAprobados</strong></div>
+                <div><span class="legend orange"></span> En Evaluación <strong>@Model.CreditosEnEvaluacion</strong></div>
+                <div><span class="legend purple"></span> Desembolsados <strong>@Model.CreditosDesembolsados</strong></div>
+                <div><span class="legend red"></span> Rechazados <strong>@Model.CreditosRechazados</strong></div>
+            </div>
+        </div>
+    </div>
+
+</section>
+<section class="admin-bottom-grid">
+
+    <div class="admin-panel-card">
+        <h3><i class="fas fa-file-alt"></i> Reportes Rápidos</h3>
+
+        <div class="quick-reports quick-reports-rows">
+
+            <div class="quick-report-row">
+                <a class="quick-report-item purple" asp-controller="Administrador" asp-action="ReporteClientesExcel">
+                    <i class="fas fa-file-excel"></i>
+                    <div><strong>Clientes Excel</strong><span>Descargar actualizado</span></div>
+                </a>
+
+                <a class="quick-report-item purple" asp-controller="Administrador" asp-action="ReporteClientesPdfRapido">
+                    <i class="fas fa-file-pdf"></i>
+                    <div><strong>Clientes PDF</strong><span>Descargar actualizado</span></div>
+                </a>
+            </div>
+
+            <div class="quick-report-row">
+                <a class="quick-report-item green" asp-controller="Administrador" asp-action="ReporteCreditosExcel">
+                    <i class="fas fa-file-excel"></i>
+                    <div><strong>Créditos Excel</strong><span>Descargar actualizado</span></div>
+                </a>
+
+                <a class="quick-report-item green" asp-controller="Administrador" asp-action="ReporteCreditosPdfRapido">
+                    <i class="fas fa-file-pdf"></i>
+                    <div><strong>Créditos PDF</strong><span>Descargar actualizado</span></div>
+                </a>
+            </div>
+
+            <div class="quick-report-row">
+                <a class="quick-report-item orange" asp-controller="Administrador" asp-action="ReportePagosExcel">
+                    <i class="fas fa-file-excel"></i>
+                    <div><strong>Pagos Excel</strong><span>Descargar actualizado</span></div>
+                </a>
+
+                <a class="quick-report-item orange" asp-controller="Administrador" asp-action="ReportePagosPdfRapido">
+                    <i class="fas fa-file-pdf"></i>
+                    <div><strong>Pagos PDF</strong><span>Descargar actualizado</span></div>
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="admin-panel-card">
+        <h3><i class="fas fa-sliders-h"></i> Distribución de Pagos (Este Mes)</h3>
+
+        <div class="payment-row">
+            <span>Completados</span>
+            <div class="payment-bar">
+                <div class="payment-fill green" style="width:@Model.PorcentajePagosCompletados%"></div>
+            </div>
+            <strong>@Model.PagosCompletadosMes (@Model.PorcentajePagosCompletados%)</strong>
+        </div>
+
+        <div class="payment-row">
+            <span>Pendientes</span>
+            <div class="payment-bar">
+                <div class="payment-fill orange" style="width:@Model.PorcentajePagosPendientes%"></div>
+            </div>
+            <strong>@Model.PagosPendientesMes (@Model.PorcentajePagosPendientes%)</strong>
+        </div>
+
+        <div class="payment-row">
+            <span>En Mora</span>
+            <div class="payment-bar">
+                <div class="payment-fill red" style="width:@Model.PorcentajePagosMora%"></div>
+            </div>
+            <strong>@Model.PagosMoraMes (@Model.PorcentajePagosMora%)</strong>
+        </div>
+    </div>
+
+</section>
+<section class="system-info-card">
+    <h3><i class="fas fa-cog"></i> Información del Sistema</h3>
+
+    <div class="system-info-grid">
+
+        <div class="system-item">
+            <div class="system-icon blue">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <div>
+                <span>Último Respaldo</span>
+                <strong>@Model.UltimoRespaldo.ToString("dd/MM/yyyy, hh:mm tt")</strong>
+            </div>
+        </div>
+
+        <div class="system-item">
+            <div class="system-icon purple">
+                <i class="fas fa-users"></i>
+            </div>
+            <div>
+                <span>Usuarios del Sistema</span>
+                <strong>@Model.UsuariosSistemaActivos</strong>
+                <small>Clientes</small>
+            </div>
+        </div>
+
+        <div class="system-item">
+            <div class="system-icon green">
+                <i class="fas fa-database"></i>
+            </div>
+            <div>
+                <span>Base de Datos</span>
+                <strong>Estado: <b class="positive">@Model.EstadoBaseDatos</b></strong>
+            </div>
+        </div>
+
+        <div class="system-item">
+            <div class="system-icon code">
+                <i class="fas fa-code"></i>
+            </div>
+            <div>
+                <span>Versión del Sistema</span>
+                <strong>@Model.VersionSistema</strong>
+            </div>
+        </div>
+
+        <div class="system-item storage-item">
+            <div class="system-icon storage">
+                <i class="fas fa-chart-pie"></i>
+            </div>
+            <div>
+                <span>Almacenamiento</span>
+                <strong>@Model.PorcentajeAlmacenamiento% utilizado</strong>
+                <div class="storage-bar">
+                    <div style="width:@Model.PorcentajeAlmacenamiento%"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+             if (localStorage.getItem("ultimoTotalInicioClientes") === null) {
+            localStorage.setItem("ultimoTotalInicioClientes", "@Model.TotalClientes");
+        }
+
+                detectarCambio(
+            "ultimoTotalInicioClientes",
+            "@Model.TotalClientes",
+            "notificacionesInicio",
+            "inicioVisto"
+        );
+
+        detectarCambio(
+            "ultimoTotalInicioCreditos",
+            "@Model.TotalCreditosAprobados",
+            "notificacionesInicio",
+            "inicioVisto"
+        );
+
+        detectarCambio(
+            "ultimoTotalInicioMora",
+            "@Model.TotalCuotasEnMora",
+            "notificacionesInicio",
+            "inicioVisto"
+        );
+                detectarCambio(
+            "ultimoTotalInicioReportes",
+            "@Model.TotalReportesGenerados",
+            "notificacionesInicio",
+            "inicioVisto"
+        );
+
+        detectarCambio(
+            "ultimoTotalInicioPagos",
+            "@Model.PagosCompletadosMes",
+            "notificacionesInicio",
+            "inicioVisto"
+        );
+        const btnToggle = document.getElementById("btnToggleActividades");
+        const hiddenActivities = document.querySelectorAll(".activity-hidden");
+        const container = document.getElementById("contenedorActividades");
+
+        let mostrandoTodo = false;
+
+        if (btnToggle) {
+            btnToggle.addEventListener("click", function () {
+                mostrandoTodo = !mostrandoTodo;
+
+                hiddenActivities.forEach(item => {
+                    if (mostrandoTodo) {
+                        item.classList.add("mostrar-actividad");
+                    } else {
+                        item.classList.remove("mostrar-actividad");
+                    }
+                });
+
+                if (mostrandoTodo) {
+                    container.classList.add("expandido");
+                    btnToggle.innerHTML = '← Ver menos actividades';
+                } else {
+                    container.classList.remove("expandido");
+                    btnToggle.innerHTML = 'Ver todas las actividades <i class="fas fa-arrow-right"></i>';
+                }
+            });
+        }
+                       window.addEventListener("load", function () {
+
+            const cantidad = parseInt(localStorage.getItem("notificacionesInicio") || "0");
+
+            const badgeSuperior = document.querySelector(".navbar-notifications .badge-count");
+
+            if (badgeSuperior) {
+                badgeSuperior.innerText = cantidad;
+
+                if (cantidad > 0) {
+                    badgeSuperior.style.display = "inline-flex";
+                } else {
+                    badgeSuperior.style.display = "none";
+                }
+            }
+
+            const campana = document.querySelector(".navbar-notifications");
+
+            if (campana) {
+                campana.addEventListener("click", function () {
+                    localStorage.setItem("notificacionesInicio", "0");
+                    localStorage.setItem("inicioVisto", "true");
+
+                    if (badgeSuperior) {
+                        badgeSuperior.innerText = "0";
+                        badgeSuperior.style.display = "none";
+                    }
+
+                    const badgeMenu = document.getElementById("badgeInicioMenu");
+                    if (badgeMenu) {
+                        badgeMenu.style.display = "none";
+                        badgeMenu.innerText = "";
+                    }
+                });
+            }
+        });
+    </script>
+}

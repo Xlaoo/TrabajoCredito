@@ -1,0 +1,1398 @@
+﻿@model trabajo.Models.ViewModels.AdminAnalistaViewModel
+
+@{
+    Layout = "~/Views/Shared/_LayoutAdministrador.cshtml";
+    ViewData["Title"] = "Analistas";
+    ViewData["ActivePage"] = "Analistas";
+
+    bool sinAnalista = Model == null || Model.IdAnalista <= 0;
+
+    string nombreAnalista = sinAnalista || string.IsNullOrWhiteSpace(Model?.NombreAnalista)
+        ? "Sin analista asignado"
+        : Model!.NombreAnalista.Trim();
+
+    string inicialAnalista = string.IsNullOrWhiteSpace(nombreAnalista)
+        ? "A"
+        : nombreAnalista.Substring(0, 1).ToUpper();
+
+    string estadoClase = !sinAnalista && Model!.EstadoActivo ? "activo" : "inactivo";
+    string estadoTexto = !sinAnalista && Model!.EstadoActivo ? "Activo" : "Inactivo";
+}
+
+<style>
+    .analistas-page {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0 28px 28px 28px;
+        box-sizing: border-box;
+    }
+
+        .analistas-page * {
+            box-sizing: border-box;
+        }
+
+    .analistas-topbar {
+        width: 100%;
+        min-height: 72px;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 16px 24px;
+        margin-bottom: 34px;
+        box-shadow: 0 10px 30px rgba(31, 11, 74, 0.06);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+    }
+
+    .analistas-topbar-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #230044;
+    }
+
+    .analistas-topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .analistas-bell {
+        position: relative;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #33005c;
+        font-size: 19px;
+    }
+
+    .analistas-bell-badge {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 15px;
+        height: 15px;
+        background: #ef4444;
+        color: #ffffff;
+        border-radius: 50%;
+        font-size: 9px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .analistas-user-info {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.15;
+    }
+
+        .analistas-user-info strong {
+            font-size: 14px;
+            font-weight: 800;
+            color: #21003f;
+        }
+
+        .analistas-user-info small {
+            margin-top: 4px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+    .analistas-avatar-admin {
+        position: relative;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: #5b0aa3;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+        .analistas-avatar-admin::after {
+            content: "";
+            position: absolute;
+            right: 1px;
+            bottom: 1px;
+            width: 9px;
+            height: 9px;
+            background: #22c55e;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+        }
+
+    .analistas-header {
+        margin-bottom: 28px;
+    }
+
+    .analistas-title {
+        font-size: 32px;
+        font-weight: 900;
+        color: #21003f;
+        margin: 0 0 7px 0;
+        letter-spacing: -0.5px;
+    }
+
+    .analistas-subtitle {
+        font-size: 14px;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    .no-analista-box {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #9a3412;
+        border-radius: 18px;
+        padding: 18px 20px;
+        margin-bottom: 24px;
+        font-size: 14px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .analista-main-card {
+        background: linear-gradient(135deg, #ffffff 0%, #faf7ff 100%);
+        border-radius: 22px;
+        padding: 28px;
+        box-shadow: 0 16px 42px rgba(31, 11, 74, 0.09);
+        border: 1px solid #f0e7ff;
+        margin-bottom: 28px;
+        display: grid;
+        grid-template-columns: 1.35fr 1fr;
+        gap: 28px;
+        align-items: center;
+    }
+
+    .analista-profile {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+    }
+
+    .analista-avatar {
+        width: 94px;
+        height: 94px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #7c3aed, #4c1d95);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 42px;
+        font-weight: 900;
+        box-shadow: 0 18px 34px rgba(109, 40, 217, 0.28);
+        flex-shrink: 0;
+    }
+
+    .analista-profile-info h2 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 900;
+        color: #21003f;
+    }
+
+    .analista-profile-info p {
+        margin: 6px 0 14px;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .analista-status-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .analista-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+        transition: all 0.2s ease;
+    }
+
+        .analista-status.activo {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .analista-status.inactivo {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+    .analista-status-note {
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .analista-contact-btn {
+        height: 36px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: none;
+        background: #6d28d9;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 900;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+        .analista-contact-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+    .analista-info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .analista-info-item {
+        background: #ffffff;
+        border: 1px solid #eee7ff;
+        border-radius: 14px;
+        padding: 14px;
+        min-height: 74px;
+    }
+
+        .analista-info-item span {
+            display: block;
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .analista-info-item strong {
+            display: block;
+            color: #1f2937;
+            font-size: 14px;
+            font-weight: 900;
+            word-break: break-word;
+        }
+
+    .analistas-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 22px;
+        margin-bottom: 28px;
+    }
+
+    .analista-stat-card {
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 22px;
+        min-height: 150px;
+        box-shadow: 0 12px 35px rgba(31, 11, 74, 0.08);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .analista-stat-top {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+    }
+
+    .analista-stat-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 13px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 21px;
+        flex-shrink: 0;
+    }
+
+        .analista-stat-icon.purple {
+            background: linear-gradient(135deg, #7c3aed, #9333ea);
+        }
+
+        .analista-stat-icon.green {
+            background: linear-gradient(135deg, #10b981, #22c55e);
+        }
+
+        .analista-stat-icon.orange {
+            background: linear-gradient(135deg, #f59e0b, #fb923c);
+        }
+
+        .analista-stat-icon.blue {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+        }
+
+    .analista-stat-top h4 {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 900;
+        color: #1f2937;
+    }
+
+    .analista-stat-top p {
+        margin: 4px 0 0;
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .analista-stat-card h2 {
+        margin: 18px 0 0;
+        color: #28005c;
+        font-size: 32px;
+        font-weight: 900;
+        letter-spacing: -0.5px;
+    }
+
+    .analistas-content-grid {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 28px;
+    }
+
+    .analistas-panel {
+        background: #ffffff;
+        border-radius: 22px;
+        box-shadow: 0 12px 35px rgba(31, 11, 74, 0.08);
+        overflow: hidden;
+    }
+
+    .analistas-panel-header {
+        padding: 22px 24px;
+        border-bottom: 1px solid #eef0f5;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+    }
+
+    .analistas-panel-title {
+        margin: 0;
+        color: #21003f;
+        font-size: 20px;
+        font-weight: 900;
+    }
+
+    .analistas-panel-subtitle {
+        margin: 4px 0 0;
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .activity-list {
+        padding: 22px 24px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        max-height: 460px;
+        overflow-y: auto;
+    }
+
+    .activity-item {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        border: 1px solid #eef0f5;
+        border-radius: 16px;
+        padding: 15px;
+        background: #fbfbff;
+    }
+
+    .activity-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: #ede9fe;
+        color: #6d28d9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .activity-item h4 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 900;
+        color: #1f2937;
+    }
+
+    .activity-item p {
+        margin: 5px 0 7px;
+        font-size: 13px;
+        color: #6b7280;
+        line-height: 1.35;
+    }
+
+    .activity-item small {
+        color: #8b5cf6;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .chat-panel {
+        display: flex;
+        flex-direction: column;
+        height: 590px;
+    }
+
+    .chat-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 11px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+        .chat-status.activo {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .chat-status.inactivo {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+    .chat-messages {
+        flex: 1;
+        padding: 22px 24px;
+        overflow-y: auto;
+        background: linear-gradient(180deg, #ffffff 0%, #faf7ff 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .chat-empty {
+        height: 100%;
+        min-height: 220px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: #6b7280;
+        gap: 10px;
+    }
+
+        .chat-empty i {
+            font-size: 40px;
+            color: #a78bfa;
+        }
+
+    .chat-message {
+        max-width: 75%;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+        .chat-message.admin {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .chat-message.analista {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+    .chat-bubble {
+        padding: 12px 14px;
+        border-radius: 16px;
+        font-size: 14px;
+        line-height: 1.45;
+        word-break: break-word;
+    }
+
+    .chat-message.admin .chat-bubble {
+        background: #6d28d9;
+        color: #ffffff;
+        border-bottom-right-radius: 5px;
+    }
+
+    .chat-message.analista .chat-bubble {
+        background: #ffffff;
+        color: #1f2937;
+        border: 1px solid #e9e2ff;
+        border-bottom-left-radius: 5px;
+    }
+
+    .chat-meta {
+        font-size: 11px;
+        color: #94a3b8;
+        font-weight: 700;
+    }
+
+    .chat-form {
+        border-top: 1px solid #eef0f5;
+        padding: 16px;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+        .chat-form input {
+            flex: 1;
+            height: 46px;
+            border: 1px solid #e5e7eb;
+            border-radius: 999px;
+            padding: 0 16px;
+            outline: none;
+            font-size: 14px;
+            color: #1f2937;
+        }
+
+            .chat-form input:focus {
+                border-color: #7c3aed;
+                box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+            }
+
+            .chat-form input:disabled {
+                background: #f8fafc;
+                color: #94a3b8;
+                cursor: not-allowed;
+            }
+
+    .chat-send-btn {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        border: none;
+        background: #6d28d9;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+        .chat-send-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+    @@media (max-width: 1200px) {
+        .analista-main-card,
+        .analistas-content-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .analistas-stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 700px) {
+        .analistas-page {
+            padding: 0 16px 24px 16px;
+        }
+
+        .analistas-topbar {
+            height: auto;
+            padding: 18px 20px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .analistas-topbar-right {
+            flex-wrap: wrap;
+        }
+
+        .analista-profile {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .analista-info-grid,
+        .analistas-stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .chat-message {
+            max-width: 90%;
+        }
+    }
+</style>
+
+<div class="analistas-page">
+
+    <div class="analistas-topbar">
+        <div class="analistas-topbar-title">
+            Bienvenido Administrador
+        </div>
+
+        <div class="analistas-topbar-right">
+            <div class="analistas-bell">
+                <i class="far fa-bell"></i>
+                <span class="analistas-bell-badge">0</span>
+            </div>
+
+            <div class="analistas-user-info">
+                <strong>@(ViewBag.AdminNombre ?? "Administrador")</strong>
+                <small>@(ViewBag.AdminCorreo ?? "admin@crediplus.com")</small>
+            </div>
+
+            <div class="analistas-avatar-admin">
+                <i class="fas fa-user"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="analistas-header">
+        <h1 class="analistas-title">Analista</h1>
+        <p class="analistas-subtitle">Gestión del analista asignado y comunicación directa.</p>
+    </div>
+
+    @if (sinAnalista)
+    {
+        <div class="no-analista-box">
+            <i class="fas fa-triangle-exclamation"></i>
+            No existe un usuario con rol Analista registrado en la base de datos.
+        </div>
+    }
+    <div style="display:flex;justify-content:flex-end;align-items:flex-start;margin-bottom:14px;">
+        <button type="button"
+                class="analista-contact-btn"
+                style="background:#ef4444;"
+                data-bs-toggle="modal"
+                data-bs-target="#modalReemplazarAnalista"
+                disabled="@(sinAnalista ? "disabled" : null)">
+            <i class="fas fa-trash"></i>
+            Eliminar Analista
+        </button>
+    </div>
+    <div class="analista-main-card">
+        <div class="analista-profile">
+            <div class="analista-avatar">@inicialAnalista</div>
+
+            <div class="analista-profile-info">
+                <h2>@nombreAnalista</h2>
+                <p>Analista de Riesgo asignado al módulo administrativo.</p>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;color:#64748b;font-size:13px;font-weight:700;">
+                    <span><i class="fas fa-id-card"></i> DNI: @(Model?.DniAnalista ?? "---")</span>
+                    <span><i class="fas fa-envelope"></i> @(Model?.CorreoAnalista ?? "---")</span>
+                    <span><i class="fas fa-phone"></i> @(Model?.CelularAnalista ?? "---")</span>
+                </div>
+
+                <div class="analista-status-row">
+                    <span id="estadoAnalistaBadge" class="analista-status @estadoClase">
+                        <i class="fas fa-circle"></i>
+                        <span class="estado-texto">@estadoTexto</span>
+                    </span>
+
+                    <span id="ultimaConexionAnalista" class="analista-status-note">
+                        Estado actualizado en tiempo real
+                    </span>
+                    <button type="button"
+                            class="analista-contact-btn"
+                            style="background:white;color:#6d28d9;border:2px solid #6d28d9;"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalPerfilAnalista"
+                            disabled="@(sinAnalista ? "disabled" : null)">
+                        <i class="fas fa-eye"></i>
+                        Ver Perfil Completo
+                    </button>
+                    <button type="button"
+                            class="analista-contact-btn"
+                            data-bs-toggle="modal"
+                            data-bs-target="#modalChatAnalista"
+                            disabled="@(sinAnalista ? "disabled" : null)">
+                        <i class="fas fa-comments"></i>
+                        Contactar
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:18px;border-left:1px solid #eee7ff;padding-left:34px;max-width:360px;">
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div class="analista-stat-icon purple">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div>
+                    <span style="font-size:13px;color:#64748b;font-weight:800;">Fecha Asignación</span>
+                    <strong style="display:block;font-size:15px;color:#21003f;">@(Model == null ? "---" : Model.FechaAsignacion.ToString("dd/MM/yyyy"))</strong>
+                </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div class="analista-stat-icon purple">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div>
+                    <span style="font-size:13px;color:#64748b;font-weight:800;">Solicitudes Asignadas</span>
+                    <strong style="display:block;font-size:18px;color:#21003f;">@(Model?.SolicitudesAsignadas ?? 0)</strong>
+                </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div class="analista-stat-icon purple">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                    <span style="font-size:13px;color:#64748b;font-weight:800;">Solicitudes Completadas</span>
+                    <strong style="display:block;font-size:18px;color:#21003f;">@(Model?.SolicitudesCompletadas ?? 0)</strong>
+                    <small style="color:#22c55e;font-weight:900;">@(Model?.TasaEfectividad ?? 0)% de efectividad</small>
+                </div>
+            </div>
+        </div>
+       
+    </div>
+
+    
+
+    <div class="analistas-content-grid">
+        <div class="analistas-panel">
+            <div class="analistas-panel-header">
+                <div>
+                    <h3 class="analistas-panel-title">Actividad Reciente</h3>
+                    <p class="analistas-panel-subtitle">Últimas acciones sobre solicitudes.</p>
+                </div>
+            </div>
+
+            <div class="activity-list">
+                @if (Model?.Actividades != null && Model.Actividades.Any())
+                {
+                    foreach (var actividad in Model.Actividades)
+                    {
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="@actividad.Icono"></i>
+                            </div>
+
+                            <div>
+                                <h4>@actividad.Titulo</h4>
+                                <p>@actividad.Descripcion</p>
+                                <small>@actividad.Fecha.ToString("dd/MM/yyyy hh:mm tt")</small>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="chat-empty">
+                        <i class="fas fa-list-check"></i>
+                        <strong>Sin actividad reciente</strong>
+                        <span>No hay cambios registrados todavía.</span>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="analistas-panel">
+            <div class="analistas-panel-header">
+                <div>
+                    <h3 class="analistas-panel-title">Rendimiento del Analista</h3>
+                    <p class="analistas-panel-subtitle">Resumen general de desempeño.</p>
+                </div>
+            </div>
+
+            <div class="analistas-stats-grid" style="grid-template-columns:repeat(2,1fr);padding:24px;margin-bottom:0;">
+                <div class="analista-stat-card">
+                    <div class="analista-stat-top">
+                        <div class="analista-stat-icon green"><i class="fas fa-check"></i></div>
+                        <div>
+                            <h4>Completadas</h4>
+                            <p>Total finalizadas</p>
+                        </div>
+                    </div>
+                    <h2>@(Model?.SolicitudesCompletadas ?? 0)</h2>
+                </div>
+
+                <div class="analista-stat-card">
+                    <div class="analista-stat-top">
+                        <div class="analista-stat-icon orange"><i class="fas fa-clock"></i></div>
+                        <div>
+                            <h4>En Proceso</h4>
+                            <p>En evaluación</p>
+                        </div>
+                    </div>
+                    <h2>@(Model?.SolicitudesEnProceso ?? 0)</h2>
+                </div>
+
+                <div class="analista-stat-card">
+                    <div class="analista-stat-top">
+                        <div class="analista-stat-icon purple"><i class="fas fa-hourglass-half"></i></div>
+                        <div>
+                            <h4>Pendientes</h4>
+                            <p>Por revisar</p>
+                        </div>
+                    </div>
+                    <h2>@(Model?.SolicitudesPendientes ?? 0)</h2>
+                </div>
+
+                <div class="analista-stat-card">
+                    <div class="analista-stat-top">
+                        <div class="analista-stat-icon blue"><i class="fas fa-bullseye"></i></div>
+                        <div>
+                            <h4>Efectividad</h4>
+                            <p>Este mes</p>
+                        </div>
+                    </div>
+                    <h2>@(Model?.TasaEfectividad ?? 0)%</h2>
+                </div>
+            </div>
+        </div>
+       
+    </div>
+   
+
+</div>
+<div class="modal fade" id="modalPerfilAnalista" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="border-radius:24px;border:none;">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-user"></i> Perfil Completo del Analista
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="analista-info-grid">
+                    <div class="analista-info-item">
+                        <span>Nombre completo</span>
+                        <strong>@nombreAnalista</strong>
+                    </div>
+
+                    <div class="analista-info-item">
+                        <span>DNI</span>
+                        <strong>@(Model?.DniAnalista ?? "---")</strong>
+                    </div>
+
+                    <div class="analista-info-item">
+                        <span>Celular</span>
+                        <strong>@(Model?.CelularAnalista ?? "---")</strong>
+                    </div>
+
+                    <div class="analista-info-item">
+                        <span>Correo</span>
+                        <strong>@(Model?.CorreoAnalista ?? "---")</strong>
+                    </div>
+
+                    <div class="analista-info-item">
+                        <span>Fecha de asignación</span>
+                        <strong>@(Model == null ? "---" : Model.FechaAsignacion.ToString("dd/MM/yyyy"))</strong>
+                    </div>
+
+                    <div class="analista-info-item">
+                        <span>Solicitudes asignadas</span>
+                        <strong>@(Model?.SolicitudesAsignadas ?? 0)</strong>
+                    </div>
+
+                    <div class="analista-info-item">
+                        <span>Solicitudes completadas</span>
+                        <strong>@(Model?.SolicitudesCompletadas ?? 0)</strong>
+                    </div>
+
+                    <div class="analista-info-item">
+                        <span>Efectividad</span>
+                        <strong>@(Model?.TasaEfectividad ?? 0)%</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modalChatAnalista" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content" style="border-radius:24px;border:none;overflow:hidden;">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-comments"></i> Comunicación Directa
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-0">
+                <div class="analistas-panel chat-panel" id="panelChatAnalista">
+
+                    <div class="analistas-panel-header">
+
+                        <div>
+
+                            <h3 class="analistas-panel-title">Chat con Analista</h3>
+
+                            <p class="analistas-panel-subtitle">Mensajes en tiempo real Administrador ↔ Analista.</p>
+
+                        </div>
+
+
+
+                        <span id="chatEstadoAnalista" class="chat-status @estadoClase">
+
+                            <i class="fas fa-wifi"></i>
+
+                            <span class="chat-estado-texto">@estadoTexto</span>
+
+                        </span>
+
+                    </div>
+
+
+
+                    <div class="chat-messages" id="chatMensajes">
+
+                        @if (Model?.Mensajes != null && Model.Mensajes.Any())
+
+                        {
+
+                            foreach (var mensaje in Model.Mensajes)
+
+                            {
+
+                                var claseMensaje = mensaje.RemitenteRol == "Administrador" ? "admin" : "analista";
+
+
+
+                                <div class="chat-message @claseMensaje">
+
+                                    <div class="chat-bubble">@mensaje.Mensaje</div>
+
+                                    <div class="chat-meta">
+
+                                        @mensaje.RemitenteRol · @mensaje.FechaEnvio.ToString("dd/MM/yyyy hh:mm tt")
+
+                                    </div>
+
+                                </div>
+
+                            }
+
+                        }
+
+                        else
+
+                        {
+
+                            <div class="chat-empty" id="chatVacio">
+
+                                <i class="far fa-comments"></i>
+
+                                <strong>Aún no hay mensajes</strong>
+
+                                <span>Escribe el primer mensaje para iniciar la conversación.</span>
+
+                            </div>
+
+                        }
+
+                    </div>
+
+
+
+                    <form class="chat-form" id="formChatAnalista">
+
+                        <input type="text"
+                               id="mensajeInput"
+                               autocomplete="off"
+                               placeholder="Escribe un mensaje para el analista..."
+                               disabled="@(sinAnalista ? "disabled" : null)" />
+
+
+
+                        <button type="submit"
+                                class="chat-send-btn"
+                                id="btnEnviarMensaje"
+                                disabled="@(sinAnalista ? "disabled" : null)">
+
+                            <i class="fas fa-paper-plane"></i>
+
+                        </button>
+
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modalReemplazarAnalista" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content" style="border-radius:24px;border:none;">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-danger">
+                    <i class="fas fa-trash"></i> Reemplazar Analista
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    Para eliminar el analista actual, primero debes asignar otro analista.
+                    Al reemplazarlo, se limpiará el chat anterior.
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h5 class="fw-bold">Escoger cliente existente</h5>
+
+                        <form asp-action="ReemplazarAnalistaExistente" asp-controller="Administrador" method="post">
+                            <select name="idCliente" class="form-select mb-3" required>
+                                <option value="">Seleccione un cliente</option>
+                                @foreach (var cliente in ViewBag.ClientesDisponibles)
+                                {
+                                    <option value="@cliente.Id" disabled="@(cliente.TieneSolicitudActiva ? "disabled" : null)">
+                                        @cliente.Nombre @cliente.Apellido - DNI: @cliente.Dni
+                                        @(cliente.TieneSolicitudActiva ? " | Solicitud activa" : " | Sin solicitud")
+                                    </option>
+                                }
+                            </select>
+
+                            <button type="submit" class="btn btn-primary w-100">
+                                Convertir cliente en analista
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h5 class="fw-bold">Crear nuevo analista</h5>
+
+                        <form asp-action="CrearReemplazarAnalista" asp-controller="Administrador" method="post">
+                            <input name="nombre" class="form-control mb-2" placeholder="Nombre" required />
+                            <input name="apellido" class="form-control mb-2" placeholder="Apellido" required />
+                            <input name="dni" class="form-control mb-2" placeholder="DNI" required />
+                            <input name="celular" class="form-control mb-2" placeholder="Celular" required />
+                            <input name="correo" type="email" class="form-control mb-2" placeholder="Correo" required />
+                            <input name="clave" type="password" class="form-control mb-2" placeholder="Contraseña" required />
+
+                            <select name="genero" class="form-select mb-3" required>
+                                <option value="">Seleccione género</option>
+                                <option value="Masculino">Masculino</option>
+                                <option value="Femenino">Femenino</option>
+                            </select>
+
+                            <button type="submit" class="btn btn-success w-100">
+                                Crear y asignar analista
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@if (ViewBag.SolicitudSoporte != null)
+{
+    var solicitud = ViewBag.SolicitudSoporte;
+}
+
+@if (ViewBag.SolicitudSoporte != null)
+{
+    <div class="modal fade show"
+         id="modalSolicitudSoporte"
+         tabindex="-1"
+         style="display:block;background:rgba(0,0,0,.55);">
+
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-headset"></i>
+                        Nueva Solicitud de Soporte
+                    </h5>
+                </div>
+
+                <div class="modal-body">
+
+                    <p><b>Asunto:</b></p>
+                    <div class="form-control mb-3">
+                        @ViewBag.SolicitudSoporte.Asunto
+                    </div>
+
+                    <p><b>Mensaje:</b></p>
+                    <div class="form-control" style="min-height:140px;">
+                        @ViewBag.SolicitudSoporte.Mensaje
+                    </div>
+
+                    <br />
+
+                    <small class="text-muted">
+                        Enviado:
+                        @ViewBag.SolicitudSoporte.FechaEnvio.ToString("dd/MM/yyyy hh:mm tt")
+                    </small>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <form asp-action="ConfirmarSolicitudSoporte"
+                          method="post">
+
+                        <input type="hidden"
+                               name="id"
+                               value="@ViewBag.SolicitudSoporte.Id_Soporte" />
+
+                        <button class="btn btn-success">
+                            OK
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+}
+@if (TempData["ErrorAnalista"] != null)
+{
+    <div class="modal fade show" style="display:block;background:rgba(0,0,0,.55);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:18px;">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="fas fa-triangle-exclamation"></i> Error
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    @TempData["ErrorAnalista"]
+                </div>
+                <div class="modal-footer">
+                    <a href="@Url.Action("Analistas", "Administrador")" class="btn btn-danger">
+                        OK
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+
+    <script>
+        const idAdministrador = @(Model?.IdAdministrador ?? 0);
+        const idAnalista = @(Model?.IdAnalista ?? 0);
+        const remitenteRol = "Administrador";
+        const estadoAnalistaUrl = '@Url.Action("EstadoAnalista", "Administrador")';
+
+        const chatMensajes = document.getElementById("chatMensajes");
+        const formChat = document.getElementById("formChatAnalista");
+        const mensajeInput = document.getElementById("mensajeInput");
+        const btnEnviar = document.getElementById("btnEnviarMensaje");
+        const estadoAnalistaBadge = document.getElementById("estadoAnalistaBadge");
+        const ultimaConexionAnalista = document.getElementById("ultimaConexionAnalista");
+        const chatEstadoAnalista = document.getElementById("chatEstadoAnalista");
+
+        let connection = null;
+
+        function enfocarChat() {
+        const panel = document.getElementById("panelChatAnalista");
+
+        if (panel) {
+        panel.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        if (mensajeInput && !mensajeInput.disabled) {
+        setTimeout(() => mensajeInput.focus(), 450);
+        }
+        }
+
+        function scrollChatFinal() {
+        if (chatMensajes) {
+        chatMensajes.scrollTop = chatMensajes.scrollHeight;
+        }
+        }
+
+        function agregarMensaje(remitente, mensaje, fechaEnvio) {
+        if (!chatMensajes) return;
+
+        const empty = document.getElementById("chatVacio");
+        if (empty) empty.remove();
+
+        const clase = remitente === "Administrador" ? "admin" : "analista";
+
+        const contenedor = document.createElement("div");
+        contenedor.className = "chat-message " + clase;
+
+        const burbuja = document.createElement("div");
+        burbuja.className = "chat-bubble";
+        burbuja.textContent = mensaje;
+
+        const meta = document.createElement("div");
+        meta.className = "chat-meta";
+        meta.textContent = remitente + " · " + fechaEnvio;
+
+        contenedor.appendChild(burbuja);
+        contenedor.appendChild(meta);
+        chatMensajes.appendChild(contenedor);
+
+        scrollChatFinal();
+        }
+
+        function cambiarClaseEstado(elemento, conectado) {
+        if (!elemento) return;
+
+        elemento.classList.remove("activo", "inactivo");
+        elemento.classList.add(conectado ? "activo" : "inactivo");
+        }
+
+        function aplicarEstadoAnalista(conectado, texto, ultimaConexion) {
+        const textoFinal = texto || (conectado ? "Activo" : "Inactivo");
+
+        cambiarClaseEstado(estadoAnalistaBadge, conectado);
+        cambiarClaseEstado(chatEstadoAnalista, conectado);
+
+        const estadoTexto = estadoAnalistaBadge?.querySelector(".estado-texto");
+        if (estadoTexto) {
+        estadoTexto.textContent = textoFinal;
+        }
+
+        const chatTexto = chatEstadoAnalista?.querySelector(".chat-estado-texto");
+        if (chatTexto) {
+        chatTexto.textContent = textoFinal;
+        }
+
+        if (ultimaConexionAnalista) {
+        ultimaConexionAnalista.textContent = ultimaConexion
+        ? "Última conexión: " + ultimaConexion
+        : "Estado actualizado en tiempo real";
+        }
+        }
+
+        async function actualizarEstadoAnalista() {
+        if (!idAnalista || idAnalista <= 0 || !estadoAnalistaUrl) {
+        return;
+        }
+
+        try {
+        const respuesta = await fetch(`${estadoAnalistaUrl}?idAnalista=${encodeURIComponent(idAnalista)}`, {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+        "Accept": "application/json"
+        }
+        });
+
+        if (!respuesta.ok) {
+        return;
+        }
+
+        const data = await respuesta.json();
+        aplicarEstadoAnalista(data.conectado === true, data.texto, data.ultimaConexion);
+        } catch (error) {
+        console.log("No se pudo consultar el estado del analista.", error);
+        }
+        }
+
+        async function iniciarChatTiempoReal() {
+        if (!idAdministrador || !idAnalista || idAdministrador <= 0 || idAnalista <= 0) {
+        return;
+        }
+
+        if (!window.signalR) {
+        console.error("SignalR no cargó correctamente.");
+        return;
+        }
+
+        connection = new signalR.HubConnectionBuilder()
+        .withUrl("/chatAnalistaHub")
+        .withAutomaticReconnect()
+        .build();
+
+        connection.on("RecibirMensaje", function (data) {
+        const remitente = data.remitenteRol || data.RemitenteRol || "Analista";
+        const mensaje = data.mensaje || data.Mensaje || "";
+        const fechaEnvio = data.fechaEnvio || data.FechaEnvio || "Ahora";
+
+        agregarMensaje(remitente, mensaje, fechaEnvio);
+        });
+
+        connection.onreconnecting(function () {
+        if (btnEnviar) btnEnviar.disabled = true;
+        });
+
+        connection.onreconnected(async function () {
+        try {
+        await connection.invoke("UnirseConversacion", idAdministrador, idAnalista);
+        if (btnEnviar) btnEnviar.disabled = false;
+        } catch (error) {
+        console.error("Error al reconectar al grupo:", error);
+        }
+        });
+
+        connection.onclose(function () {
+        if (btnEnviar) btnEnviar.disabled = true;
+        });
+
+        try {
+        await connection.start();
+        await connection.invoke("UnirseConversacion", idAdministrador, idAnalista);
+
+        if (btnEnviar) btnEnviar.disabled = false;
+        } catch (error) {
+        console.error("Error SignalR:", error);
+        }
+        }
+
+        if (formChat) {
+        formChat.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        if (!mensajeInput || !btnEnviar) return;
+
+        const texto = mensajeInput.value.trim();
+        if (!texto) return;
+
+        if (!connection || connection.state !== signalR.HubConnectionState.Connected) {
+        alert("El chat todavía no está conectado. Espera unos segundos e intenta de nuevo.");
+        return;
+        }
+
+        btnEnviar.disabled = true;
+
+        try {
+        await connection.invoke("EnviarMensaje", idAdministrador, idAnalista, remitenteRol, texto);
+        mensajeInput.value = "";
+        } catch (error) {
+        console.error("Error enviando mensaje:", error);
+        alert("No se pudo enviar el mensaje. Revisa la conexión del chat.");
+        } finally {
+        btnEnviar.disabled = false;
+        mensajeInput.focus();
+        }
+        });
+        }
+
+        scrollChatFinal();
+        actualizarEstadoAnalista();
+        iniciarChatTiempoReal();
+
+        setInterval(actualizarEstadoAnalista, 10000);
+    </script>
+}

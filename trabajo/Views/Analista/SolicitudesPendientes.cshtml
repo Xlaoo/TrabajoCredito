@@ -1,0 +1,276 @@
+﻿@model List<trabajo.Models.SolicitudCredito>
+
+@{
+    Layout = null;
+    var solicitudesEvaluacion =
+       ViewBag.EnEvaluacion as List<trabajo.Models.SolicitudCredito>;
+
+    Layout = "~/Views/Shared/_LayoutAnalista.cshtml";
+    ViewData["Title"] = "Solicitudes Pendientes";
+    ViewData["ActivePage"] = "SolicitudesPendientes";
+}
+<style>
+    .contenedor {
+        background: white;
+        border-radius: 25px;
+        padding: 25px;
+        box-shadow: 0 10px 25px rgba(124,58,237,.08);
+    }
+
+    h1 {
+        color: #4c1d95;
+        font-size: 40px;
+        font-weight: 800;
+        margin-bottom: 25px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        background: #f3e8ff;
+        color: #5b21b6;
+        padding: 15px;
+        text-align: left;
+    }
+
+    td {
+        padding: 10px 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .btn-ver {
+        background: #6d28d9;
+        color: white;
+        text-decoration: none;
+        padding: 10px 15px;
+        border-radius: 10px;
+    }
+
+    /* CONTENT */
+
+    .content {
+        flex: 1;
+        padding: 35px;
+    }
+
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .welcome {
+        color: #6b7280;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+
+    .top-bar h1 {
+        font-size: 50px;
+        color: #4c1d95;
+        font-weight: 800;
+    }
+
+    .top-bar p {
+        color: #6b7280;
+    }
+
+    /* PROFILE */
+
+    .profile-box {
+        background: white;
+        border-radius: 20px;
+        padding: 20px 25px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 10px 30px rgba(124,58,237,.08);
+    }
+
+    .avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg,#6d28d9,#9333ea);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 25px;
+    }
+
+</style>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+
+<div class="content">
+    <div class="contenedor">
+
+        <h1>Solicitudes Pendientes</h1>
+        <div style="margin-bottom:20px;color:red;font-weight:bold;">
+            Total registros: @Model.Count()
+        </div>
+
+        <table>
+
+            <thead>
+
+                <tr>
+                    <th>N° Solicitud</th>
+                    <th>Cliente</th>
+                    <th>Monto</th>
+                    <th>Plazo</th>
+                    <th>Fecha</th>
+                    <th>Acción</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @if (Model.Any())
+                {
+                    @foreach (var solicitud in Model)
+                    {
+                        var ultimaEvaluacion = solicitud.HISTORIAL_ESTADOS?
+                        .OrderByDescending(h => h.FechaCambio)
+                        .FirstOrDefault();
+                        <tr>
+
+                            <td>
+                                SOL-@solicitud.Id_Solicitud.ToString("D5")
+                            </td>
+
+                            <td>
+                                @solicitud.USUARIO.Nombre
+                                @solicitud.USUARIO.Apellido
+                            </td>
+
+                            <td>
+                                S/ @solicitud.MontoSolicitado.ToString("N0")
+                            </td>
+
+                            <td>
+                                @solicitud.PlazoMeses meses
+                            </td>
+
+                            <td>
+                                @(ultimaEvaluacion != null
+                                                        ? ultimaEvaluacion.FechaCambio.ToString("dd/MM/yyyy HH:mm")
+                                                        : "-")
+                            </td>
+
+                            <td>
+                                <a href="@Url.Action("VerSolicitud", "Analista", new { id = solicitud.Id_Solicitud })"
+                                   class="btn-ver">
+                                    👁 Ver Solicitud
+                                </a>
+                            </td>
+
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+
+                        <td colspan="6"
+                            style="text-align:center;padding:80px 40px;">
+                            📄 No tiene ninguna solicitud pendiente.
+                        </td>
+
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+    <div class="contenedor" style="margin-top:40px;">
+
+        <h1>Solicitudes En Evaluación</h1>
+
+        <div style="margin-bottom:20px;color:red;font-weight:bold;">
+            Total registros: @(solicitudesEvaluacion?.Count ?? 0)
+        </div>
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>N° Solicitud</th>
+                    <th>Cliente</th>
+                    <th>Monto</th>
+                    <th>Plazo</th>
+                    <th>Fecha</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @if (solicitudesEvaluacion != null && solicitudesEvaluacion.Any())
+                {
+                    @foreach (var solicitud in solicitudesEvaluacion)
+                    {
+                        var ultimaEvaluacion = solicitud.HISTORIAL_ESTADOS?
+                        .OrderByDescending(h => h.FechaCambio)
+                        .FirstOrDefault();
+
+                        <tr>
+
+                            <td>
+                                SOL-@solicitud.Id_Solicitud.ToString("D5")
+                            </td>
+
+                            <td>
+                                @solicitud.USUARIO.Nombre
+                                @solicitud.USUARIO.Apellido
+                            </td>
+
+                            <td>
+                                S/ @solicitud.MontoSolicitado.ToString("N0")
+                            </td>
+
+                            <td>
+                                @solicitud.PlazoMeses meses
+                            </td>
+
+                            <td>
+                                @(ultimaEvaluacion != null
+                                                        ? ultimaEvaluacion.FechaCambio.ToString("dd/MM/yyyy HH:mm")
+                                                        : "-")
+                            </td>
+
+                            <td>
+                                <a href="@Url.Action("VerSolicitud", "Analista",
+                                                                      new { id = solicitud.Id_Solicitud })"
+                           class="btn-ver">
+                            👁 Ver Solicitud
+                        </a>
+                    </td>
+
+                        </tr>
+                                }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6"
+                            style="text-align:center;padding:80px 40px;">
+                            📄 No cuenta con ningún registro en evaluación.
+                        </td>
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+</div>

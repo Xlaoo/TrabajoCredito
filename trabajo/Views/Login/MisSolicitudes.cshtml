@@ -1,0 +1,1664 @@
+﻿@model List<trabajo.Models.SolicitudCreditoViewModel>
+
+@{
+	Layout = null;
+	Layout = "~/Views/Shared/_LayoutCliente.cshtml";
+	ViewData["Title"] = "MisSolicitudes";
+	ViewData["ActivePage"] = "MisSolicitudes";
+}
+
+<style>
+	.title h1 {
+		font-size: 42px;
+		font-weight: 800;
+		color: #1f1235;
+	}
+
+	.title p {
+		color: #51446b;
+		font-size: 18px;
+	}
+
+	.request-card {
+		margin-top: 35px;
+		background: white;
+		border-radius: 24px;
+		padding: 34px;
+		box-shadow: 0 10px 30px rgba(124,58,237,.10);
+	}
+
+	.request-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 28px;
+	}
+
+		.request-header h2 {
+			color: #3c096c;
+			font-weight: 800;
+		}
+
+	.status {
+		padding: 12px 22px;
+		border-radius: 22px;
+		font-weight: bold;
+		background: #fef3c7;
+		color: #b45309;
+		font-size: 16px;
+	}
+
+	.request-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 22px;
+		margin-bottom: 30px;
+	}
+
+	.data-box {
+		background: #f8f5ff;
+		padding: 24px;
+		border-radius: 18px;
+		border: 1px solid #ede9fe;
+	}
+
+		.data-box span {
+			color: #6b7280;
+			font-size: 15px;
+		}
+
+		.data-box h3 {
+			margin-top: 8px;
+			font-size: 28px;
+			font-weight: 800;
+			color: #4c1d95;
+		}
+
+	.actions {
+		display: flex;
+		gap: 18px;
+		flex-wrap: wrap;
+	}
+
+		.actions button {
+			border: none;
+			padding: 16px 26px;
+			border-radius: 14px;
+			font-weight: bold;
+			font-size: 16px;
+			color: white;
+		}
+
+	.btn-edit {
+		background: #7c3aed;
+	}
+
+	.btn-cancel {
+		background: #ef4444;
+	}
+
+	.btn-download {
+		background: #22c55e;
+	}
+
+		.btn-edit:hover,
+		.btn-cancel:hover,
+		.btn-download:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 10px 25px rgba(0,0,0,.25);
+		}
+
+	.actions button {
+		transition: .3s;
+	}
+
+	.status.approved {
+		background: #dcfce7;
+		color: #15803d;
+	}
+
+	.edit-input {
+		width: 100%;
+		padding: 12px;
+		border: 2px solid #7c3aed;
+		border-radius: 12px;
+		font-size: 22px;
+		font-weight: bold;
+		color: #4c1d95;
+	}
+
+	.btn-save {
+		background: #16a34a;
+	}
+
+	.modal-pago {
+		display: none;
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,.55);
+		justify-content: center;
+		align-items: center;
+		z-index: 9999;
+	}
+
+	.modal-content-pago {
+		background: white;
+		width: 520px;
+		padding: 35px;
+		border-radius: 24px;
+		box-shadow: 0 20px 50px rgba(0,0,0,.25);
+	}
+
+		.modal-content-pago h2 {
+			color: #4c1d95;
+			font-weight: 800;
+			margin-bottom: 10px;
+		}
+
+		.modal-content-pago p {
+			color: #51446b;
+			margin-bottom: 22px;
+		}
+
+		.modal-content-pago label {
+			font-weight: bold;
+			color: #3c096c;
+			margin-top: 12px;
+			display: block;
+		}
+
+		.modal-content-pago input,
+		.modal-content-pago select {
+			width: 100%;
+			padding: 14px;
+			border: 2px solid #ddd6fe;
+			border-radius: 14px;
+			margin-top: 8px;
+			margin-bottom: 15px;
+			font-size: 16px;
+		}
+
+	.modal-actions {
+		display: flex;
+		gap: 15px;
+		margin-top: 20px;
+	}
+
+	.btn-cancelar-modal {
+		flex: 1;
+		background: #ef4444;
+		color: white;
+		border: none;
+		padding: 14px;
+		border-radius: 14px;
+		font-weight: bold;
+	}
+
+	.btn-pagar-modal {
+		flex: 2;
+		background: #22c55e;
+		color: white;
+		border: none;
+		padding: 14px;
+		border-radius: 14px;
+		font-weight: bold;
+	}
+
+	.btn-disabled {
+		background: #9ca3af !important;
+		cursor: not-allowed !important;
+		opacity: .7;
+	}
+
+	.pago-info {
+		background: #f8f5ff;
+		border: 2px solid #ddd6fe;
+		border-radius: 16px;
+		padding: 18px;
+		margin-top: 12px;
+	}
+
+		.pago-info h4 {
+			color: #4c1d95;
+			font-weight: 800;
+			margin-bottom: 12px;
+		}
+
+		.pago-info p {
+			margin: 6px 0;
+			color: #1f1235;
+		}
+
+		.pago-info input {
+			width: 100%;
+			padding: 12px;
+			border: 2px solid #ddd6fe;
+			border-radius: 12px;
+			margin-top: 8px;
+			margin-bottom: 10px;
+		}
+
+	.btn-disabled {
+		background: #9ca3af !important;
+		color: white !important;
+		cursor: not-allowed !important;
+		opacity: .6;
+		pointer-events: none;
+	}
+
+	.bloqueado,
+	.bloqueado:hover {
+		background: #6b7280 !important;
+		color: white !important;
+		cursor: not-allowed !important;
+		opacity: .7 !important;
+		transform: none !important;
+		box-shadow: none !important;
+	}
+
+	.btn-observacion {
+		background: #0ea5e9;
+		color: white;
+		border: none;
+		padding: 13px 24px;
+		border-radius: 12px;
+		font-weight: 700;
+		cursor: pointer;
+		box-shadow: 0 8px 18px rgba(14,165,233,0.25);
+	}
+
+		.btn-observacion:hover {
+			background: #0284c7;
+			transform: translateY(-2px);
+		}
+
+	.modal-observacion {
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,0.55);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		z-index: 9999;
+	}
+
+	.modal-observacion-box {
+		width: 500px;
+		background: white;
+		border-radius: 22px;
+		overflow: hidden;
+		box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+		animation: aparecerModal .25s ease;
+	}
+
+	.modal-header {
+		background: linear-gradient(135deg,#7c3aed,#5b21b6);
+		color: white;
+		padding: 20px 25px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+		.modal-header h2 {
+			margin: 0;
+			font-size: 24px;
+			color: black !important;
+			font-weight: 700;
+		}
+
+	.btn-close-modal {
+		border: none;
+		background: none;
+		color: white;
+		font-size: 22px;
+		cursor: pointer;
+	}
+
+	.modal-body {
+		padding: 30px;
+		text-align: center;
+	}
+
+	.observacion-icon {
+		font-size: 55px;
+		margin-bottom: 18px;
+	}
+
+	#textoObservacion {
+		width: 100%;
+		height: 160px;
+		resize: none;
+		border: 2px solid #ddd6fe;
+		border-radius: 16px;
+		padding: 18px;
+		font-size: 16px;
+		outline: none;
+		background: #f8fafc;
+		color: #374151;
+	}
+
+	.modal-footer {
+		padding: 20px;
+		display: flex;
+		justify-content: center;
+	}
+
+	.btn-cerrar-modal {
+		background: #ef4444;
+		color: white;
+		border: none;
+		padding: 13px 30px;
+		border-radius: 14px;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+	.oculto {
+		display: none;
+	}
+
+	@@keyframes aparecerModal {
+		from {
+			transform: scale(.8);
+			opacity: 0;
+		}
+
+		to {
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+
+	.status-rechazado {
+		background: #fee2e2 !important;
+		color: #dc2626 !important;
+	}
+
+	.btn-delete {
+		background: #dc2626;
+		color: white;
+		border: none;
+		padding: 13px 24px;
+		border-radius: 12px;
+		font-weight: 700;
+		cursor: pointer;
+	}
+
+		.btn-delete:hover {
+			background: #b91c1c;
+			transform: translateY(-3px);
+			box-shadow: 0 10px 25px rgba(220,38,38,.35);
+		}
+
+	.btn-observacion:hover {
+		background: #0284c7;
+		transform: translateY(-3px);
+		box-shadow: 0 10px 25px rgba(14,165,233,.35);
+	}
+
+	.btn-observacion,
+	.btn-mensaje {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		border: none;
+		border-radius: 12px;
+		padding: 10px 16px;
+		font-weight: 700;
+		cursor: pointer;
+		transition: .25s;
+	}
+
+	.btn-mensaje {
+		background: #f3e8ff;
+		color: #7c3aed;
+	}
+
+		.btn-mensaje:hover {
+			background: #e9d5ff;
+		}
+
+	#modalChat {
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,.55);
+		display: none;
+		justify-content: center;
+		align-items: center;
+		z-index: 99999;
+	}
+
+	.chat-contenido {
+		width: 800px;
+		height: 650px;
+		background: white;
+		border-radius: 20px;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	.chat-header {
+		padding: 20px;
+		background: #7c3aed;
+		color: white;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	#chatMensajes {
+		flex: 1;
+		padding: 20px;
+		overflow-y: auto;
+	}
+
+	.chat-footer {
+		padding: 15px;
+		display: flex;
+		gap: 10px;
+		border-top: 1px solid #ddd;
+	}
+
+		.chat-footer input {
+			flex: 1;
+			padding: 12px;
+			border-radius: 10px;
+			border: 1px solid #ccc;
+		}
+
+	.chat-contenido {
+		width: 850px;
+		height: 650px;
+		background: white;
+		border-radius: 22px;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		box-shadow: 0 20px 60px rgba(0,0,0,.25);
+	}
+
+	.chat-header {
+		background: linear-gradient(135deg,#7c3aed,#5b21b6);
+		color: white;
+		padding: 18px 25px;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.chat-titulo {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 22px;
+		font-weight: 800;
+	}
+
+	.btn-cerrar-chat {
+		border: none;
+		background: none;
+		color: white;
+		font-size: 22px;
+		cursor: pointer;
+	}
+
+	#chatMensajes {
+		flex: 1;
+		overflow-y: auto;
+		background: #faf8ff;
+		position: relative;
+	}
+
+	.chat-vacio {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%,-50%);
+		text-align: center;
+		opacity: .25;
+	}
+
+		.chat-vacio i {
+			font-size: 70px;
+			color: #7c3aed;
+		}
+
+		.chat-vacio h4 {
+			margin-top: 15px;
+			color: #7c3aed;
+			font-weight: 800;
+		}
+
+		.chat-vacio p {
+			color: #6b7280;
+		}
+
+	.chat-footer {
+		border-top: 1px solid #e5e7eb;
+		padding: 14px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		background: white;
+	}
+
+		.chat-footer input {
+			flex: 1;
+			border: 2px solid #ddd6fe;
+			border-radius: 14px;
+			padding: 12px 15px;
+			outline: none;
+		}
+
+	.btn-chat-icon {
+		width: 52px;
+		height: 52px;
+		border: none;
+		border-radius: 14px;
+		background: #f3e8ff;
+		color: #7c3aed;
+		font-size: 22px;
+		cursor: pointer;
+	}
+
+	.btn-enviar-chat {
+		border: none;
+		background: #7c3aed;
+		color: white;
+		padding: 14px 24px;
+		border-radius: 14px;
+		font-weight: 700;
+		font-size: 16px;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		cursor: pointer;
+	}
+
+		.btn-enviar-chat:hover {
+			background: #6d28d9;
+		}
+
+	.chat-subtitulo {
+		margin-top: 6px;
+		font-size: 14px;
+		color: #ede9fe;
+	}
+
+		.chat-subtitulo span {
+			font-weight: 700;
+		}
+
+	.mensaje-cliente {
+		display: flex;
+		justify-content: flex-start;
+		margin-bottom: 15px;
+	}
+
+	.mensaje-analista {
+		display: flex;
+		justify-content: flex-end;
+		margin-bottom: 15px;
+	}
+
+	.burbuja-cliente {
+		background: white;
+		padding: 12px 16px;
+		border-radius: 16px;
+		max-width: 70%;
+		box-shadow: 0 2px 8px rgba(0,0,0,.08);
+	}
+
+	.burbuja-analista {
+		background: #7c3aed;
+		color: white;
+		padding: 12px 16px;
+		border-radius: 16px;
+		margin-top: 6px;
+		max-width: 420px;
+	}
+
+	#modalChat {
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,.55);
+		justify-content: center;
+		align-items: center;
+		z-index: 99999;
+	}
+
+
+	.swal2-container {
+		z-index: 999999;
+	}
+
+	.avatar-chat {
+		font-size: 40px;
+		color: #8b5cf6;
+	}
+
+	.nombre-chat {
+		font-size: 13px;
+		font-weight: 700;
+		color: #7c3aed;
+	}
+
+	.fecha-chat {
+		font-size: 11px;
+		color: #9ca3af;
+		margin-top: 5px;
+	}
+
+	.chat-derecha {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+	}
+
+	.cabecera-derecha {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: 4px;
+	}
+
+	.nombre-derecha {
+		text-align: right;
+	}
+
+	.fecha-derecha {
+		text-align: right;
+	}
+
+	.mensaje-cliente {
+		display: flex;
+		align-items: flex-start;
+		gap: 10px;
+		margin-bottom: 18px;
+	}
+
+	.mensaje-analista {
+		display: flex;
+		justify-content: flex-end;
+		margin-bottom: 18px;
+	}
+
+	.imagen-chat {
+		max-width: 250px;
+		max-height: 250px;
+		border-radius: 12px;
+		display: block;
+		margin-bottom: 8px;
+		cursor: pointer;
+	}
+
+	.status-evaluacion {
+		background: #0ea5e9 !important;
+		color: white !important;
+	}
+
+</style>
+
+<div class="content">
+	@if (TempData["Mensaje"] != null)
+	{
+		<div class="alert alert-success" style="font-size:18px; font-weight:bold; border-radius:14px;">
+			@TempData["Mensaje"]
+		</div>
+	}
+
+	<div class="title">
+		<h1>Mis solicitudes de préstamo</h1>
+		<p>Consulta, edita, cancela o descarga el cronograma de tus solicitudes registradas.</p>
+	</div>
+
+	@if (Model == null || Model.Count == 0)
+	{
+		<div class="request-card">
+			<h2 style="color:#3c096c; font-weight:800;">No tienes solicitudes registradas</h2>
+			<p>Aún no has solicitado ningún préstamo.</p>
+			<a href="@Url.Action("DashboardCliente", "Login")" class="btn btn-secondary">Regresar al inicio</a>
+		</div>
+	}
+	else
+	{
+
+		foreach (var solicitud in Model)
+		{
+
+
+			var estadoNormalizado = solicitud.Estado?.Trim().ToLower();
+			var evaluacion = ViewBag.Evaluaciones != null
+			? ((List<trabajo.Models.Evaluacion_Riesgo>)ViewBag.Evaluaciones)
+			.FirstOrDefault(e => e.SOLICITUD_CREDITO_Id_Solicitud == solicitud.IdSolicitud)
+			: null;
+
+			<div class="request-card">
+				<div class="request-header">
+					<h2>Solicitud N.º @solicitud.NumeroSolicitud</h2>
+					<span id="estadoSolicitud_@solicitud.IdSolicitud"
+						  class="status
+						@(solicitud.Estado == "Aprobado" ? "approved" : "")
+						@(solicitud.Estado == "Rechazado" ? "status-rechazado" : "")
+						@(estadoNormalizado == "en evaluación" ? "status-evaluacion" : "")">
+
+						@solicitud.Estado
+
+					</span>
+				</div>
+
+				<div class="request-grid">
+					<div class="data-box">
+						<span>Monto solicitado</span>
+
+						<h3 id="montoTexto_@solicitud.IdSolicitud">
+							S/ @solicitud.MontoSolicitado.ToString("N0")
+						</h3>
+
+						<input id="montoInput_@solicitud.IdSolicitud"
+							   class="edit-input"
+							   type="number"
+							   value="@solicitud.MontoSolicitado"
+							   style="display:none;"
+							   oninput="marcarCambio()" />
+					</div>
+
+					<div class="data-box">
+						<span>Plazo seleccionado</span>
+
+						<h3 id="plazoTexto_@solicitud.IdSolicitud">
+							@solicitud.PlazoMeses meses
+						</h3>
+
+						<select id="plazoInput_@solicitud.IdSolicitud"
+								class="edit-input"
+								style="display:none;"
+								onchange="marcarCambio()">
+							<option value="12" selected="@(solicitud.PlazoMeses == 12)">12 meses</option>
+							<option value="18" selected="@(solicitud.PlazoMeses == 18)">18 meses</option>
+							<option value="24" selected="@(solicitud.PlazoMeses == 24)">24 meses</option>
+							<option value="30" selected="@(solicitud.PlazoMeses == 30)">30 meses</option>
+							<option value="36" selected="@(solicitud.PlazoMeses == 36)">36 meses</option>
+							<option value="48" selected="@(solicitud.PlazoMeses == 48)">48 meses</option>
+							<option value="60" selected="@(solicitud.PlazoMeses == 60)">60 meses</option>
+							<option value="72" selected="@(solicitud.PlazoMeses == 72)">72 meses</option>
+						</select>
+					</div>
+
+					<div class="data-box">
+						<span>Interés estimado</span>
+						<h3>@solicitud.InteresEstimado.ToString("N0")%</h3>
+					</div>
+
+					<div class="data-box">
+						<span>Fecha de solicitud</span>
+						<h3>@solicitud.FechaSolicitud.ToString("dd/MM/yyyy")</h3>
+					</div>
+				</div>
+
+				<div class="actions">
+
+					@if (solicitud.Estado == "Rechazado")
+					{
+						<button class="btn-delete"
+								onclick="borrarSolicitud(@solicitud.IdSolicitud)">
+							🗑 Borrar solicitud
+						</button>
+
+						<button id="btnObservacion_@solicitud.IdSolicitud"
+								type="button"
+								class="btn-observacion"
+								data-observacion="@(evaluacion != null ? evaluacion.Observacion : "Sin observaciones")"
+								onclick="verObservacionBoton(this)">
+							<i class="fas fa-eye"></i> Observaciones
+						</button>
+					}
+					else
+					{
+						bool bloquearAcciones =
+						estadoNormalizado == "pendiente" ||
+						estadoNormalizado == "pendiente cancelación" ||
+						estadoNormalizado == "pendiente edición";
+
+						bool bloquearCronograma =
+						estadoNormalizado == "pendiente" ||
+						estadoNormalizado == "pendiente cancelación" ||
+						estadoNormalizado == "pendiente edición" ||
+						estadoNormalizado == "en evaluación";
+
+						<button id="btnEditar_@solicitud.IdSolicitud"
+								type="button"
+								class="btn-edit @(bloquearAcciones ? "bloqueado" : "")"
+							@(bloquearAcciones ? "disabled" : "")
+								onclick="editarSolicitud(@solicitud.IdSolicitud, '@solicitud.Estado')">
+							<i class="fas fa-edit"></i> Editar solicitud
+						</button>
+
+						<button id="btnCancelar_@solicitud.IdSolicitud"
+								type="button"
+								class="btn-cancel @(bloquearAcciones ? "bloqueado" : "")"
+							@(bloquearAcciones ? "disabled" : "")
+								onclick="cancelarSolicitud(@solicitud.IdSolicitud, '@solicitud.Estado', '@solicitud.MontoSolicitado')">
+							<i class="fas fa-times"></i> Cancelar solicitud
+						</button>
+
+						<form method="post" action="@Url.Action("EnviarCronograma", "Login")">
+							<input type="hidden"
+								   name="idSolicitud"
+								   value="@solicitud.IdSolicitud" />
+
+							<button id="btnCronograma_@solicitud.IdSolicitud"
+									type="submit"
+									class="btn-download @(bloquearCronograma ? "bloqueado" : "")"
+								@(bloquearCronograma ? "disabled" : "")>
+								<i class="fas fa-envelope"></i>
+								Enviar cronograma
+							</button>
+						</form>
+
+						<button id="btnGuardar_@solicitud.IdSolicitud"
+								type="button"
+								class="btn-save"
+								style="display:none;"
+								onclick="guardarEdicion(@solicitud.IdSolicitud)">
+							<i class="fas fa-save"></i> Guardar cambios
+						</button>
+
+						<button id="btnCancelarCambios_@solicitud.IdSolicitud"
+								type="button"
+								class="btn-cancel"
+								style="display:none;"
+								onclick="cancelarCambios(@solicitud.IdSolicitud)">
+							<i class="fas fa-undo"></i> Cancelar cambios
+						</button>
+
+						<button id="btnObservacion_@solicitud.IdSolicitud"
+								type="button"
+								class="btn-observacion"
+								data-observacion="@(evaluacion != null ? evaluacion.Observacion : "Sin observaciones")"
+								onclick="verObservacionBoton(this)">
+							<i class="fas fa-eye"></i> Observaciones
+						</button>
+
+						<button id="btnMensaje_@solicitud.IdSolicitud"
+								type="button"
+								class="btn-observacion"
+								onclick="abrirChat(@solicitud.IdSolicitud)">
+							<i class="fas fa-comments"></i> Mensaje
+						</button>
+					}
+
+				</div>
+			</div>
+		}
+		<div id="modalObservacion" class="modal-observacion oculto">
+			<div class="modal-observacion-box">
+				<div class="modal-header">
+					<h2>Observaciones del analista</h2>
+					<button type="button" class="btn-close-modal" onclick="cerrarObservacion()">✕</button>
+				</div>
+
+				<div class="modal-body">
+					<div class="observacion-icon">👁</div>
+					<textarea id="textoObservacion" readonly></textarea>
+				</div>
+
+				<div class="modal-footer">
+					<button type="button" class="btn-cerrar-modal" onclick="cerrarObservacion()">Cerrar</button>
+				</div>
+			</div>
+		</div>
+	}
+
+</div>
+
+<div id="modalChat" style="display:none;">
+
+	<div class="chat-contenido">
+
+		<div class="chat-header">
+
+			<div>
+
+				<div class="chat-titulo">
+					<i class="fas fa-comments"></i>
+					<span id="tituloSolicitud">
+						Mensajes
+					</span>
+				</div>
+
+				<div class="chat-subtitulo">
+
+					Analista:
+					<span id="chatAnalista">-</span>
+
+					<br />
+
+					Correo:
+					<span id="chatCorreo">-</span>
+
+				</div>
+
+			</div>
+
+			<button class="btn-cerrar-chat"
+					onclick="cerrarChat()">
+				<i class="fas fa-times"></i>
+			</button>
+
+		</div>
+
+		<div id="chatMensajes">
+
+			<div class="chat-vacio">
+
+				<i class="fas fa-comments"></i>
+
+				<h4>No hay mensajes</h4>
+
+				<p>
+					Inicia una conversación con el analista.
+				</p>
+
+			</div>
+
+		</div>
+
+		<div class="chat-footer">
+
+			<div id="nombreArchivoSeleccionado"></div>
+			<input type="text"
+				   id="txtMensaje"
+				   placeholder="Escribe tu mensaje..." />
+
+			<input type="file"
+				   id="fileImagen"
+				   accept="image/*"
+				   style="display:none">
+
+			<button class="btn-chat-icon"
+					onclick="document.getElementById('fileImagen').click()">
+				<i class="far fa-image"></i>
+			</button>
+
+			<button class="btn-enviar-chat"
+					onclick="enviarMensaje()">
+
+				<i class="fas fa-paper-plane"></i>
+
+				Enviar
+
+			</button>
+
+		</div>
+
+	</div>
+
+</div>
+
+<script>
+			let solicitudSeleccionada = 0;
+				let montoSeleccionado = 0;
+				let solicitudEditando = 0;
+				let huboCambio = false;
+				let montoOriginal = {};
+				let plazoOriginal = {};
+
+				function marcarCambio() {
+					huboCambio = true;
+				}
+
+				function editarSolicitud(idSolicitud, estado) {
+							if (estado === "Pendiente cancelación") {
+					alert("No puedes editar esta solicitud porque ya está en proceso de cancelación.");
+					return;
+				}
+
+					solicitudEditando = idSolicitud;
+					huboCambio = false;
+
+					montoOriginal[idSolicitud] = document.getElementById("montoInput_" + idSolicitud).value;
+					plazoOriginal[idSolicitud] = document.getElementById("plazoInput_" + idSolicitud).value;
+
+					document.getElementById("montoTexto_" + idSolicitud).style.display = "none";
+					document.getElementById("plazoTexto_" + idSolicitud).style.display = "none";
+
+					document.getElementById("montoInput_" + idSolicitud).style.display = "block";
+					document.getElementById("plazoInput_" + idSolicitud).style.display = "block";
+
+					document.getElementById("btnGuardar_" + idSolicitud).style.display = "inline-block";
+					document.getElementById("btnCancelarCambios_" + idSolicitud).style.display = "inline-block";
+
+					document.getElementById("btnCancelar_" + idSolicitud).disabled = true;
+					document.getElementById("btnCronograma_" + idSolicitud).disabled = true;
+
+					document.getElementById("btnCancelar_" + idSolicitud).classList.add("btn-disabled");
+					document.getElementById("btnCronograma_" + idSolicitud).classList.add("btn-disabled");
+									document.getElementById("btnObservacion_" + idSolicitud)
+					.disabled = true;
+
+					document.getElementById("btnObservacion_" + idSolicitud)
+					.classList.add("bloqueado");
+
+				}
+
+				function cancelarCambios(idSolicitud) {
+					if (huboCambio) {
+						let confirmar = confirm("¿Deseas cancelar los cambios realizados?");
+						if (!confirmar) return;
+					}
+
+					document.getElementById("montoInput_" + idSolicitud).value = montoOriginal[idSolicitud];
+					document.getElementById("plazoInput_" + idSolicitud).value = plazoOriginal[idSolicitud];
+
+					document.getElementById("montoTexto_" + idSolicitud).style.display = "block";
+					document.getElementById("plazoTexto_" + idSolicitud).style.display = "block";
+
+					document.getElementById("montoInput_" + idSolicitud).style.display = "none";
+					document.getElementById("plazoInput_" + idSolicitud).style.display = "none";
+
+					document.getElementById("btnGuardar_" + idSolicitud).style.display = "none";
+					document.getElementById("btnCancelarCambios_" + idSolicitud).style.display = "none";
+
+					document.getElementById("btnCancelar_" + idSolicitud).disabled = false;
+					document.getElementById("btnCronograma_" + idSolicitud).disabled = false;
+
+					document.getElementById("btnCancelar_" + idSolicitud).classList.remove("btn-disabled");
+					document.getElementById("btnCronograma_" + idSolicitud).classList.remove("btn-disabled");
+							document.getElementById("btnObservacion_" + idSolicitud)
+				.disabled = false;
+
+			document.getElementById("btnObservacion_" + idSolicitud)
+				.classList.remove("bloqueado");
+
+					solicitudEditando = 0;
+					huboCambio = false;
+				}
+
+				function guardarEdicion(idSolicitud) {
+					let nuevoMonto = document.getElementById("montoInput_" + idSolicitud).value;
+					let nuevoPlazo = document.getElementById("plazoInput_" + idSolicitud).value;
+
+					if (nuevoMonto < 1000) {
+						alert("El monto mínimo permitido es S/ 1,000.");
+						return;
+					}
+
+					if (nuevoMonto > 50000) {
+						alert("El monto máximo permitido es S/ 50,000.");
+						return;
+					}
+
+					fetch('@Url.Action("EditarSolicitud", "Login")', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						body:
+							'idSolicitud=' + encodeURIComponent(idSolicitud) +
+							'&nuevoMonto=' + encodeURIComponent(nuevoMonto) +
+							'&nuevoPlazo=' + encodeURIComponent(nuevoPlazo)
+					})
+					.then(response => response.json())
+							.then(data => {
+				alert(data.mensaje);
+
+				if (data.ok) {
+					location.reload();
+				}
+			})
+					.catch(() => {
+						alert("No se pudo guardar la edición.");
+					});
+				}
+
+				document.querySelectorAll(".menu a").forEach(link => {
+					link.addEventListener("click", function (e) {
+						if (solicitudEditando !== 0 && huboCambio) {
+							let salir = confirm("¿Deseas salir sin guardar los cambios?");
+							if (!salir) {
+								e.preventDefault();
+							}
+						}
+					});
+				});
+								function cancelarSolicitud(idSolicitud, estado, monto)
+			{
+				solicitudSeleccionada = idSolicitud;
+				montoSeleccionado = monto;
+
+				estado = estado.trim().toLowerCase();
+
+				if (estado === "pendiente" || estado === "pendiente cancelación")
+				{
+					alert("No puedes cancelar esta solicitud.");
+					return;
+				}
+
+				if (estado === "en evaluación")
+				{
+					document.getElementById("motivoEvaluacion").value = "";
+
+					document.getElementById("modalCancelacionEvaluacion").style.display = "flex";
+
+					return;
+				}
+
+
+				if (estado === "aprobado")
+				{
+					document.getElementById("montoDevolver").value =
+						"S/ " + Number(monto).toLocaleString("es-PE");
+
+					document.getElementById("modalPago").style.display = "flex";
+
+					return;
+				}
+			}
+			function cerrarModalEvaluacion()
+	{
+		document.getElementById("modalCancelacionEvaluacion")
+			.style.display = "none";
+	}
+
+					function confirmarCancelacionEvaluacion()
+			{
+				let motivo = document.getElementById("motivoEvaluacion").value.trim();
+
+				if (motivo === "")
+				{
+					Swal.fire({
+						icon: 'warning',
+						title: 'Motivo obligatorio',
+						text: 'Debe ingresar el motivo de cancelación.',
+						confirmButtonColor: '#6d28d9'
+					});
+					return;
+				}
+
+				fetch('/Login/CancelarEvaluacion', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body:
+						'idSolicitud=' + encodeURIComponent(solicitudSeleccionada) +
+						'&motivo=' + encodeURIComponent(motivo)
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (data.ok) {
+						Swal.fire({
+							icon: 'success',
+							title: 'Solicitud cancelada',
+							text: data.mensaje,
+							confirmButtonColor: '#16a34a'
+						}).then(() => {
+							location.reload();
+						});
+					} else {
+						Swal.fire({
+							icon: 'error',
+							title: 'Error',
+							text: data.mensaje,
+							confirmButtonColor: '#dc2626'
+						});
+					}
+				})
+				.catch(() => {
+					Swal.fire({
+						icon: 'error',
+						title: 'Error',
+						text: 'No se pudo cancelar la solicitud.',
+						confirmButtonColor: '#dc2626'
+					});
+				});
+			}
+
+				function cerrarModalPago() {
+					document.getElementById("modalPago").style.display = "none";
+					document.getElementById("metodoPago").value = "";
+					document.getElementById("datosPago").style.display = "none";
+					document.getElementById("datosPago").innerHTML = "";
+					document.getElementById("motivoCancelacion").value = "";
+				}
+
+				function confirmarPagoCancelacion() {
+					let metodo = document.getElementById("metodoPago").value;
+					let codigo = document.getElementById("codigoOperacion")?.value;
+					let motivo = document.getElementById("motivoCancelacion").value.trim();
+
+					if (metodo === "") {
+						alert("Debe seleccionar un método de pago.");
+						return;
+					}
+
+					if (!codigo) {
+						alert("Debe ingresar el código de operación.");
+						return;
+					}
+
+					if (motivo === "") {
+						alert("Debe ingresar el motivo de cancelación.");
+						return;
+					}
+
+					fetch('@Url.Action("RegistrarCancelacion", "Login")', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+						body:
+							'idSolicitud=' + encodeURIComponent(solicitudSeleccionada) +
+							'&montoDevuelto=' + encodeURIComponent(montoSeleccionado) +
+							'&metodoPago=' + encodeURIComponent(metodo) +
+							'&codigoOperacion=' + encodeURIComponent(codigo) +
+							'&motivoCancelacion=' + encodeURIComponent(motivo)
+					})
+					.then(response => response.json())
+							.then(data => {
+
+							alert(data.mensaje);
+
+						document.getElementById("btnEditar_" + solicitudSeleccionada).disabled = true;
+						document.getElementById("btnCronograma_" + solicitudSeleccionada).disabled = true;
+						document.getElementById("btnCancelar_" + solicitudSeleccionada).disabled = true;
+
+						document.getElementById("btnEditar_" + solicitudSeleccionada).classList.add("btn-disabled");
+						document.getElementById("btnCronograma_" + solicitudSeleccionada).classList.add("btn-disabled");
+						document.getElementById("btnCancelar_" + solicitudSeleccionada).classList.add("btn-disabled");
+
+						location.reload();
+					})
+					.catch(() => {
+						alert("No se pudo registrar la cancelación.");
+					});
+				}
+
+				function mostrarDatosPago() {
+					let metodo = document.getElementById("metodoPago").value;
+					let datos = document.getElementById("datosPago");
+
+					if (metodo === "") {
+						datos.style.display = "none";
+						datos.innerHTML = "";
+						return;
+					}
+
+					datos.style.display = "block";
+
+					datos.innerHTML = `
+						<div class="pago-info">
+							<h4>Pago por ${metodo}</h4>
+							<p><b>Empresa:</b> CrediPlus Financiera</p>
+							<p><b>Referencia:</b> Devolución total del préstamo.</p>
+							<input id="codigoOperacion"
+								   type="text"
+								   maxlength="20"
+								   placeholder="Ingrese código de operación"
+								   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+						</div>`;
+				}
+								function verObservacionBoton(boton) {
+				let texto = boton.getAttribute("data-observacion");
+
+				if (texto == null || texto.trim() === "") {
+					texto = "Sin observaciones del analista.";
+				}
+
+				document.getElementById("textoObservacion").value = texto;
+				document.getElementById("modalObservacion").classList.remove("oculto");
+			}
+
+			function cerrarObservacion() {
+
+				document.getElementById("modalObservacion")
+					.classList.add("oculto");
+			}
+				function borrarSolicitud(idSolicitud) {
+				if (!confirm("¿Seguro que deseas borrar esta solicitud rechazada?")) {
+					return;
+				}
+
+				fetch('/Login/BorrarSolicitudRechazada', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+					body: 'idSolicitud=' + encodeURIComponent(idSolicitud)
+				})
+				.then(response => response.json())
+				.then(data => {
+					alert(data.mensaje);
+					location.reload();
+				})
+				.catch(() => {
+					alert("No se pudo borrar la solicitud.");
+				});
+			}
+							function mostrarAviso(texto)
+			{
+				Swal.fire({
+					icon: 'warning',
+					title: 'Atención',
+					text: texto,
+					confirmButtonText: 'Entendido',
+					confirmButtonColor: '#6d28d9',
+					allowOutsideClick: false
+				});
+			}
+							let solicitudActual = 0;
+
+									function abrirChat(idSolicitud)
+			{
+				console.log("Solicitud:", idSolicitud);
+				solicitudActual = idSolicitud;
+
+				document.getElementById("modalChat").style.display = "flex";
+
+				cargarInfoSolicitud(idSolicitud);
+
+				cargarMensajes(idSolicitud);
+			}
+					function cargarInfoSolicitud(idSolicitud)
+			{
+				fetch('/Login/ObtenerInfoSolicitud?idSolicitud=' + idSolicitud)
+				.then(r => r.json())
+				.then(data => {
+
+							document.getElementById("tituloSolicitud").innerHTML =
+							"Mensajes - Analista";
+
+							document.getElementById("chatAnalista").innerHTML =
+							data.analista;
+
+							document.getElementById("chatCorreo").innerHTML =
+							data.correo;
+
+				});
+			}
+				let imagenSeleccionada = null;
+							document.getElementById("fileImagen")
+			.addEventListener("change", function () {
+
+				if(this.files.length > 0)
+				{
+					imagenSeleccionada = this.files[0];
+
+					document.getElementById("nombreArchivoSeleccionado").innerHTML =
+					`
+					<div class="archivo-preview">
+						📷 ${imagenSeleccionada.name}
+						<button type="button" onclick="quitarImagen()">✕</button>
+					</div>
+					`;
+				}
+
+			});
+					function quitarImagen()
+			{
+				imagenSeleccionada = null;
+
+				document.getElementById("fileImagen").value = "";
+
+				document.getElementById("nombreArchivoSeleccionado").innerHTML = "";
+			}
+											function enviarMensaje()
+			{
+				let mensaje = document.getElementById("txtMensaje").value.trim();
+
+				if(mensaje === "" && imagenSeleccionada == null)
+				{
+					mostrarAviso("Debe escribir un mensaje o adjuntar una imagen.");
+					return;
+				}
+
+				let formData = new FormData();
+
+				formData.append("idSolicitud", solicitudActual);
+				formData.append("mensaje", mensaje);
+
+				if(imagenSeleccionada != null)
+				{
+					formData.append("imagen", imagenSeleccionada);
+				}
+
+				fetch('/Login/EnviarMensaje', {
+					method: 'POST',
+					body: formData
+				})
+				.then(r => r.json())
+				.then(data => {
+
+					console.log(data);
+
+					document.getElementById("txtMensaje").value = "";
+					document.getElementById("fileImagen").value = "";
+					document.getElementById("nombreArchivoSeleccionado").innerHTML = "";
+					imagenSeleccionada = null;
+
+					cargarMensajes(solicitudActual);
+
+				})
+				.catch(error => {
+
+					console.error(error);
+					alert("Error al enviar mensaje");
+
+				});
+			}
+					function verImagen(url)
+			{
+				Swal.fire({
+					imageUrl: url,
+					imageAlt: 'Imagen',
+					showConfirmButton: false,
+					showCloseButton: true,
+					width: '80%'
+				});
+			}
+
+							function cargarMensajes(idSolicitud)
+			{
+				fetch('/Login/ObtenerMensajes?idSolicitud=' + idSolicitud)
+				.then(r => r.json())
+				.then(data => {
+
+					let html = "";
+
+					if(data.length === 0)
+					{
+						html = `
+						<div class="chat-vacio">
+							<i class="fas fa-comments"></i>
+							<h4>No hay mensajes todavía</h4>
+							<p>Inicia una conversación con el analista</p>
+						</div>`;
+					}
+					else
+					{
+						data.forEach(m => {
+
+									if(m.tipoUsuario === "Usuario")
+			{
+								html += `
+			<div class="mensaje-analista">
+
+				<div class="chat-derecha">
+
+					<div class="cabecera-derecha">
+						<span class="nombre-chat">
+							${m.nombre}
+						</span>
+
+						<div class="avatar-chat">
+							<i class="fas fa-user-circle"></i>
+						</div>
+					</div>
+
+							<div class="${m.imagen ? 'imagen-contenedor' : 'burbuja-analista'}">
+			${m.imagen
+			 ? `<img src="${m.imagen}"
+				  class="imagen-chat"
+				  onclick="verImagen('${m.imagen}')">`
+			 : ''
+			}
+
+			${m.mensaje != "[Imagen]"
+			 ? `<div class="texto-chat">${m.mensaje}</div>`
+			 : ''
+			}
+
+			</div>
+
+					<div class="fecha-chat fecha-derecha">
+						${m.fecha}
+					</div>
+
+				</div>
+
+			</div>`;
+			}
+									else
+			{
+						html += `
+			<div class="mensaje-cliente">
+
+				<div class="avatar-chat">
+					<i class="fas fa-user-circle"></i>
+				</div>
+
+				<div>
+
+					<div class="nombre-chat">
+						${m.nombre}
+					</div>
+
+							<div class="${m.imagen ? 'imagen-contenedor' : 'burbuja-cliente'}">
+			${m.imagen
+			 ? `<img src="${m.imagen}"
+				  class="imagen-chat"
+				  onclick="verImagen('${m.imagen}')">`
+			 : ''
+			}
+
+			${m.mensaje != "[Imagen]"
+			 ? `<div class="texto-chat">${m.mensaje}</div>`
+			 : ''
+			}
+
+			</div>
+
+					<div class="fecha-chat">
+						${m.fecha}
+					</div>
+
+				</div>
+
+			</div>`;
+			}
+
+						});
+					}
+
+					document.getElementById("chatMensajes").innerHTML = html;
+
+				});
+			}
+
+			function cerrarChat()
+			{
+				document.getElementById("modalChat").style.display = "none";
+			}
+</script>
+<div id="modalPago" class="modal-pago">
+
+	<div class="modal-content-pago">
+		<h2>Cancelar solicitud</h2>
+		<p>
+			Para cancelar esta solicitud aprobada, debes devolver el monto total prestado.
+		</p>
+
+		<label>Monto a devolver</label>
+		<input id="montoDevolver" type="text" value="S/ 10,000" readonly />
+
+		<label>Método de pago</label>
+		<select id="metodoPago" onchange="mostrarDatosPago()">
+			<option value="">Seleccione método de pago</option>
+			<option>Yape</option>
+			<option>Plin</option>
+			<option>BCP</option>
+			<option>Interbank</option>
+			<option>BBVA</option>
+			<option>Scotiabank</option>
+			<option>Caja Arequipa</option>
+			<option>Transferencia bancaria</option>
+		</select>
+		<div id="datosPago" style="display:none; margin-top:15px;"></div>
+
+		<label>Motivo de cancelación</label>
+		<textarea id="motivoCancelacion"
+				  placeholder="Explique el motivo de la cancelación"
+				  maxlength="255"
+				  required
+				  style="
+		width:100%;
+		padding:14px;
+		border:2px solid #ddd6fe;
+		border-radius:14px;
+		margin-top:8px;
+		margin-bottom:15px;
+		font-size:16px;
+		resize:none;
+		min-height:100px;"></textarea>
+
+		<div class="modal-actions">
+			<button class="btn-cancelar-modal" onclick="cerrarModalPago()">Volver</button>
+			<button class="btn-pagar-modal" onclick="confirmarPagoCancelacion()">Pagar y solicitar cancelación</button>
+		</div>
+	</div>
+
+</div>
+<div id="modalCancelacionEvaluacion" class="modal-pago" style="display:none;">
+
+	<div class="modal-content-pago">
+
+		<h2>Cancelar solicitud</h2>
+
+		<p>
+			Explique el motivo de la cancelación.
+		</p>
+
+		<label>Motivo de cancelación</label>
+
+		<textarea id="motivoEvaluacion"
+				  maxlength="255"
+				  placeholder="Ingrese el motivo..."
+				  style="
+		width:100%;
+		min-height:120px;
+		padding:14px;
+		border:2px solid #ddd6fe;
+		border-radius:14px;
+		resize:none;">
+	</textarea>
+
+	<p style="margin-top:15px;color:#6b7280;">
+		Este comentario será utilizado para futuras mejoras del proceso.
+	</p>
+
+	<div class="modal-actions">
+
+		<button class="btn-cancelar-modal"
+				onclick="cerrarModalEvaluacion()">
+			Volver
+		</button>
+
+		<button class="btn-pagar-modal"
+				onclick="confirmarCancelacionEvaluacion()">
+			Aceptar
+		</button>
+
+	</div>
+
+</div>
+
+</div>
+
+<script src="~/js/config-global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

@@ -1,0 +1,1081 @@
+﻿@model List<trabajo.Models.SolicitudCredito>
+
+@{
+    Layout = null;
+    var aprobadas = Model
+    .Where(x => x.Estado == "Aprobado")
+    .ToList();
+
+    var rechazadas = Model
+        .Where(x => x.Estado == "Rechazado")
+        .ToList();
+
+    Layout = "~/Views/Shared/_LayoutAnalista.cshtml";
+    ViewData["Title"] = "Historial Evaluaciones";
+    ViewData["ActivePage"] = "HistorialEvaluaciones";
+}
+
+    <style>
+
+        /* CONTENT */
+
+        .content {
+            flex: 1;
+            padding: 35px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .welcome {
+            color: #6b7280;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .top-bar h1 {
+            font-size: 50px;
+            color: #4c1d95;
+            font-weight: 800;
+        }
+
+        .top-bar p {
+            color: #6b7280;
+        }
+
+        /* PROFILE */
+
+        .profile-box {
+            background: white;
+            border-radius: 20px;
+            padding: 20px 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 10px 30px rgba(124,58,237,.08);
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg,#6d28d9,#9333ea);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 25px;
+        }
+
+        .content {
+            flex: 1;
+            padding: 35px;
+        }
+
+        .contenedor {
+            background: white;
+            border-radius: 25px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(124,58,237,.08);
+        }
+
+        h1 {
+            color: #4c1d95;
+            font-size: 40px;
+            font-weight: 800;
+            margin-bottom: 25px;
+        }
+
+        .total {
+            margin-bottom: 20px;
+            color: red;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f3e8ff;
+            color: #5b21b6;
+            padding: 15px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .estado-aprobado {
+            background: #dcfce7;
+            color: #15803d;
+            padding: 7px 12px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .estado-rechazado {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 7px 12px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .btn-ojo {
+            background: #6d28d9;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+    .acciones-historial {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .btn-cronograma {
+        background: #f59e0b;
+        color: white;
+        border: none;
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        font-size: 17px;
+        font-weight: bold;
+        transition: .25s;
+    }
+
+        .btn-cronograma:hover {
+            background: #d97706;
+            color: white;
+        }
+        .modal-historial {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, .62);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+
+        .modal-box {
+            width: 860px;
+            max-width: 94%;
+            background: white;
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 25px 70px rgba(0,0,0,.28);
+        }
+
+        .modal-title {
+            color: #4c1d95;
+            font-size: 30px;
+            font-weight: 900;
+            margin-bottom: 20px;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .info-card {
+            background: #faf8ff;
+            border-radius: 16px;
+            padding: 18px;
+            border: 1px solid #eee;
+        }
+
+            .info-card h3 {
+                color: #4c1d95;
+                margin-top: 0;
+            }
+
+        .fila {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            gap: 12px;
+        }
+
+            .fila strong {
+                text-align: right;
+            }
+
+        .observacion {
+            margin-top: 18px;
+            background: #f3e8ff;
+            padding: 18px;
+            border-radius: 16px;
+            color: #3c096c;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin-top: 25px;
+        }
+
+        .btn-aceptar {
+            background: #22c55e;
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-mensaje {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #modalChat {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.55);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999999;
+        }
+
+        .chat-contenido {
+            width: 850px;
+            height: 650px;
+            background: white;
+            border-radius: 22px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 80px rgba(0,0,0,.35);
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg,#8b5cf6,#5b21b6);
+            color: white;
+            padding: 18px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-titulo {
+            font-size: 24px;
+            font-weight: 900;
+        }
+
+        .chat-subtitulo {
+            margin-top: 6px;
+            font-size: 14px;
+            color: #ede9fe;
+        }
+
+        .btn-cerrar-chat {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 34px;
+            font-weight: 900;
+            cursor: pointer;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+        }
+
+            .btn-cerrar-chat:hover {
+                background: rgba(255,255,255,.18);
+            }
+
+        #chatMensajes {
+            flex: 1;
+            overflow-y: auto;
+            background: #faf8ff;
+            padding: 22px;
+            position: relative;
+        }
+
+        .chat-vacio {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%,-50%);
+            text-align: center;
+            opacity: .22;
+        }
+
+        .chat-vacio-icono {
+            font-size: 95px;
+            color: #7c3aed;
+        }
+
+        .chat-vacio h4 {
+            color: #7c3aed;
+            font-size: 22px;
+            font-weight: 900;
+        }
+
+        .chat-vacio p {
+            color: #6b7280;
+        }
+
+        .chat-footer {
+            margin-top: auto; 
+            border-top: 1px solid #e5e7eb;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+        }
+
+            .chat-footer input[type=text] {
+                flex: 1;
+                border: 2px solid #ddd6fe;
+                border-radius: 14px;
+                padding: 13px 16px;
+                outline: none;
+            }
+
+                .chat-footer input[type=text]:focus {
+                    border-color: #7c3aed;
+                }
+
+        .btn-chat-icon {
+            width: 52px;
+            height: 52px;
+            border: none;
+            border-radius: 15px;
+            background: #f3e8ff;
+            color: #7c3aed;
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: 0 8px 18px rgba(124,58,237,.18);
+        }
+
+            .btn-chat-icon:hover {
+                background: #e9d5ff;
+            }
+
+        .btn-enviar-chat {
+            min-width: 115px;
+            height: 52px;
+            border: none;
+            border-radius: 15px;
+            background: linear-gradient(135deg,#8b5cf6,#7c3aed);
+            color: white;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 8px 18px rgba(124,58,237,.25);
+        }
+
+            .btn-enviar-chat:hover {
+                background: #6d28d9;
+            }
+
+        .archivo-seleccionado {
+            max-width: 190px;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+        }
+
+        .archivo-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f3e8ff;
+            color: #6d28d9;
+            padding: 8px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            max-width: 190px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+            .archivo-preview span {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .archivo-preview button {
+                border: none;
+                background: #ef4444;
+                color: white;
+                width: 24px;
+                min-width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                cursor: pointer;
+                font-weight: 900;
+            }
+        .archivo-preview {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #f3e8ff;
+            color: #6d28d9;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+            .archivo-preview button {
+                border: none;
+                background: #ef4444;
+                color: white;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                cursor: pointer;
+                font-weight: 900;
+            }
+
+        .mensaje-cliente {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+
+        .mensaje-analista {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 18px;
+        }
+
+        .burbuja-cliente {
+            background: white;
+            color: #111827;
+            padding: 12px 16px;
+            border-radius: 16px;
+            max-width: 70%;
+            box-shadow: 0 4px 14px rgba(0,0,0,.08);
+        }
+
+        .burbuja-analista {
+            background: #7c3aed;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 16px;
+            max-width: 70%;
+        }
+
+        .nombre-chat {
+            font-size: 13px;
+            font-weight: 800;
+            color: #7c3aed;
+            margin-bottom: 4px;
+        }
+
+        .fecha-chat {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 5px;
+        }
+
+        .fecha-derecha {
+            text-align: right;
+        }
+
+        .avatar-chat {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #8b5cf6;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin: 0 10px;
+        }
+
+        .chat-derecha {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .cabecera-derecha {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .imagen-chat {
+            max-width: 280px;
+            max-height: 260px;
+            border-radius: 14px;
+            display: block;
+            cursor: pointer;
+            object-fit: cover;
+            border: 1px solid #e5e7eb;
+        }
+
+        .imagen-contenedor {
+            background: transparent !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+            margin-top: 8px;
+        }
+
+        .texto-chat {
+            margin-top: 8px;
+        }
+
+        .chat-vacio-img {
+            width: 120px;
+            opacity: .75;
+            margin-bottom: 18px;
+            filter: hue-rotate(230deg) saturate(1.7);
+        }
+
+        .swal2-container {
+            z-index: 99999999 !important;
+        }
+
+      </style>
+    
+        <div class="content">
+            <div class="contenedor">
+                <h1>Solicitudes Aprobadas</h1>
+
+                <div class="total">
+                    Total registros: @aprobadas.Count()
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>N° Solicitud</th>
+                            <th>Cliente</th>
+                            <th>Monto</th>
+                            <th>Plazo</th>
+                            <th>Fecha</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (aprobadas.Any())
+                        {
+                            foreach (var solicitud in aprobadas)
+                            {
+                                var evaluacion = ViewBag.Evaluaciones != null
+                                ? ((List<trabajo.Models.Evaluacion_Riesgo>)ViewBag.Evaluaciones)
+                                .FirstOrDefault(x => x.SOLICITUD_CREDITO_Id_Solicitud == solicitud.Id_Solicitud)
+                                : null;
+
+                                var observacion = evaluacion?.Observacion ?? "Sin observación";
+                                var ultimaFecha = solicitud.HISTORIAL_ESTADOS?
+                                .OrderByDescending(h => h.FechaCambio)
+                                .FirstOrDefault()?.FechaCambio ?? solicitud.FechaSolicitud;
+
+                                <tr>
+                                    <td>SOL-@solicitud.Id_Solicitud.ToString("D5")</td>
+                                    <td>@solicitud.USUARIO.Nombre @solicitud.USUARIO.Apellido</td>
+                                    <td>S/ @solicitud.MontoSolicitado.ToString("N0")</td>
+                                    <td>@solicitud.PlazoMeses meses</td>
+                                    <td>@ultimaFecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <div class="acciones-historial">
+                                        <button type="button"
+                                                class="btn-ojo"
+                                                onclick="abrirDetalle(
+                    @solicitud.Id_Solicitud,
+                    '@(solicitud.USUARIO.Nombre + " " + solicitud.USUARIO.Apellido)',
+                    '@solicitud.USUARIO.Dni',
+                    '@solicitud.USUARIO.Celular',
+                    '@solicitud.USUARIO.Correo',
+                    '@solicitud.MontoSolicitado.ToString("N0")',
+                    '@solicitud.PlazoMeses',
+                    '@solicitud.PERFIL_FINANCIERO?.MotivoPrestamo',
+                    '@solicitud.PERFIL_FINANCIERO?.Ocupacion',
+                    '@solicitud.PERFIL_FINANCIERO?.IngresoMensual.ToString("N2")',
+                    '@solicitud.PERFIL_FINANCIERO?.EgresoMensual.ToString("N2")',
+                    '@solicitud.Estado',
+                    '@observacion')">
+                                            👁
+                                        </button>
+                                        <div class="dropdown d-inline">
+                                            <button class="btn-cronograma" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-file-invoice"></i>
+                                            </button>
+
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a class="dropdown-item"
+                                                       asp-controller="Analista"
+                                                       asp-action="CronogramaEvaluacionPdf"
+                                                       asp-route-idSolicitud="@solicitud.Id_Solicitud"
+                                                       target="_blank">
+                                                        <i class="fas fa-file-pdf text-danger"></i> PDF
+                                                    </a>
+                                                </li>
+
+                                                <li>
+                                                    <a class="dropdown-item"
+                                                       asp-controller="Analista"
+                                                       asp-action="CronogramaEvaluacionExcel"
+                                                       asp-route-idSolicitud="@solicitud.Id_Solicitud">
+                                                        <i class="fas fa-file-excel text-success"></i> Excel
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" style="text-align:center;padding:70px;">
+                                    📄 No hay solicitudes aprobadas disponibles.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <br /><br />
+
+                <h1>Solicitudes Rechazadas</h1>
+
+                <div class="total">
+                    Total registros: @rechazadas.Count()
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>N° Solicitud</th>
+                            <th>Cliente</th>
+                            <th>Monto</th>
+                            <th>Plazo</th>
+                            <th>Fecha</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (rechazadas.Any())
+                        {
+                            foreach (var solicitud in rechazadas)
+                            {
+                                var evaluacion = ViewBag.Evaluaciones != null
+                                ? ((List<trabajo.Models.Evaluacion_Riesgo>)ViewBag.Evaluaciones)
+                                .FirstOrDefault(x => x.SOLICITUD_CREDITO_Id_Solicitud == solicitud.Id_Solicitud)
+                                : null;
+                                var observacion = evaluacion?.Observacion ?? "Sin observación";
+                                var ultimaFecha = solicitud.HISTORIAL_ESTADOS?
+                                .OrderByDescending(h => h.FechaCambio)
+                                .FirstOrDefault()?.FechaCambio ?? solicitud.FechaSolicitud;
+
+                                <tr>
+                                    <td>SOL-@solicitud.Id_Solicitud.ToString("D5")</td>
+                                    <td>@solicitud.USUARIO.Nombre @solicitud.USUARIO.Apellido</td>
+                                    <td>S/ @solicitud.MontoSolicitado.ToString("N0")</td>
+                                    <td>@solicitud.PlazoMeses meses</td>
+                                    <td>@ultimaFecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        <button type="button"
+                                                class="btn-ojo"
+                                                onclick="abrirDetalle(
+                    @solicitud.Id_Solicitud,
+                    '@(solicitud.USUARIO.Nombre + " " + solicitud.USUARIO.Apellido)',
+                    '@solicitud.USUARIO.Dni',
+                    '@solicitud.USUARIO.Celular',
+                    '@solicitud.USUARIO.Correo',
+                    '@solicitud.MontoSolicitado.ToString("N0")',
+                    '@solicitud.PlazoMeses',
+                    '@solicitud.PERFIL_FINANCIERO?.MotivoPrestamo',
+                    '@solicitud.PERFIL_FINANCIERO?.Ocupacion',
+                    '@solicitud.PERFIL_FINANCIERO?.IngresoMensual.ToString("N2")',
+                    '@solicitud.PERFIL_FINANCIERO?.EgresoMensual.ToString("N2")',
+                    '@solicitud.Estado',
+                    '@observacion')">
+                                            👁
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" style="text-align:center;padding:70px;">
+                                    📄 No hay solicitudes rechazadas disponibles.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+    <div id="modalDetalle" class="modal-historial">
+        <div class="modal-box">
+            <div class="modal-title" id="modalTitulo">Detalle de Evaluación</div>
+
+            <div class="modal-grid">
+                <div class="info-card">
+                    <h3>Datos personales</h3>
+                    <div class="fila"><span>Cliente:</span><strong id="mCliente"></strong></div>
+                    <div class="fila"><span>DNI:</span><strong id="mDni"></strong></div>
+                    <div class="fila"><span>Teléfono:</span><strong id="mCelular"></strong></div>
+                    <div class="fila"><span>Email:</span><strong id="mCorreo"></strong></div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Perfil financiero</h3>
+                    <div class="fila"><span>Monto:</span><strong id="mMonto"></strong></div>
+                    <div class="fila"><span>Plazo:</span><strong id="mPlazo"></strong></div>
+                    <div class="fila"><span>Motivo:</span><strong id="mMotivo"></strong></div>
+                    <div class="fila"><span>Ocupación:</span><strong id="mOcupacion"></strong></div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Resumen financiero</h3>
+                    <div class="fila"><span>Ingresos mensuales:</span><strong id="mIngreso"></strong></div>
+                    <div class="fila"><span>Egresos mensuales:</span><strong id="mEgreso"></strong></div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Resultado</h3>
+                    <div class="fila"><span>Estado:</span><strong id="mEstado"></strong></div>
+                    <div class="fila"><span>N° Solicitud:</span><strong id="mSolicitud"></strong></div>
+                </div>
+            </div>
+
+            <div class="observacion">
+                <b>Observación del analista:</b>
+                <p id="mObservacion"></p>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-aceptar" onclick="cerrarDetalle()">Aceptar</button>
+                <button class="btn-mensaje" onclick="abrirMensajeDesdeHistorial()">💬 Mensaje</button>
+            </div>
+        </div>
+    </div>
+    <div id="modalChat" style="display:none;">
+        <div class="chat-contenido">
+
+            <div class="chat-header">
+                <div>
+                    <div class="chat-titulo">
+                        💬 <span id="tituloSolicitud">Mensajes</span>
+                    </div>
+
+                    <div class="chat-subtitulo">
+                        Cliente: <span id="chatCliente">-</span>
+                        &nbsp; • &nbsp;
+                        Estado: <span id="chatEstado">-</span>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-cerrar-chat" onclick="cerrarChat()">
+                    ✕
+                </button>
+            </div>
+
+            <div id="chatMensajes">
+                <div class="chat-vacio">
+                    <img src="https://cdn-icons-png.flaticon.com/512/1041/1041916.png"
+                         class="chat-vacio-img" />
+
+                    <h4>No hay mensajes todavía</h4>
+                    <p>Inicia una conversación con el Usuario</p>
+                </div>
+            </div>
+
+            <div class="chat-footer">
+
+                <input type="text"
+                       id="txtMensaje"
+                       placeholder="Escribe tu mensaje..." />
+
+                <div id="nombreArchivoSeleccionado" class="archivo-seleccionado"></div>
+
+                <input type="file"
+                       id="fileImagen"
+                       accept="image/*"
+                       style="display:none">
+
+                <button type="button"
+                        class="btn-chat-icon"
+                        onclick="document.getElementById('fileImagen').click()">
+                    🖼
+                </button>
+
+                <button type="button"
+                        class="btn-enviar-chat"
+                        onclick="enviarMensaje()">
+                    ✈ Enviar
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let solicitudSeleccionada = 0;
+
+        function abrirDetalle(id, cliente, dni, celular, correo, monto, plazo, motivo, ocupacion, ingreso, egreso, estado, observacion) {
+            solicitudSeleccionada = id;
+
+            document.getElementById("modalTitulo").innerText =
+                "Detalle de Evaluación - SOL-" + id.toString().padStart(5, "0");
+
+            document.getElementById("mCliente").innerText = cliente;
+            document.getElementById("mDni").innerText = dni;
+            document.getElementById("mCelular").innerText = celular;
+            document.getElementById("mCorreo").innerText = correo;
+            document.getElementById("mMonto").innerText = "S/ " + monto;
+            document.getElementById("mPlazo").innerText = plazo + " meses";
+            document.getElementById("mMotivo").innerText = motivo;
+            document.getElementById("mOcupacion").innerText = ocupacion;
+            document.getElementById("mIngreso").innerText = "S/ " + ingreso;
+            document.getElementById("mEgreso").innerText = "S/ " + egreso;
+            document.getElementById("mEstado").innerText = estado;
+            document.getElementById("mSolicitud").innerText = "SOL-" + id.toString().padStart(5, "0");
+            document.getElementById("mObservacion").innerText = observacion;
+
+            document.getElementById("modalDetalle").style.display = "flex";
+        }
+
+        function cerrarDetalle() {
+            document.getElementById("modalDetalle").style.display = "none";
+        }
+
+                      function abrirMensajeDesdeHistorial() {
+            console.log("Solicitud seleccionada:", solicitudSeleccionada);
+
+            if (solicitudSeleccionada == 0 || solicitudSeleccionada == null) {
+                alert("No se encontró la solicitud seleccionada.");
+                return;
+            }
+
+            cerrarDetalle();
+
+            setTimeout(function () {
+                abrirChat(solicitudSeleccionada);
+            }, 100);
+        }
+                        let imagenSeleccionada = null;
+
+        function abrirChat(idSolicitud) {
+            solicitudSeleccionada = idSolicitud;
+
+            document.getElementById("modalChat").style.display = "flex";
+
+            cargarInfoSolicitud(idSolicitud);
+            cargarMensajes(idSolicitud);
+        }
+
+
+        function cargarInfoSolicitud(idSolicitud) {
+            fetch('/Analista/ObtenerInfoSolicitud?idSolicitud=' + idSolicitud)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById("tituloSolicitud").innerHTML =
+                        "Mensajes - Solicitud " + data.numeroSolicitud;
+
+                    document.getElementById("chatCliente").innerHTML = data.cliente;
+                    document.getElementById("chatEstado").innerHTML = data.estado;
+                });
+        }
+
+        document.getElementById("fileImagen").addEventListener("change", function () {
+            if (this.files.length > 0) {
+                imagenSeleccionada = this.files[0];
+
+                document.getElementById("nombreArchivoSeleccionado").innerHTML = `
+                    <div class="archivo-preview">
+                        📷 <span>${imagenSeleccionada.name}</span>
+                        <button type="button" onclick="quitarImagen()">✕</button>
+                    </div>
+                `;
+            }
+        });
+
+        function quitarImagen() {
+            imagenSeleccionada = null;
+            document.getElementById("fileImagen").value = "";
+            document.getElementById("nombreArchivoSeleccionado").innerHTML = "";
+        }
+
+        function cerrarChat() {
+            document.getElementById("modalChat").style.display = "none";
+            quitarImagen();
+        }
+
+        function enviarMensaje() {
+            let mensaje = document.getElementById("txtMensaje").value.trim();
+
+            if (mensaje === "" && imagenSeleccionada == null) {
+                alert("Debe escribir un mensaje o adjuntar una imagen.");
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append("idSolicitud", solicitudSeleccionada);
+            formData.append("mensaje", mensaje);
+
+            if (imagenSeleccionada != null) {
+                formData.append("imagen", imagenSeleccionada);
+            }
+
+            fetch('/Analista/EnviarMensaje', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById("txtMensaje").value = "";
+                quitarImagen();
+                cargarMensajes(solicitudSeleccionada);
+            });
+        }
+
+        function verImagen(url) {
+            Swal.fire({
+                imageUrl: url,
+                imageAlt: 'Imagen del chat',
+                showConfirmButton: false,
+                showCloseButton: true,
+                width: '70%',
+                background: '#ffffff'
+            });
+        }
+
+              function cargarMensajes(idSolicitud) {
+            fetch('/Analista/ObtenerMensajes?idSolicitud=' + idSolicitud)
+                .then(r => r.json())
+                .then(data => {
+
+                    let html = "";
+
+                    if (data.length === 0) {
+                        html = `
+                        <div class="chat-vacio">
+                            <img src="https://cdn-icons-png.flaticon.com/512/1041/1041916.png"
+                                 class="chat-vacio-img" />
+                            <h4>No hay mensajes todavía</h4>
+                            <p>Inicia una conversación con el Usuario</p>
+                        </div>`;
+                    }
+                    else {
+                        data.forEach(m => {
+
+                            if (m.tipoUsuario === "Analista") {
+
+                                html += `
+                                <div class="mensaje-analista">
+                                    <div class="chat-derecha">
+
+                                        <div class="cabecera-derecha">
+                                            <span class="nombre-chat">${m.nombre}</span>
+                                            <div class="avatar-chat">
+                                                <i class="fas fa-user-circle"></i>
+                                            </div>
+                                        </div>
+
+                                        ${m.imagen
+                                            ? `<div class="imagen-contenedor">
+                                                   <img src="${m.imagen}"
+                                                        class="imagen-chat"
+                                                        onclick="verImagen('${m.imagen}')">
+                                               </div>`
+                                            : `<div class="burbuja-analista">
+                                                   <div class="texto-chat">${m.mensaje}</div>
+                                               </div>`
+                                        }
+
+                                        ${m.imagen && m.mensaje !== "[Imagen]"
+                                            ? `<div class="burbuja-analista" style="margin-top:6px;">
+                                                   <div class="texto-chat">${m.mensaje}</div>
+                                               </div>`
+                                            : ''
+                                        }
+
+                                        <div class="fecha-chat fecha-derecha">${m.fecha}</div>
+                                    </div>
+                                </div>`;
+                            }
+                            else {
+
+                                html += `
+                                <div class="mensaje-cliente">
+
+                                    <div class="avatar-chat">
+                                        <i class="fas fa-user-circle"></i>
+                                    </div>
+
+                                    <div>
+                                        <div class="nombre-chat">${m.nombre}</div>
+
+                                        ${m.imagen
+                                            ? `<div class="imagen-contenedor">
+                                                   <img src="${m.imagen}"
+                                                        class="imagen-chat"
+                                                        onclick="verImagen('${m.imagen}')">
+                                               </div>`
+                                            : `<div class="burbuja-cliente">
+                                                   <div class="texto-chat">${m.mensaje}</div>
+                                               </div>`
+                                        }
+
+                                        ${m.imagen && m.mensaje !== "[Imagen]"
+                                            ? `<div class="burbuja-cliente" style="margin-top:6px;">
+                                                   <div class="texto-chat">${m.mensaje}</div>
+                                               </div>`
+                                            : ''
+                                        }
+
+                                        <div class="fecha-chat">${m.fecha}</div>
+                                    </div>
+
+                                </div>`;
+                            }
+
+                        });
+                    }
+
+                    document.getElementById("chatMensajes").innerHTML = html;
+                });
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
