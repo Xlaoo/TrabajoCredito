@@ -1,0 +1,1401 @@
+﻿@{
+    Layout = null;
+    Layout = "~/Views/Shared/_LayoutCliente.cshtml";
+    ViewData["Title"] = "DashboardCliente";
+    ViewData["ActivePage"] = "Inicio";
+
+    var solicitud = ViewBag.SolicitudActiva as trabajo.Models.SolicitudCredito;
+    var perfil = solicitud != null &&
+              (solicitud.Estado == "Aprobado" || solicitud.Estado == "Rechazado")
+     ? ViewBag.PerfilFinanciero as trabajo.Models.PerfilFinanciero
+     : null;
+    decimal ingreso = perfil != null ? perfil.IngresoMensual : 0;
+    decimal egreso = perfil != null ? perfil.EgresoMensual : 0;
+    decimal capacidad = ingreso * 0.30m;
+    decimal disponible = ingreso - egreso;
+    string otrosCreditos = perfil != null
+    ? (perfil.OtrosCreditos ? "Sí tiene" : "No tiene")
+    : "Sin registro";
+
+    string nombre = User.Identity.Name ?? "Cliente";
+    string apellido = User.FindFirst("Apellido")?.Value ?? "";
+    string dni = User.FindFirst("Dni")?.Value ?? "Sin registro";
+    string celular = User.FindFirst("Celular")?.Value ?? "Sin registro";
+    string correo = User.FindFirst("Correo")?.Value ?? "Sin registro";
+    string nombreCompleto = nombre + " " + apellido;
+}
+<style>
+    .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 30px;
+    }
+
+    .welcome-text {
+        color: #4c1d95;
+        font-size: 18px;
+    }
+
+    .top h1 {
+        font-size: 38px;
+        font-weight: 800;
+        margin: 5px 0;
+    }
+
+    .top p {
+        font-size: 17px;
+        color: #51446b;
+    }
+
+    .profile-card {
+        background: white;
+        padding: 20px 30px;
+        border-radius: 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.08);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 280px;
+    }
+
+    .avatar {
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6d28d9, #9333ea);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        box-shadow: 0 5px 15px rgba(109,40,217,.35);
+    }
+
+    .profile-card h4 {
+        margin: 0;
+        font-weight: bold;
+    }
+
+    .profile-card span {
+        color: #4c1d95;
+        font-size: 14px;
+    }
+
+    .cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 22px;
+        margin-top: 25px;
+    }
+
+    .card-box {
+        background: white;
+        border-radius: 22px;
+        padding: 25px;
+        display: flex;
+        gap: 18px;
+        align-items: flex-start;
+        border: 2px solid #ece5ff;
+        box-shadow: 0 10px 25px rgba(124,58,237,.12);
+        transition: .3s;
+    }
+
+        .card-box:hover {
+            transform: translateY(-4px);
+            border-color: #7c3aed;
+            box-shadow: 0 14px 30px rgba(124,58,237,.20);
+        }
+
+        .card-box h3 {
+            font-size: 18px;
+            margin: 0;
+            color: #27104e;
+        }
+
+        .card-box h2 {
+            margin: 10px 0 5px;
+            color: #7c3aed;
+            font-size: 34px;
+            font-weight: 800;
+        }
+
+        .card-box span {
+            color: #777;
+        }
+
+    .icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 24px;
+    }
+
+    .purple {
+        background: linear-gradient(135deg,#7c3aed,#9333ea);
+    }
+
+    .blue {
+        background: linear-gradient(135deg,#2563eb,#3b82f6);
+    }
+
+    .green {
+        background: linear-gradient(135deg,#16a34a,#22c55e);
+    }
+
+    .orange {
+        background: linear-gradient(135deg,#ea580c,#fb923c);
+    }
+
+    .loan-banner {
+        margin-top: 35px;
+        background: linear-gradient( 90deg, #2b0050, #5b21b6, #3b82f6 );
+        border-radius: 28px;
+        padding: 40px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 15px 40px rgba(76,29,149,.25);
+    }
+
+    .loan-left {
+        display: flex;
+        align-items: center;
+        gap: 25px;
+    }
+
+    .loan-image {
+        width: 120px;
+        height: 120px;
+        border-radius: 24px;
+        background: rgba(255,255,255,.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 60px;
+    }
+
+    .loan-info h2 {
+        font-size: 34px;
+        font-weight: 800;
+        margin-bottom: 10px;
+    }
+
+    .loan-info p {
+        color: #ddd6fe;
+        font-size: 18px;
+        margin-bottom: 20px;
+    }
+
+    .loan-feature {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+        .loan-feature i {
+            width: 55px;
+            height: 55px;
+            border-radius: 16px;
+            background: rgba(255,255,255,.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+        }
+
+        .loan-feature strong {
+            display: block;
+            font-size: 18px;
+        }
+
+        .loan-feature span {
+            color: #ddd6fe;
+            font-size: 16px;
+        }
+
+    .loan-right {
+        min-width: 300px;
+        margin-right: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+        .loan-right small {
+            color: #ddd6fe;
+            font-size: 15px;
+        }
+
+        .loan-right h1 {
+            font-size: 60px;
+            margin: 5px 0 15px;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+    .loan-line {
+        width: 100%;
+        height: 2px;
+        background: rgba(255,255,255,.2);
+        margin: 25px 0 35px;
+    }
+
+    .loan-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 18px 40px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: white !important;
+        text-decoration: none !important;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: .5px;
+        box-shadow: 0 10px 25px rgba(34,197,94,.35);
+        transition: all .3s ease;
+    }
+
+        .loan-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(34,197,94,.45);
+            color: white !important;
+            text-decoration: none !important;
+        }
+
+
+
+            .loan-btn:hover::after {
+                transform: translateX(5px);
+            }
+
+    .bottom-cards {
+        margin-top: 35px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+        align-items: stretch;
+    }
+
+    .info-card {
+        background: white;
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.08);
+        min-height: 340px;
+    }
+
+        .info-card h3 {
+            font-size: 30px;
+            font-weight: bold;
+            color: #3c096c;
+            margin-bottom: 28px;
+        }
+
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 25px;
+        padding: 18px 0;
+        border-bottom: 1px solid #ececec;
+        font-size: 19px;
+    }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-item span {
+            color: #4b5563;
+            font-weight: 500;
+        }
+
+        .info-item strong {
+            color: #111827;
+        }
+
+    .status-purple {
+        color: #7c3aed;
+        font-weight: bold;
+    }
+
+    .bottom-cards {
+        margin-top: 35px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 28px;
+    }
+
+    .finance-card,
+    .benefits-card {
+        background: white;
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.08);
+        min-height: 340px;
+    }
+
+        .finance-card h3,
+        .benefits-card h3 {
+            font-size: 38px;
+            font-weight: 800;
+            color: #3c096c;
+            margin-bottom: 35px;
+        }
+
+    .finance-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #ececec;
+        font-size: 17px;
+    }
+
+    .finance-box {
+        margin-top: 18px;
+        padding: 16px 18px;
+        border-radius: 14px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 17px;
+        font-weight: bold;
+    }
+
+    .purple-box {
+        background: #f3e8ff;
+        color: #7c3aed;
+    }
+
+    .green-box {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .benefit-item {
+        margin-bottom: 22px;
+    }
+
+        .benefit-item strong {
+            display: block;
+            color: #3c096c;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .benefit-item p {
+            margin: 4px 0 0;
+            color: #6b7280;
+            font-size: 18px;
+            line-height: 1.5;
+        }
+
+    .loan-features {
+        margin-top: 35px;
+        width: 100%;
+        background: white;
+        border-radius: 24px;
+        padding: 40px 50px;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        align-items: center;
+        gap: 35px;
+        box-shadow: 0 10px 30px rgba(124,58,237,.08);
+    }
+
+    .feature-box {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        width: 100%;
+    }
+
+        .feature-box i {
+            font-size: 38px;
+            color: #7c3aed;
+        }
+
+        .feature-box h4 {
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 6px;
+        }
+
+        .feature-box p {
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.4;
+            color: #6b7280;
+        }
+
+    .loan-btn.bloqueado,
+    .loan-btn.bloqueado:hover {
+        background: #9ca3af !important;
+        color: white !important;
+        cursor: pointer;
+    }
+
+    .loan-btn.revisar,
+    .loan-btn.revisar:hover {
+        background: #22c55e !important;
+        color: white !important;
+    }
+
+    .loan-btn.bloqueado,
+    .loan-btn.bloqueado:hover {
+        background: #9ca3af !important;
+        color: white !important;
+        cursor: not-allowed;
+    }
+
+    .btn-solicitar.bloqueado {
+        background: #9ca3af !important;
+        color: white !important;
+        cursor: not-allowed !important;
+        text-decoration: none !important;
+    }
+
+    .question-bubble {
+        width: 105px;
+        height: 105px;
+        border-radius: 50%;
+        background: linear-gradient(135deg,#a855f7,#6d28d9);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 72px;
+        font-weight: 900;
+        box-shadow: 0 12px 30px rgba(0,0,0,.25);
+    }
+
+    .chat-bubble {
+        position: absolute;
+        right: 10px;
+        bottom: 18px;
+        background: white;
+        color: #f59e0b;
+        padding: 14px 22px;
+        border-radius: 22px;
+        font-size: 24px;
+        font-weight: 900;
+        box-shadow: 0 8px 20px rgba(0,0,0,.18);
+    }
+
+    /* ==========================
+                           NUESTROS CLIENTES
+                        ========================== */
+
+    .clients-section {
+        margin-top: 35px;
+        background: white;
+        padding: 30px;
+        border-radius: 24px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    }
+
+        .clients-section h2 {
+            color: #6d28d9;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+
+    .clients-grid {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 15px;
+    }
+
+    .client-card {
+        background: #f7f2ff;
+        border-radius: 16px;
+        padding: 15px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
+
+        .client-card i {
+            font-size: 58px;
+            color: #6d28d9;
+        }
+
+        .client-card strong {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .client-card p {
+            margin: 0 0 5px;
+        }
+
+    /* ==========================
+                           APRENDE MÁS
+                        ========================== */
+
+    .learn-section {
+        margin-top: 35px;
+        background: white;
+        padding: 30px;
+        border-radius: 24px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    }
+
+        .learn-section h2 {
+            color: #6d28d9;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 22px;
+        }
+
+    .learn-grid {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 18px;
+    }
+
+    .learn-card {
+        background: #f7f2ff;
+        padding: 20px;
+        border-radius: 16px;
+        transition: .3s;
+    }
+
+        .learn-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .learn-card i {
+            font-size: 40px;
+            color: #6d28d9;
+            margin-bottom: 15px;
+        }
+
+        .learn-card h3 {
+            color: #6d28d9;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+
+        .learn-card p {
+            color: #555;
+        }
+
+    /* ==========================
+                           BENEFICIOS INFERIORES
+                        ========================== */
+
+    .footer-benefits {
+        margin-top: 35px;
+        background: white;
+        padding: 35px;
+        border-radius: 24px;
+        display: grid;
+        grid-template-columns: repeat(5,1fr);
+        gap: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    }
+
+    .benefit {
+        display: flex;
+        align-items: flex-start;
+        gap: 18px;
+    }
+
+        .benefit i {
+            font-size: 42px;
+            color: #6d28d9;
+            margin-top: 5px;
+        }
+
+        .benefit strong {
+            display: block;
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 1.2;
+            color: #1f1235;
+        }
+
+
+        .benefit p {
+            margin-top: 8px;
+            font-size: 16px;
+            line-height: 1.4;
+            color: #6b7280;
+        }
+
+    .steps-card {
+        background: white;
+        border-radius: 24px;
+        padding: 25px;
+        margin-top: 40px; /* agrega esto */
+        box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    }
+
+        .steps-card h2 {
+            color: #6d28d9;
+            font-size: 24px;
+            font-weight: 800;
+            margin-top: 25px; /* nuevo */
+            margin-bottom: 40px; /* más separación */
+        }
+
+    .steps {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 35px;
+        margin-top: 40px; /* aumenta esto */
+    }
+
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 110px;
+    }
+
+    .step-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 15px;
+        background: #efe4ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6d28d9;
+        font-size: 25px;
+        margin-bottom: 10px;
+    }
+
+    .step span {
+        font-size: 15px;
+        color: #241041;
+    }
+
+    .step-arrow {
+        font-size: 40px;
+        color: #b7b7b7;
+        margin: 0 10px;
+    }
+
+    .carousel-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .clients-grid {
+        display: flex;
+        gap: 15px;
+        overflow-x: hidden;
+        scroll-behavior: smooth;
+        flex: 1;
+    }
+
+    .client-card {
+        flex: 0 0 calc((100% - 30px) / 3);
+    }
+
+    .carousel-btn {
+        width: 45px;
+        height: 45px;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 20px;
+        background: #6c3cf0;
+        color: white;
+    }
+
+        .carousel-btn:disabled {
+            background: #bdbdbd;
+            cursor: not-allowed;
+        }
+
+    .modal-resena {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, .70);
+        backdrop-filter: blur(5px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 999999;
+    }
+
+    .resena-box {
+        width: 760px;
+        max-width: 94%;
+        background: white;
+        border-radius: 30px;
+        padding: 42px 55px;
+        text-align: center;
+        box-shadow: 0 30px 90px rgba(0,0,0,.35);
+        animation: aparecerResena .25s ease;
+    }
+
+    .resena-logo {
+        width: 82px;
+        height: 82px;
+        margin: 0 auto 15px;
+        border-radius: 24px;
+        background: linear-gradient(135deg,#7c3aed,#5b21b6);
+        color: white;
+        font-size: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .resena-box h1 {
+        font-size: 44px;
+        color: #6d28d9;
+        font-weight: 900;
+        margin-bottom: 12px;
+    }
+
+    .resena-subtitulo {
+        font-size: 18px;
+        color: #4b5563;
+        line-height: 1.5;
+        margin-bottom: 25px;
+    }
+
+    .estrellas-resena {
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        margin: 22px 0 30px;
+    }
+
+    .estrella {
+        font-size: 78px;
+        cursor: pointer;
+        color: #c4b5fd;
+        transition: .2s;
+        line-height: 1;
+        user-select: none;
+    }
+
+        .estrella:hover {
+            color: #8b5cf6;
+            transform: scale(1.12);
+        }
+
+        .estrella.activa {
+            color: #7c3aed;
+            transform: scale(1.16);
+            text-shadow: 0 0 20px rgba(124,58,237,.45);
+        }
+
+    .comentario-resena {
+        width: 100%;
+        height: 145px;
+        border: 2px solid #ddd6fe;
+        border-radius: 18px;
+        padding: 20px;
+        resize: none;
+        font-size: 17px;
+        outline: none;
+    }
+
+        .comentario-resena:focus {
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 4px rgba(124,58,237,.12);
+        }
+
+    .error-resena {
+        display: none;
+        margin-top: 12px;
+        color: #dc2626;
+        font-weight: 700;
+    }
+
+    .btn-enviar-resena {
+        margin-top: 25px;
+        width: 100%;
+        border: none;
+        background: linear-gradient(135deg,#7c3aed,#5b21b6);
+        color: white;
+        padding: 18px;
+        border-radius: 18px;
+        font-weight: 900;
+        font-size: 19px;
+        cursor: pointer;
+    }
+
+        .btn-enviar-resena:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 32px rgba(124,58,237,.35);
+        }
+
+    @@keyframes aparecerResena {
+        from {
+            opacity: 0;
+            transform: scale(.85);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+</style>
+<div class="content">
+    <div class="top">
+
+
+        <div>
+            <strong class="welcome-text">¡Bienvenido de vuelta!</strong>
+            <h1>Listo para solicitar el monto de tu préstamo</h1>
+            <p>Gestiona tu crédito personal de forma 100% online, rápida y segura.</p>
+        </div>
+
+        <div class="profile-card">
+            <div class="avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div>
+                <h4>@nombreCompleto</h4>
+                <span>Cliente registrado</span>
+            </div>
+        </div>
+    </div>
+    <div class="cards">
+        <div class="card-box">
+            <div class="icon purple">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <div>
+                <h3>Nivel de Confianza</h3>
+                <h2>@(perfil != null ? perfil.NivelRiesgo : "Sin registro")</h2>
+                <span>@(perfil != null ? "Cliente evaluado" : "-")</span>
+            </div>
+        </div>
+
+        <div class="card-box">
+            <div class="icon blue">
+                <i class="fas fa-wallet"></i>
+            </div>
+            <div>
+                <h3>Capacidad de Pago</h3>
+                <h2>@(perfil != null ? "S/ " + capacidad.ToString("N2") : "Sin registro")</h2>
+                <span>@(perfil != null ? "30% de ingresos" : "-")</span>
+            </div>
+        </div>
+
+        <div class="card-box">
+            <div class="icon green">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div>
+                <h3>Límite Máximo</h3>
+                <h2>@(perfil != null ? "S/ 50,000" : "Sin registro")</h2>
+                <span>@(perfil != null ? "Monto permitido" : "-")</span>
+            </div>
+        </div>
+
+        <div class="card-box">
+            <div class="icon orange">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div>
+                <h3>Deuda Actual</h3>
+                <h2>@(perfil != null ? (perfil.OtrosCreditos ? "Sí tiene" : "No tiene") : "Sin registro")</h2>
+                <span>@(perfil != null ? "Según declaración" : "-")</span>
+            </div>
+        </div>
+    </div>
+    <div class="loan-banner">
+
+        <div class="loan-left">
+
+            <div class="loan-image">
+                💸
+            </div>
+
+            <div class="loan-info">
+                <h2>Solicita tu préstamo personal</h2>
+
+                <p>
+                    Obtén hasta S/ 50,000 de forma rápida,
+                    100% online y segura.
+                </p>
+
+                <div class="loan-feature">
+                    <i class="fas fa-bolt"></i>
+                    <div>
+                        <strong>Aprobación inmediata</strong>
+                        <span>Respuesta en minutos</span>
+                    </div>
+                </div>
+
+                <div class="loan-feature">
+                    <i class="fas fa-file-alt"></i>
+                    <div>
+                        <strong>Sin papeles</strong>
+                        <span>Todo el proceso es digital</span>
+                    </div>
+                </div>
+
+                <div class="loan-feature">
+                    <i class="fas fa-calendar-alt"></i>
+                    <div>
+                        <strong>Plazos flexibles</strong>
+                        <span>12, 18, 24, 30, 36, 48, 60 y 72 meses</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="loan-right">
+
+            <small>Monto máximo a solicitar</small>
+
+            <h1>S/ 50,000</h1>
+
+            <div class="loan-line"></div>
+
+            @if (ViewBag.SolicitudActiva != null &&
+                                ViewBag.SolicitudActiva.Estado == "Aprobado")
+            {
+                <button class="loan-btn bloqueado" disabled>
+                    Ya tienes un préstamo activo
+                </button>
+            }
+            else if (ViewBag.SolicitudActiva != null)
+            {
+                <button class="loan-btn bloqueado" disabled>
+                    Solicitud en evaluación
+                </button>
+            }
+            else if (ViewBag.SolicitudRechazada != null)
+            {
+                <button class="loan-btn bloqueado" disabled>
+                    Solicitud rechazada pendiente
+                </button>
+
+                <p style="color:white; margin-top:15px; font-weight:bold;">
+                    Primero debes borrar tu solicitud rechazada en "Mis solicitudes".
+                </p>
+            }
+            else
+            {
+                <a href="@Url.Action("SolicitarCredito", "Login")"
+                   class="loan-btn">
+                    Solicitar préstamo
+                </a>
+            }
+
+        </div>
+
+    </div>
+    <div class="bottom-cards">
+
+        <div class="info-card">
+            <h3>Información de tu perfil</h3>
+
+            <div class="info-item">
+                <span>👤 Nombre completo</span>
+                <strong>@nombreCompleto</strong>
+            </div>
+
+            <div class="info-item">
+                <span>🪪 DNI</span>
+                <strong>@dni</strong>
+            </div>
+
+            <div class="info-item">
+                <span>📱 Celular</span>
+                <strong>@celular</strong>
+            </div>
+
+            <div class="info-item">
+                <span>✉ Correo electrónico</span>
+                <strong>@correo</strong>
+            </div>
+
+            <div class="info-item">
+                <span>📅 Fecha de registro</span>
+                <strong>20/05/2024</strong>
+            </div>
+
+            <div class="info-item">
+                <span>🛡 Estado de verificación</span>
+
+                <strong class="status-purple">
+                    @(ViewBag.SolicitudActiva != null
+                                                ? ViewBag.SolicitudActiva.Estado
+                                                : "Sin solicitud")
+                </strong>
+            </div>
+        </div>
+        <div class="finance-card">
+            <h3>Resumen financiero</h3>
+
+            <div class="finance-item">
+                <span>💸 Ingresos mensuales</span>
+                <strong>@(perfil != null ? "S/ " + ingreso.ToString("N2") : "Sin registro")</strong>
+            </div>
+
+            <div class="finance-item">
+                <span>📉 Egresos mensuales</span>
+                <strong>@(perfil != null ? "S/ " + egreso.ToString("N2") : "Sin registro")</strong>
+            </div>
+
+            <div class="finance-item">
+                <span>🏦 Otros créditos</span>
+                <strong>@otrosCreditos</strong>
+            </div>
+
+            <div class="finance-box purple-box">
+                <span>Capacidad de Pago (30%)</span>
+                <strong>@(perfil != null ? "S/ " + capacidad.ToString("N2") : "Sin registro")</strong>
+            </div>
+
+            <div class="finance-box green-box">
+                <span>Disponible para préstamo</span>
+                <strong>@(perfil != null ? "S/ " + disponible.ToString("N2") : "Sin registro")</strong>
+            </div>
+        </div>
+        <div class="benefits-card">
+            <h3>¿Por qué elegir CrediPlus?</h3>
+
+            <div class="benefit-item">
+                <div>
+                    <strong>📈 Las mejores tasas del mercado</strong>
+                    <p>Tasas competitivas y transparentes</p>
+                </div>
+            </div>
+
+            <div class="benefit-item">
+                <div>
+                    <strong>🛡 Seguridad garantizada</strong>
+                    <p>Protegemos tu información 24/7</p>
+                </div>
+            </div>
+
+            <div class="benefit-item">
+                <div>
+                    <strong>👨‍💼 Atención personalizada</strong>
+                    <p>Asesores disponibles para ti</p>
+                </div>
+            </div>
+
+            <div class="benefit-item">
+                <div>
+                    <strong>📋 Sin costos ocultos</strong>
+                    <p>Sin comisiones adicionales</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div class="steps-card">
+
+        <h2>Proceso en 4 pasos</h2>
+
+        <div class="steps">
+
+            <div class="step">
+                <div class="step-icon">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <span>Simula</span>
+            </div>
+
+            <div class="step-arrow">→</div>
+
+            <div class="step">
+                <div class="step-icon">
+                    <i class="fas fa-user-plus"></i>
+                </div>
+                <span>Regístrate</span>
+            </div>
+
+            <div class="step-arrow">→</div>
+
+            <div class="step">
+                <div class="step-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <span>Verifica</span>
+            </div>
+
+            <div class="step-arrow">→</div>
+
+            <div class="step">
+                <div class="step-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <span>Obtén dinero</span>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="clients-section">
+
+        <h2>Nuestros Clientes Dicen</h2>
+
+        <div class="carousel-container">
+
+            <button id="btnLeft"
+                    class="carousel-btn"
+                    onclick="moverClientes(-1)">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <div class="clients-grid" id="clientsGrid">
+            </div>
+
+            <button id="btnRight"
+                    class="carousel-btn"
+                    onclick="moverClientes(1)">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+
+        </div>
+
+    </div>
+    <div class="learn-section">
+
+        <h2>Aprende Más & Mantente Informado</h2>
+
+        <div class="learn-grid">
+
+            <div class="learn-card">
+                <i class="fas fa-book"></i>
+                <h3>Educación Financiera</h3>
+                <p>Consejos para mejorar tu historial.</p>
+            </div>
+
+            <div class="learn-card">
+                <i class="fas fa-bell"></i>
+                <h3>Nuevas Ofertas</h3>
+                <p>Promociones exclusivas.</p>
+            </div>
+
+            <div class="learn-card">
+                <i class="fas fa-headset"></i>
+                <h3>Soporte 24/7</h3>
+                <p>Atención inmediata.</p>
+            </div>
+
+        </div>
+    </div>
+    <div class="loan-features">
+
+        <div class="feature-box">
+            <i class="fas fa-laptop"></i>
+            <div>
+                <h4>100% online</h4>
+                <p>Todo el proceso es digital</p>
+            </div>
+        </div>
+
+        <div class="feature-box">
+            <i class="fas fa-money-check-alt"></i>
+            <div>
+                <h4>Hasta S/ 50,000</h4>
+                <p>Monto máximo a prestar</p>
+            </div>
+        </div>
+
+        <div class="feature-box">
+            <i class="fas fa-calendar-alt"></i>
+            <div>
+                <h4>Hasta 72 meses</h4>
+                <p>Plazos flexibles disponibles</p>
+            </div>
+        </div>
+
+        <div class="feature-box">
+            <i class="fas fa-check-circle"></i>
+            <div>
+                <h4>Aprobación rápida</h4>
+                <p>Respuesta en minutos</p>
+            </div>
+        </div>
+
+        <div class="feature-box">
+            <i class="fas fa-shield-alt"></i>
+            <div>
+                <h4>Pagos seguros</h4>
+                <p>Plataforma segura y confiable</p>
+            </div>
+        </div>
+
+    </div>
+
+            
+</div>
+@if (ViewBag.MostrarResena == true)
+{
+    <div id="modalResena" class="modal-resena">
+        <div class="resena-box">
+
+            <div class="resena-logo">⭐</div>
+
+            <h1>Califica nuestro servicio</h1>
+
+            <p class="resena-subtitulo">
+                Tu opinión nos ayuda a mejorar la atención, el proceso de crédito
+                y la experiencia de nuestros clientes.
+            </p>
+
+            <div class="estrellas-resena">
+                <span class="estrella" onclick="seleccionarEstrella(1)">★</span>
+                <span class="estrella" onclick="seleccionarEstrella(2)">★</span>
+                <span class="estrella" onclick="seleccionarEstrella(3)">★</span>
+                <span class="estrella" onclick="seleccionarEstrella(4)">★</span>
+                <span class="estrella" onclick="seleccionarEstrella(5)">★</span>
+            </div>
+
+            <textarea id="comentarioResena"
+                      class="comentario-resena"
+                      placeholder="Escribe tu opinión sobre el servicio..."></textarea>
+
+            <div id="errorResena" class="error-resena">
+                Debes seleccionar una calificación y escribir un comentario.
+            </div>
+
+            <button type="button"
+                    class="btn-enviar-resena"
+                    onclick="enviarResena()">
+                Enviar reseña
+            </button>
+
+        </div>
+    </div>
+}
+<script>
+
+    const clientes = [
+
+    @foreach (var c in Model)
+    {
+                        <text>
+                                    {
+                                        nombre: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(c.NombreCompleto))",
+                                        comentario: "@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(c.Comentario))",
+                                        estrellas: @c.Calificacion
+                                    },
+                        </text>
+    }
+
+    ];
+
+    let indiceActual = 0;
+
+    function renderClientes() {
+
+        const grid = document.getElementById("clientsGrid");
+
+        if (!grid) return;
+
+        grid.innerHTML = "";
+
+        const visibles = clientes.slice(indiceActual, indiceActual + 3);
+
+        visibles.forEach(c => {
+
+            let estrellas = "";
+
+            for (let i = 0; i < c.estrellas; i++) {
+                estrellas += "⭐";
+            }
+
+            grid.innerHTML += `
+                <div class="client-card">
+                    <i class="fas fa-user-circle"></i>
+                    <div>
+                        <strong>${c.nombre}</strong>
+                        <p>${c.comentario}</p>
+                        ${estrellas}
+                    </div>
+                </div>
+            `;
+        });
+
+        document.getElementById("btnLeft").disabled =
+            indiceActual === 0;
+
+        document.getElementById("btnRight").disabled =
+            indiceActual + 3 >= clientes.length;
+    }
+
+    function moverClientes(direccion) {
+
+        if (direccion === 1 && indiceActual + 3 < clientes.length) {
+            indiceActual++;
+        }
+
+        if (direccion === -1 && indiceActual > 0) {
+            indiceActual--;
+        }
+
+        renderClientes();
+    }
+    let calificacionSeleccionada = 0;
+
+    function seleccionarEstrella(valor) {
+        calificacionSeleccionada = valor;
+
+        document.querySelectorAll(".estrella").forEach((estrella, index) => {
+            estrella.classList.toggle("activa", index < valor);
+        });
+
+        document.getElementById("errorResena").style.display = "none";
+    }
+
+    function enviarResena() {
+        const comentario = document.getElementById("comentarioResena").value.trim();
+
+        if (calificacionSeleccionada === 0 || comentario === "") {
+            document.getElementById("errorResena").style.display = "block";
+            return;
+        }
+
+        fetch('@Url.Action("GuardarResena", "Login")', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body:
+                'calificacion=' + encodeURIComponent(calificacionSeleccionada) +
+                '&comentario=' + encodeURIComponent(comentario)
+        })
+        .then(r => r.json())
+        .then(data => {
+            alert(data.mensaje);
+
+            if (data.ok) {
+                document.getElementById("modalResena").style.display = "none";
+            }
+        })
+        .catch(() => {
+            alert("Error al guardar la reseña.");
+        });
+    }
+
+       
+    document.addEventListener("DOMContentLoaded", renderClientes);
+
+</script>
+<script src="~/js/config-global.js"></script>

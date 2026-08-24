@@ -1,0 +1,1777 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Iniciar Sesión</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/utilidades-ui.css" />
+    <!-- ICONOS BOOTSTRAP -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #240046, #3c096c, #4361ee, #00b4d8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+        }
+
+        .main-box {
+            width: 1250px;
+            min-height: 760px;
+            display: flex;
+            background: white;
+            border-radius: 28px;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0,0,0,.35);
+        }
+
+        .left-panel {
+            width: 48%;
+            background: linear-gradient(160deg, #4cc9f0, #4361ee, #7209b7);
+            color: white;
+            padding: 45px 35px;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .left-panel::before {
+                content: "";
+                position: absolute;
+                width: 240px;
+                height: 240px;
+                border-radius: 50%;
+                background: rgba(255,255,255,.18);
+                bottom: -80px;
+                left: -80px;
+            }
+
+            .left-panel::after {
+                content: "";
+                position: absolute;
+                width: 170px;
+                height: 170px;
+                border-radius: 50%;
+                background: rgba(255,255,255,.13);
+                top: 70px;
+                right: -70px;
+            }
+
+        .logo {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .logo-crediplus {
+            width: 190px;
+            height: auto;
+            display: block;
+            object-fit: contain;
+            mix-blend-mode: multiply;
+            filter: contrast(1.05);
+        }
+
+        .welcome {
+            margin-top: 120px;
+            position: relative;
+            z-index: 2;
+        }
+
+            .welcome h1 {
+                font-size: 52px;
+                font-weight: bold;
+            }
+
+            .welcome p {
+                font-size: 20px;
+                opacity: .95;
+                line-height: 1.7;
+            }
+
+        .credit-icon {
+            font-size: 120px;
+            margin-top: 45px;
+        }
+
+        .right-panel {
+            width: 52%;
+            padding: 95px 80px;
+            background: linear-gradient(135deg, #e0e7ff, #c7d2fe, #f3e8ff);
+        }
+
+            .right-panel h2 {
+                color: #4c1d95;
+                font-size: 42px;
+                font-weight: bold;
+                margin-bottom: 12px;
+            }
+
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 35px;
+            font-size: 18px;
+        }
+
+        .form-control {
+            height: 60px;
+            border: none;
+            background: #eef2f7;
+            border-radius: 12px;
+            font-size: 18px;
+            padding-left: 18px;
+        }
+
+            .form-control:focus {
+                box-shadow: 0 0 0 2px rgba(67, 97, 238, .25);
+                background: #fff;
+            }
+
+        .btn-login {
+            background: linear-gradient(135deg, #4361ee, #7209b7);
+            border: none;
+            color: white;
+            font-weight: bold;
+            height: 62px;
+            border-radius: 18px;
+            font-size: 20px;
+        }
+
+            .btn-login:hover {
+                opacity: .9;
+                color: white;
+            }
+
+        .register-link {
+            text-align: center;
+            font-size: 18px;
+            margin-top: 12px;
+            font-weight: 500;
+        }
+
+            .register-link a {
+                color: #4f46e5;
+                font-weight: bold;
+                text-decoration: none;
+            }
+
+                .register-link a:hover {
+                    text-decoration: underline;
+                }
+
+        @@media (max-width: 900px) {
+            .main-box {
+                width: 95%;
+                flex-direction: column;
+            }
+
+            .left-panel, .right-panel {
+                width: 100%;
+            }
+
+            .welcome {
+                margin-top: 40px;
+            }
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 14px 25px;
+            background: linear-gradient(135deg,#6d28d9,#7c3aed);
+            color: white;
+            text-decoration: none;
+            border-radius: 14px;
+            font-weight: 700;
+            box-shadow: 0 8px 20px rgba(109,40,217,.35);
+            transition: .3s;
+        }
+
+            .back-btn:hover {
+                background: linear-gradient(135deg,#5b21b6,#6d28d9);
+                color: white;
+                transform: translateY(-3px);
+            }
+
+        .btn-regresar {
+            display: inline-block !important;
+            background: linear-gradient(135deg,#6d28d9,#7c3aed) !important;
+            color: white !important;
+            text-decoration: none !important;
+            padding: 14px 28px !important;
+            border-radius: 14px !important;
+            font-size: 18px !important;
+            font-weight: 700 !important;
+            margin-top: 20px !important;
+            box-shadow: 0 8px 20px rgba(109,40,217,.35);
+            transition: .3s;
+        }
+
+            .btn-regresar:hover {
+                background: linear-gradient(135deg,#5b21b6,#6d28d9) !important;
+                color: white !important;
+                transform: translateY(-3px);
+            }
+        /* ==========================================
+           MODAL DE VERIFICACIÓN DE SEGURIDAD
+           ========================================== */
+
+        .modal-seguridad {
+            border: none;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        }
+
+            .modal-seguridad .modal-header {
+                padding: 30px 30px 10px 30px;
+            }
+
+            .modal-seguridad .modal-body {
+                padding: 20px 30px;
+            }
+
+            .modal-seguridad .modal-footer {
+                padding: 10px 30px 25px 30px;
+            }
+
+
+        /* ICONO PRINCIPAL */
+
+        .icono-seguridad {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            background: #e8f0ff;
+            color: #2563eb;
+            font-size: 28px;
+        }
+
+
+        /* TITULO */
+
+        .modal-seguridad .modal-title {
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .texto-seguridad {
+            color: #64748b;
+            margin-top: 6px;
+            margin-bottom: 0;
+            font-size: 14px;
+        }
+
+
+        /* OPCIONES */
+
+        .opcion-seguridad {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 18px;
+            margin-bottom: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #ffffff;
+        }
+
+            .opcion-seguridad:hover {
+                border-color: #93c5fd;
+                background: #f8fbff;
+            }
+
+            .opcion-seguridad.seleccionada {
+                border-color: #2563eb;
+                background: #eff6ff;
+            }
+
+
+        /* ICONOS DE OPCIONES */
+
+        .opcion-icono {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 21px;
+            margin-right: 14px;
+        }
+
+            .opcion-icono.correo {
+                background: #dbeafe;
+                color: #2563eb;
+            }
+
+            .opcion-icono.aplicacion {
+                background: #ede9fe;
+                color: #7c3aed;
+            }
+
+
+        /* CONTENIDO */
+
+        .opcion-contenido {
+            flex: 1;
+        }
+
+            .opcion-contenido h5 {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+
+            .opcion-contenido p {
+                margin: 5px 0 0;
+                font-size: 13px;
+                line-height: 1.4;
+                color: #64748b;
+            }
+
+
+        /* RADIO */
+
+        .radio-seguridad {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #cbd5e1;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 12px;
+        }
+
+            .radio-seguridad span {
+                width: 11px;
+                height: 11px;
+                border-radius: 50%;
+                display: block;
+            }
+
+        .opcion-seguridad.seleccionada .radio-seguridad {
+            border-color: #2563eb;
+        }
+
+            .opcion-seguridad.seleccionada .radio-seguridad span {
+                background: #2563eb;
+            }
+
+
+        /* TITULO + BADGE */
+
+        .titulo-opcion {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .badge-proximamente {
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+
+        /* BOTON */
+
+        .btn-continuar-seguridad {
+            min-width: 130px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+
+        /* ALERTA */
+
+        #mensajeAplicacion {
+            font-size: 13px;
+            border-radius: 10px;
+            margin-bottom: 0;
+        }
+        /* =========================================================
+           MODAL CREDIPLUS - VERIFICACIÓN
+           ========================================================= */
+
+        .modal-crediplus {
+            border: none;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, .30);
+            background: #ffffff;
+        }
+
+            /* CABECERA */
+
+            .modal-crediplus .modal-header {
+                padding: 28px 30px 15px 30px;
+                border: none;
+            }
+
+        .logo-modal-seguridad {
+            width: 62px;
+            height: 62px;
+            object-fit: contain;
+            border-radius: 16px;
+            padding: 7px;
+            background: #eef2ff;
+            box-shadow: 0 5px 15px rgba(67, 97, 238, .12);
+        }
+
+        .modal-crediplus .modal-title {
+            color: #172554;
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .texto-seguridad {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-top: 5px;
+        }
+
+        /* OPCIONES */
+
+        .opcion-seguridad {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all .2s ease;
+            background: #ffffff;
+        }
+
+            .opcion-seguridad:hover {
+                border-color: #93c5fd;
+                background: #f8fbff;
+                transform: translateY(-1px);
+            }
+
+            .opcion-seguridad.seleccionada {
+                border-color: #2563eb;
+                background: #eff6ff;
+                box-shadow: 0 5px 15px rgba(37, 99, 235, .08);
+            }
+
+        /* ICONOS DE LAS OPCIONES */
+
+        .opcion-icono {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            font-size: 22px;
+            margin-right: 14px;
+        }
+
+            .opcion-icono.correo {
+                background: #dbeafe;
+                color: #2563eb;
+            }
+
+            .opcion-icono.aplicacion {
+                background: #ede9fe;
+                color: #7c3aed;
+            }
+
+        /* CONTENIDO */
+
+        .opcion-contenido {
+            flex: 1;
+        }
+
+            .opcion-contenido h5 {
+                margin: 0;
+                color: #1e293b;
+                font-size: 15px;
+                font-weight: 800;
+            }
+
+            .opcion-contenido p {
+                margin: 4px 0 0;
+                color: #64748b;
+                font-size: 12px;
+                line-height: 1.45;
+            }
+
+        /* RADIO */
+
+        .radio-seguridad {
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
+            border: 2px solid #cbd5e1;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 12px;
+        }
+
+            .radio-seguridad span {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                display: block;
+            }
+
+        .opcion-seguridad.seleccionada .radio-seguridad {
+            border-color: #2563eb;
+        }
+
+            .opcion-seguridad.seleccionada .radio-seguridad span {
+                background: #2563eb;
+            }
+
+        /* BADGE */
+
+        .badge-proximamente {
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 9px;
+            padding: 3px 7px;
+            border-radius: 20px;
+            font-weight: 700;
+        }
+
+        .titulo-opcion {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            flex-wrap: wrap;
+        }
+
+        /* BOTONES */
+
+        .btn-continuar-seguridad {
+            min-width: 125px;
+            border-radius: 10px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2563eb, #4f46e5);
+            border: none;
+        }
+
+            .btn-continuar-seguridad:hover {
+                background: linear-gradient(135deg, #1d4ed8, #4338ca);
+            }
+
+        /* =========================================================
+           MODAL CÓDIGO
+           ========================================================= */
+
+        .modal-codigo-crediplus {
+            border: none;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, .30);
+        }
+
+        .logo-modal-codigo {
+            width: 62px;
+            height: 62px;
+            object-fit: contain;
+            border-radius: 16px;
+            padding: 7px;
+            background: #eef2ff;
+        }
+
+        /* ICONO CENTRAL */
+
+        .icono-correo-grande {
+            width: 75px;
+            height: 75px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 34px;
+        }
+
+        /* INPUT CÓDIGO */
+
+        .codigo-input {
+            height: 65px;
+            border: 2px solid #dbe4f0 !important;
+            border-radius: 14px !important;
+            background: #f8fafc !important;
+            font-size: 27px !important;
+            letter-spacing: 10px;
+            font-weight: 800;
+            color: #1e3a8a;
+            text-align: center;
+        }
+
+            .codigo-input:focus {
+                background: #ffffff !important;
+                border-color: #2563eb !important;
+                box-shadow: 0 0 0 4px rgba(37, 99, 235, .10) !important;
+            }
+
+        /* CONTADOR */
+
+        .contador-codigo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            margin-top: 15px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+            .contador-codigo i {
+                color: #2563eb;
+            }
+
+        #tiempoCodigo {
+            font-weight: 800;
+            color: #2563eb;
+        }
+
+        /* CUANDO EXPIRA */
+
+        .contador-expirado {
+            color: #dc2626 !important;
+        }
+
+            .contador-expirado i {
+                color: #dc2626 !important;
+            }
+
+        /* REENVIAR */
+
+        .btn-reenviar {
+            border: none;
+            background: transparent;
+            color: #2563eb;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: .2s;
+        }
+
+            .btn-reenviar:hover:not(:disabled) {
+                background: #eff6ff;
+            }
+
+            .btn-reenviar:disabled {
+                color: #94a3b8;
+                cursor: not-allowed;
+            }
+
+        /* ALERTA */
+
+        #mensajeCodigoLogin {
+            border-radius: 10px;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        /* RESPONSIVE */
+
+        @@media (max-width: 600px) {
+            .modal-dialog
+
+        {
+            margin: 12px;
+        }
+
+        .modal-crediplus .modal-header,
+        .modal-crediplus .modal-body,
+        .modal-crediplus .modal-footer {
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        .opcion-seguridad {
+            padding: 13px;
+        }
+
+        }</style>
+</head>
+
+<body>
+    <div class="main-box">
+
+        <div class="left-panel">
+            <div class="logo">
+                <img src="~/imagenes/credi.png"
+                     alt="CrediPlus"
+                     class="logo-crediplus" />
+            </div>
+
+            <div class="welcome">
+                <h1>Bienvenido</h1>
+                <p>
+                    Ingresa con tu DNI para gestionar tus solicitudes de crédito
+                    de forma rápida y segura.
+                </p>
+
+                <div class="credit-icon">💰</div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <h2>Iniciar Sesión</h2>
+            <p class="subtitle">Accede a tu cuenta de créditos</p>
+
+            <form asp-controller="Login"
+                  asp-action="IniciarSesion"
+                  method="post"
+                  id="formLogin">
+
+                <div class="input-util-wrap mb-3">
+                    <input id="dniInput"
+                           class="form-control"
+                           type="text"
+                           placeholder="DNI"
+                           required
+                           name="dni"
+                           maxlength="8"
+                           oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+
+                    <button type="button"
+                            class="btn-clear"
+                            onclick="clearInput('dniInput')">
+                        ✕
+                    </button>
+                </div>
+
+                <div class="input-util-wrap mb-3">
+                    <input id="claveInput"
+                           class="form-control"
+                           type="password"
+                           placeholder="Contraseña"
+                           required
+                           name="clave" />
+
+                    <button type="button" class="btn-clear" onclick="clearInput('claveInput')">
+                        ✕
+                    </button>
+
+                    <button type="button" class="btn-eye" onclick="togglePassword('claveInput', this)">
+                        👁
+                    </button>
+                </div>
+
+                <div class="d-grid gap-2 mb-3">
+                    <button class="btn btn-login" type="submit">Iniciar Sesión</button>
+                </div>
+                <div id="mensajeLogin"
+                     class="alert alert-danger mt-3"
+                     style="display:none;">
+                </div>
+                @if (ViewData["Mensaje"] != null)
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @ViewData["Mensaje"]
+                    </div>
+                }
+                @if (TempData["Mensaje"] != null)
+                {
+                    <div class="alert alert-success">
+                        @TempData["Mensaje"]
+                    </div>
+                }
+
+                <div class="register-link mb-2">
+                    <a href="@Url.Action("OlvideContrasena", "Login")">¿Olvidaste tu contraseña?</a>
+                </div>
+
+                <div class="register-link">
+                    ¿No tienes una cuenta?
+                    <a href="@Url.Action("Registro", "Login")">Regístrate</a>
+                </div>
+                <a href="@Url.Action("PantallaPrincipal", "Login")" class="back-btn">
+                    ← Regresar
+                </a>
+
+            </form>
+        </div>
+    </div>
+    <!-- MODAL DE VERIFICACIÓN DE SEGURIDAD -->
+    <div class="modal fade" id="modalVerificacionSeguridad" tabindex="-1"
+         aria-labelledby="modalVerificacionSeguridadLabel" aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-crediplus">
+
+                <div class="modal-header border-0">
+                    <div>
+                        <img src="~/imagenes/icon.png"
+                             alt="CrediPlus"
+                             class="logo-modal-seguridad" />
+
+                        <h4 class="modal-title mt-3" id="modalVerificacionSeguridadLabel">
+                            Verificación de seguridad
+                        </h4>
+
+                        <p class="texto-seguridad">
+                            Para continuar, selecciona cómo deseas recibir tu código de seguridad.
+                        </p>
+                    </div>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <!-- OPCIÓN CORREO -->
+                    <div class="opcion-seguridad seleccionada"
+                         id="opcionCorreo"
+                         onclick="seleccionarMetodo('correo')">
+
+                        <div class="opcion-icono correo">
+                            <i class="bi bi-envelope-fill"></i>
+                        </div>
+
+                        <div class="opcion-contenido">
+                            <h5>Correo electrónico</h5>
+
+                            <p>
+                                Recibir un código de seguridad en el
+                                correo electrónico registrado.
+                            </p>
+                        </div>
+
+                        <div class="radio-seguridad">
+                            <span id="radioCorreo"></span>
+                        </div>
+                    </div>
+
+
+                    <!-- OPCIÓN APLICACIÓN -->
+                    <div class="opcion-seguridad"
+                         id="opcionAplicacion"
+                         onclick="seleccionarMetodo('aplicacion')">
+
+                        <div class="opcion-icono aplicacion">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </div>
+                        <div class="opcion-contenido">
+                            <div class="titulo-opcion">
+                                <h5>Aplicación autenticadora</h5>
+
+                                <span class="badge-proximamente">
+                                    Próximamente
+                                </span>
+                            </div>
+
+                            <p>
+                                Utiliza una aplicación autenticadora
+                                para generar tu código de seguridad.
+                            </p>
+                        </div>
+
+                        <div class="radio-seguridad">
+                            <span id="radioAplicacion"></span>
+                        </div>
+                    </div>
+
+
+                    <!-- MENSAJE APLICACIÓN NO DISPONIBLE -->
+                    <div id="mensajeAplicacion"
+                         class="alert alert-info mt-3"
+                         style="display:none;">
+
+                        <i class="bi bi-info-circle-fill"></i>
+
+                        La aplicación autenticadora todavía no está disponible.
+                        Por ahora utiliza el correo electrónico.
+                    </div>
+
+                </div>
+
+                <div class="modal-footer border-0">
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary btn-continuar-seguridad"
+                            onclick="continuarVerificacion()">
+
+                        Continuar
+                        <i class="bi bi-arrow-right ms-1"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- =====================================================
+     MODAL CÓDIGO DE SEGURIDAD
+     ===================================================== -->
+
+    <div class="modal fade"
+         id="modalCodigoSeguridad"
+         tabindex="-1"
+         aria-labelledby="modalCodigoSeguridadLabel"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content modal-codigo-crediplus">
+
+                <!-- CABECERA -->
+
+                <div class="modal-header border-0">
+
+                    <div>
+
+                        <img src="~/imagenes/icon.png"
+                             alt="CrediPlus"
+                             class="logo-modal-codigo" />
+
+                        <h4 class="modal-title mt-3"
+                            id="modalCodigoSeguridadLabel">
+
+                            Código de seguridad
+
+                        </h4>
+
+                        <p class="texto-seguridad">
+
+                            Hemos enviado un código de seguridad
+                            a tu correo electrónico registrado.
+
+                        </p>
+
+                    </div>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar">
+                    </button>
+
+                </div>
+
+
+                <!-- CUERPO -->
+
+                <div class="modal-body">
+
+                    <div class="text-center">
+
+                        <!-- ICONO CORREO -->
+
+                        <div class="icono-correo-grande">
+
+                            <i class="bi bi-envelope-check-fill"></i>
+
+                        </div>
+
+
+                        <h5 class="mt-4 fw-bold"
+                            style="color:#1e293b;">
+
+                            Revisa tu correo
+
+                        </h5>
+
+
+                        <p style="color:#64748b; font-size:14px;">
+
+                            Ingresa el código de 6 caracteres
+                            que recibiste.
+
+                        </p>
+
+
+                        <!-- INPUT -->
+
+                        <input type="text"
+                               id="codigoLogin"
+                               class="form-control codigo-input mt-3"
+                               maxlength="6"
+                               autocomplete="one-time-code"
+                               placeholder="XXXXXX"
+                               oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'').toUpperCase()" />
+
+
+                        <!-- CONTADOR -->
+
+                        <div class="contador-codigo">
+
+                            <i class="bi bi-clock-fill"></i>
+
+                            <span id="textoContador">
+
+                                El código expira en
+
+                            </span>
+
+                            <span id="tiempoCodigo">
+
+                                01:00
+
+                            </span>
+
+                        </div>
+
+
+                        <!-- REENVIAR -->
+
+                        <div class="mt-2">
+
+                            <button type="button"
+                                    id="btnReenviarCodigo"
+                                    class="btn-reenviar"
+                                    disabled
+                                    onclick="reenviarCodigoLogin()">
+
+                                <i class="bi bi-arrow-clockwise"></i>
+
+                                Reenviar código
+
+                            </button>
+
+                        </div>
+
+
+                        <!-- MENSAJE -->
+
+                        <div id="mensajeCodigoLogin"
+                             class="mt-3"
+                             style="display:none;">
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- FOOTER -->
+
+                <div class="modal-footer border-0">
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Cancelar
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            id="btnVerificarCodigo"
+                            onclick="verificarCodigoLogin()">
+
+                        <i class="bi bi-shield-check"></i>
+
+                        Verificar código
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    
+
+    <!-- Bootstrap JavaScript -->
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Utilidades -->
+    <script src="~/js/utilidades-ui.js"></script>
+<script>
+
+    // Método seleccionado por defecto
+    let metodoVerificacion = "correo";
+            let intervaloCodigo = null;
+
+        let segundosCodigo = 60;
+            // ==========================================
+        // CONTADOR DEL CÓDIGO
+        // ==========================================
+
+        function iniciarContadorCodigo() {
+
+            // Detener contador anterior
+            if (intervaloCodigo) {
+                clearInterval(intervaloCodigo);
+            }
+
+            segundosCodigo = 60;
+
+            const tiempo =
+                document.getElementById("tiempoCodigo");
+
+            const texto =
+                document.getElementById("textoContador");
+
+            const botonReenviar =
+                document.getElementById("btnReenviarCodigo");
+
+            if (!tiempo || !texto || !botonReenviar) {
+                return;
+            }
+
+            // Reiniciar interfaz
+
+            botonReenviar.disabled = true;
+
+            tiempo.classList.remove("contador-expirado");
+
+            texto.innerText =
+                "El código expira en";
+
+            actualizarTiempoCodigo();
+
+
+            intervaloCodigo = setInterval(function () {
+
+                segundosCodigo--;
+
+                actualizarTiempoCodigo();
+
+
+                // ======================================
+                // CÓDIGO EXPIRADO
+                // ======================================
+
+                if (segundosCodigo <= 0) {
+
+                    clearInterval(intervaloCodigo);
+
+                    intervaloCodigo = null;
+
+                    segundosCodigo = 0;
+
+                    tiempo.innerText = "00:00";
+
+                    tiempo.classList.add(
+                        "contador-expirado"
+                    );
+
+                    texto.innerText =
+                        "El código ha expirado";
+
+                    // Habilitar reenviar
+
+                    botonReenviar.disabled = false;
+
+                }
+
+            }, 1000);
+        }
+                function actualizarTiempoCodigo() {
+
+            const tiempo =
+                document.getElementById("tiempoCodigo");
+
+            if (!tiempo) {
+                return;
+            }
+
+            const minutos =
+                Math.floor(segundosCodigo / 60);
+
+            const segundos =
+                segundosCodigo % 60;
+
+            tiempo.innerText =
+                String(minutos).padStart(2, "0") +
+                ":" +
+                String(segundos).padStart(2, "0");
+        }
+    // ==========================================
+    // SELECCIONAR MÉTODO
+    // ==========================================
+
+    function seleccionarMetodo(metodo) {
+
+        const opcionCorreo =
+            document.getElementById("opcionCorreo");
+
+        const opcionAplicacion =
+            document.getElementById("opcionAplicacion");
+
+        const radioCorreo =
+            document.getElementById("radioCorreo");
+
+        const radioAplicacion =
+            document.getElementById("radioAplicacion");
+
+        const mensajeAplicacion =
+            document.getElementById("mensajeAplicacion");
+
+
+        // CORREO
+        if (metodo === "correo") {
+
+            metodoVerificacion = "correo";
+
+            opcionCorreo.classList.add("seleccionada");
+
+            opcionAplicacion.classList.remove("seleccionada");
+
+            radioCorreo.style.display = "block";
+
+            radioAplicacion.style.display = "none";
+
+            mensajeAplicacion.style.display = "none";
+        }
+
+
+        // APLICACIÓN
+        if (metodo === "aplicacion") {
+
+            metodoVerificacion = "aplicacion";
+
+            opcionAplicacion.classList.add("seleccionada");
+
+            opcionCorreo.classList.remove("seleccionada");
+
+            radioAplicacion.style.display = "block";
+
+            radioCorreo.style.display = "none";
+
+            mensajeAplicacion.style.display = "block";
+        }
+    }
+
+
+    // ==========================================
+    // CONTINUAR
+    // ==========================================
+
+           async function continuarVerificacion() {
+
+            if (metodoVerificacion === "aplicacion") {
+
+                alert(
+                    "La aplicación autenticadora todavía no está disponible. " +
+                    "Por ahora utiliza el correo electrónico."
+                );
+
+                return;
+            }
+
+
+            const boton =
+                document.querySelector(
+                    ".btn-continuar-seguridad"
+                );
+
+
+            if (boton) {
+
+                boton.disabled = true;
+
+                boton.innerHTML =
+                    '<span class="spinner-border spinner-border-sm"></span> Enviando...';
+
+            }
+
+
+            try {
+
+                const respuesta =
+                    await fetch(
+                        '/Login/EnviarCodigoLogin',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
+
+
+                const resultado =
+                    await respuesta.json();
+
+
+                if (!resultado.ok) {
+
+                    alert(
+                        resultado.mensaje ||
+                        "No se pudo enviar el código."
+                    );
+
+                    if (boton) {
+
+                        boton.disabled = false;
+
+                        boton.innerHTML =
+                            'Continuar <i class="bi bi-arrow-right ms-1"></i>';
+
+                    }
+
+                    return;
+                }
+
+
+                // ==========================================
+                // CERRAR MODAL DE SEGURIDAD
+                // ==========================================
+
+                const modalSeguridad =
+                    bootstrap.Modal.getInstance(
+                        document.getElementById(
+                            "modalVerificacionSeguridad"
+                        )
+                    );
+
+
+                if (modalSeguridad) {
+
+                    modalSeguridad.hide();
+
+                }
+
+
+                // ==========================================
+                // LIMPIAR CÓDIGO
+                // ==========================================
+
+                document.getElementById(
+                    "codigoLogin"
+                ).value = "";
+
+
+                document.getElementById(
+                    "mensajeCodigoLogin"
+                ).style.display = "none";
+
+
+                // ==========================================
+                // ABRIR MODAL CÓDIGO
+                // ==========================================
+
+                const modalCodigo =
+                    new bootstrap.Modal(
+                        document.getElementById(
+                            "modalCodigoSeguridad"
+                        )
+                    );
+
+
+                modalCodigo.show();
+
+
+                // ==========================================
+                // INICIAR 60 SEGUNDOS
+                // ==========================================
+
+                iniciarContadorCodigo();
+
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                alert(
+                    "No se pudo enviar el código de seguridad."
+                );
+
+            }
+            finally {
+
+                if (boton) {
+
+                    boton.disabled = false;
+
+                    boton.innerHTML =
+                        'Continuar <i class="bi bi-arrow-right ms-1"></i>';
+
+                }
+
+            }
+
+        }
+                // ==========================================
+        // REENVIAR CÓDIGO
+        // ==========================================
+
+        async function reenviarCodigoLogin() {
+
+            const boton =
+                document.getElementById(
+                    "btnReenviarCodigo"
+                );
+
+            const mensaje =
+                document.getElementById(
+                    "mensajeCodigoLogin"
+                );
+
+
+            if (!boton) {
+                return;
+            }
+
+
+            // No permitir reenviar antes de tiempo
+
+            if (segundosCodigo > 0) {
+
+                return;
+
+            }
+
+
+            boton.disabled = true;
+
+            boton.innerHTML =
+                '<span class="spinner-border spinner-border-sm"></span> Enviando...';
+
+
+            try {
+
+                const respuesta =
+                    await fetch(
+                        "/Login/EnviarCodigoLogin",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json"
+                            }
+                        }
+                    );
+
+
+                const resultado =
+                    await respuesta.json();
+
+
+                if (!resultado.ok) {
+
+                    mensaje.style.display = "block";
+
+                    mensaje.className =
+                        "alert alert-danger mt-3";
+
+                    mensaje.innerText =
+                        resultado.mensaje ||
+                        "No se pudo reenviar el código.";
+
+                    boton.disabled = false;
+
+                    boton.innerHTML =
+                        '<i class="bi bi-arrow-clockwise"></i> Reenviar código';
+
+                    return;
+                }
+
+
+                // ==========================================
+                // LIMPIAR CÓDIGO ANTERIOR
+                // ==========================================
+
+                document.getElementById(
+                    "codigoLogin"
+                ).value = "";
+
+
+                // ==========================================
+                // MENSAJE
+                // ==========================================
+
+                mensaje.style.display = "block";
+
+                mensaje.className =
+                    "alert alert-success mt-3";
+
+                mensaje.innerText =
+                    "Se ha enviado un nuevo código a tu correo.";
+
+
+                // ==========================================
+                // NUEVO CONTADOR
+                // ==========================================
+
+                iniciarContadorCodigo();
+
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                mensaje.style.display = "block";
+
+                mensaje.className =
+                    "alert alert-danger mt-3";
+
+                mensaje.innerText =
+                    "No se pudo reenviar el código.";
+
+                boton.disabled = false;
+
+            }
+            finally {
+
+                boton.innerHTML =
+                    '<i class="bi bi-arrow-clockwise"></i> Reenviar código';
+
+            }
+
+        }
+        async function verificarCodigoLogin() {
+
+        const codigo =
+            document.getElementById("codigoLogin")
+                .value
+                .trim()
+                .toUpperCase();
+
+        const mensaje =
+            document.getElementById(
+                "mensajeCodigoLogin"
+            );
+
+        const boton =
+            document.getElementById(
+                "btnVerificarCodigo"
+            );
+
+        if (codigo.length !== 6) {
+
+            mensaje.style.display = "block";
+            mensaje.className = "alert alert-warning mt-3";
+            mensaje.innerText =
+                "Debes ingresar un código de 6 caracteres.";
+
+            return;
+        }
+
+        boton.disabled = true;
+
+        boton.innerHTML =
+            '<span class="spinner-border spinner-border-sm"></span> Verificando...';
+
+        try {
+
+            const formData = new FormData();
+
+            formData.append(
+                "codigo",
+                codigo
+            );
+
+            const respuesta = await fetch(
+                '/Login/VerificarCodigoLogin',
+                {
+                    method: 'POST',
+                    body: formData
+                }
+            );
+
+            const resultado =
+                await respuesta.json();
+
+            if (!resultado.ok) {
+
+                mensaje.style.display = "block";
+                mensaje.className =
+                    "alert alert-danger mt-3";
+
+                mensaje.innerText =
+                    resultado.mensaje;
+
+                boton.disabled = false;
+
+                boton.innerHTML =
+                    '<i class="bi bi-shield-check"></i> Verificar código';
+
+                return;
+            }
+
+            // Código correcto
+            mensaje.style.display = "block";
+            mensaje.className =
+                "alert alert-success mt-3";
+
+            mensaje.innerText =
+                "Código correcto. Ingresando...";
+
+            // Esperamos un momento para mostrar el mensaje
+            setTimeout(function () {
+
+                window.location.href =
+                    resultado.redirectUrl;
+
+            }, 700);
+
+        }
+        catch (error) {
+
+            console.error(error);
+
+            mensaje.style.display = "block";
+            mensaje.className =
+                "alert alert-danger mt-3";
+
+            mensaje.innerText =
+                "Ocurrió un error al verificar el código.";
+
+            boton.disabled = false;
+
+            boton.innerHTML =
+                '<i class="bi bi-shield-check"></i> Verificar código';
+        }
+    }
+        // ==========================================
+    // INICIAR SESIÓN
+    // ==========================================
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        const formulario = document.getElementById("formLogin");
+
+        if (!formulario) {
+            console.error("No se encontró el formulario #formLogin");
+            return;
+        }
+
+        formulario.addEventListener("submit", async function (event) {
+
+            // MUY IMPORTANTE:
+            // evita que el navegador vaya a /Login/IniciarSesion
+            event.preventDefault();
+
+            const boton = formulario.querySelector('button[type="submit"]');
+            const mensaje = document.getElementById("mensajeLogin");
+
+            if (mensaje) {
+                mensaje.style.display = "none";
+            }
+
+            if (boton) {
+                boton.disabled = true;
+                boton.innerHTML =
+                    '<span class="spinner-border spinner-border-sm"></span> Verificando...';
+            }
+
+            try {
+
+                const datos = new FormData(formulario);
+
+                const respuesta = await fetch(formulario.action, {
+                    method: "POST",
+                    body: datos
+                });
+
+                const resultado = await respuesta.json();
+
+                // ==========================================
+                // DNI / CONTRASEÑA INCORRECTOS
+                // ==========================================
+
+                if (!resultado.ok) {
+
+                    if (mensaje) {
+                        mensaje.style.display = "block";
+                        mensaje.className = "alert alert-danger mt-3";
+                        mensaje.innerText =
+                            resultado.mensaje || "Los datos ingresados son incorrectos.";
+                    }
+
+                    if (boton) {
+                        boton.disabled = false;
+                        boton.innerHTML = "Iniciar sesión";
+                    }
+
+                    return;
+                }
+
+                // ==========================================
+                // DNI + CONTRASEÑA CORRECTOS
+                // ==========================================
+
+                const modalElemento =
+                    document.getElementById("modalVerificacionSeguridad");
+
+                if (!modalElemento) {
+                    console.error(
+                        "No se encontró #modalVerificacionSeguridad"
+                    );
+                    return;
+                }
+
+                const modal =
+                    new bootstrap.Modal(modalElemento);
+
+                modal.show();
+
+                if (boton) {
+                    boton.disabled = false;
+                    boton.innerHTML = "Iniciar sesión";
+                }
+
+            }
+            catch (error) {
+
+                console.error("Error al iniciar sesión:", error);
+
+                if (mensaje) {
+                    mensaje.style.display = "block";
+                    mensaje.className = "alert alert-danger mt-3";
+                    mensaje.innerText =
+                        "Ocurrió un error al iniciar sesión.";
+                }
+
+                if (boton) {
+                    boton.disabled = false;
+                    boton.innerHTML = "Iniciar sesión";
+                }
+            }
+
+        });
+
+    });
+</script>
+</body>
+</html>

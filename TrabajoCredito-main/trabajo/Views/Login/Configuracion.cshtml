@@ -1,0 +1,352 @@
+﻿@{
+    Layout = null;
+    Layout = "~/Views/Shared/_LayoutCliente.cshtml";
+    ViewData["Title"] = "Configuracion";
+    ViewData["ActivePage"] = "Configuracion";
+}
+
+<style>
+    .title h1 {
+        font-size: 38px;
+        font-weight: 800;
+        color: #1f1235;
+        margin-bottom: 8px;
+    }
+
+    .title p {
+        font-size: 20px;
+        color: #51446b;
+        margin-bottom: 30px;
+    }
+
+    .config-card {
+        background: white;
+        border-radius: 24px;
+        padding: 35px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.08);
+        max-width: 1200px;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 20px;
+        border-bottom: 2px solid #ede9fe;
+        margin-bottom: 30px;
+    }
+
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 16px 22px;
+        font-size: 18px;
+        font-weight: 800;
+        color: #6b7280;
+        cursor: pointer;
+        border-bottom: 4px solid transparent;
+    }
+
+        .tab-btn.active {
+            color: #7c3aed;
+            border-bottom: 4px solid #7c3aed;
+        }
+
+    .tab-content {
+        display: none;
+    }
+
+        .tab-content.active {
+            display: block;
+        }
+
+    .section-title2 {
+        font-size: 30px;
+        font-weight: 900;
+        color: #3c096c;
+        margin-bottom: 25px;
+    }
+
+    .setting-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 22px;
+    }
+
+    .setting-box {
+        background: #f8f5ff;
+        border: 1px solid #ede9fe;
+        border-radius: 18px;
+        padding: 24px;
+    }
+
+        .setting-box label {
+            font-size: 17px;
+            font-weight: bold;
+            color: #3c096c;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .setting-box p {
+            color: #6b7280;
+            font-size: 15px;
+            margin-bottom: 12px;
+        }
+
+        .setting-box select,
+        .setting-box input {
+            width: 100%;
+            padding: 13px;
+            border: 2px solid #ddd6fe;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+        }
+
+            .setting-box input:focus,
+            .setting-box select:focus {
+                border-color: #7c3aed;
+            }
+
+    .switch-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .switch {
+        width: 56px;
+        height: 30px;
+        background: #d1d5db;
+        border-radius: 30px;
+        position: relative;
+        cursor: pointer;
+    }
+
+        .switch::before {
+            content: "";
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 3px;
+            left: 4px;
+            transition: .3s;
+        }
+
+        .switch.active {
+            background: #7c3aed;
+        }
+
+            .switch.active::before {
+                left: 28px;
+            }
+
+    .actions {
+        margin-top: 35px;
+        display: flex;
+        gap: 15px;
+    }
+
+    .btn-save {
+        background: #22c55e;
+        color: white;
+        border: none;
+        padding: 15px 28px;
+        border-radius: 14px;
+        font-size: 17px;
+        font-weight: bold;
+    }
+
+    .btn-reset {
+        background: #6b7280;
+        color: white;
+        border: none;
+        padding: 15px 28px;
+        border-radius: 14px;
+        font-size: 17px;
+        font-weight: bold;
+    }
+
+        .btn-save:hover,
+        .btn-reset:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 22px rgba(0,0,0,.20);
+        }
+
+    .message {
+        display: none;
+        margin-top: 20px;
+        background: #dcfce7;
+        color: #166534;
+        padding: 15px;
+        border-radius: 14px;
+        font-weight: bold;
+    }
+</style>
+
+<div class="content">
+
+    <div class="title">
+        <h1>Configuración</h1>
+        <p>Personaliza tu experiencia, seguridad y preferencias dentro de CrediPlus.</p>
+    </div>
+
+    <div class="config-card">
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="mostrarTab('apariencia', this)">Apariencia</button>
+            <button class="tab-btn" onclick="mostrarTab('accesibilidad', this)">Accesibilidad</button>
+            <button class="tab-btn" onclick="mostrarTab('notificaciones', this)">Notificaciones</button>
+        </div>
+
+        <div id="apariencia" class="tab-content active">
+            <h2 class="section-title2">Apariencia del sistema</h2>
+
+            <div class="setting-grid">
+                <div class="setting-box">
+                    <label>Modo visual</label>
+                    <p>Cambia entre modo claro y oscuro.</p>
+                    <select id="modoVisual">
+                        <option value="claro">Claro</option>
+                        <option value="oscuro">Oscuro</option>
+                    </select>
+                </div>
+
+                <div class="setting-box">
+                    <label>Color principal</label>
+                    <p>Cambia el color de títulos y botones.</p>
+                    <select id="colorPrincipal">
+                        <option value="morado">Morado</option>
+                        <option value="azul">Azul</option>
+                        <option value="verde">Verde</option>
+                        <option value="rojo">Rojo</option>
+                        <option value="negro">Negro</option>
+                    </select>
+                </div>
+
+                <div class="setting-box">
+                    <label>Vista compacta</label>
+                    <p>Reduce espacios del formulario.</p>
+                    <div id="vistaCompacta" class="switch" onclick="toggleSwitch(this)"></div>
+                </div>
+
+                <div class="setting-box">
+                    <label>Animaciones</label>
+                    <p>Activa o desactiva efectos visuales.</p>
+                    <div id="animaciones" class="switch active" onclick="toggleSwitch(this)"></div>
+                </div>
+                <div class="setting-box">
+                    <label>Redondeado de tarjetas</label>
+                    <p>Cambia el borde redondo de las tarjetas.</p>
+                    <select id="redondeado">
+                        <option value="normal">Normal</option>
+                        <option value="grande">Grande</option>
+                        <option value="cuadrado">Más cuadrado</option>
+                    </select>
+                </div>
+
+                <div class="setting-box">
+                    <label>Separación del contenido</label>
+                    <p>Aumenta o reduce los espacios generales.</p>
+                    <select id="espaciado">
+                        <option value="normal">Normal</option>
+                        <option value="amplio">Amplio</option>
+                        <option value="compacto">Compacto</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div id="accesibilidad" class="tab-content">
+            <h2 class="section-title2">Accesibilidad</h2>
+
+            <div class="setting-grid">
+                <div class="setting-box">
+                    <label>Tamaño de texto</label>
+                    <p>Aumenta el tamaño de las letras.</p>
+                    <select id="tamanoTexto">
+                        <option value="normal">Normal</option>
+                        <option value="grande">Grande</option>
+                        <option value="muyGrande">Muy grande</option>
+                    </select>
+                </div>
+
+                <div class="setting-box">
+                    <label>Alto contraste</label>
+                    <p>Marca más los bordes y textos.</p>
+                    <div id="altoContraste" class="switch" onclick="toggleSwitch(this)"></div>
+                </div>
+
+                <div class="setting-box">
+                    <label>Botones grandes</label>
+                    <p>Aumenta el tamaño de los botones.</p>
+                    <div id="botonesGrandes" class="switch" onclick="toggleSwitch(this)"></div>
+                </div>
+
+                <div class="setting-box">
+                    <label>Ayuda rápida</label>
+                    <p>Muestra ayudas dentro del sistema.</p>
+                    <div id="ayudaRapida" class="switch active" onclick="toggleSwitch(this)"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="notificaciones" class="tab-content">
+            <h2 class="section-title2">Notificaciones personales</h2>
+
+            <div class="setting-grid">
+                <div class="setting-box">
+                    <label>Recordatorios de pago</label>
+                    <p>Avisa antes de fechas de pago.</p>
+                    <div id="recordatoriosPago" class="switch active" onclick="toggleSwitch(this)"></div>
+                </div>
+
+                <div class="setting-box">
+                    <label>Alertas de cambios</label>
+                    <p>Avisa cuando cambias una solicitud.</p>
+                    <div id="alertasCambios" class="switch active" onclick="toggleSwitch(this)"></div>
+                </div>
+
+                <div class="setting-box">
+                    <label>Sonido de alerta</label>
+                    <p>Muestra una alerta al guardar.</p>
+                    <div id="sonidoAlertas" class="switch" onclick="toggleSwitch(this)"></div>
+                </div>
+
+                <div class="setting-box">
+                    <label>Mensaje de bienvenida</label>
+                    <p>Muestra saludo al ingresar.</p>
+                    <div id="mensajeBienvenida" class="switch active" onclick="toggleSwitch(this)"></div>
+                </div>
+                <div class="setting-box">
+                    <label>Mostrar tarjeta de preguntas frecuentes</label>
+                    <p>Muestra u oculta el cuadro de ayuda del menú lateral.</p>
+                    <div id="mostrarFaq" class="switch active" onclick="toggleSwitch(this)"></div>
+                </div>
+
+                <div class="setting-box">
+                    <label>Resaltar botones importantes</label>
+                    <p>Agrega sombra a botones principales.</p>
+                    <div id="resaltarBotones" class="switch active" onclick="toggleSwitch(this)"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-save" onclick="guardarConfiguracion()">
+                <i class="fas fa-save"></i> Guardar configuración
+            </button>
+
+            <button class="btn-reset" onclick="restablecerConfiguracion()">
+                <i class="fas fa-rotate-left"></i> Restablecer
+            </button>
+        </div>
+
+        <div id="mensajeOk" class="message">
+            Configuración guardada correctamente.
+        </div>
+
+    </div>
+</div>
+<script src="~/js/config-global.js"></script>
