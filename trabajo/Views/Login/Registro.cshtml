@@ -64,11 +64,17 @@
         }
 
         .logo {
-            font-weight: bold;
-            font-size: 22px;
             position: relative;
             z-index: 2;
+            display: flex;
+            align-items: center;
         }
+
+            .logo img {
+                width: 260px;
+                height: auto;
+                object-fit: contain;
+            }
 
         .welcome {
             margin-top: 120px;
@@ -193,7 +199,9 @@
     <div class="main-box">
 
         <div class="left-panel">
-            <div class="logo">💳 CréditoPlus</div>
+            <div class="logo">
+                <img src="~/imagenes/credi.png" alt="CréditoPlus" />
+            </div>
 
             <div class="welcome">
                 <h1>Gestiona tus créditos</h1>
