@@ -1,4 +1,0 @@
-﻿User-agent: *
-Allow: /
-
-Sitemap: https://trabajocredito.onrender.com/sitemap.xml
