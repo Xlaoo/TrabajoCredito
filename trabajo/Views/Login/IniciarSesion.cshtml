@@ -3028,31 +3028,20 @@ console.log(
 
 
         // ==========================================
-        // ENVIAR VOZ AL SERVIDOR
+        // ENVIAR VOZ AL SERVIDOR Y FINALIZAR LOGIN
         // ==========================================
 
         async function enviarVerificacionVoz(audioBlob) {
 
-            const boton =
-                document.getElementById(
-                    "btnVerificarVoz"
-                );
+            const boton = document.getElementById("btnVerificarVoz");
+            const estado = document.getElementById("estadoVerificacionVoz");
 
-            const estado =
-                document.getElementById(
-                    "estadoVerificacionVoz"
-                );
+            if (!audioBlob || audioBlob.size === 0) {
 
-
-            if (!audioBlob) {
-
-                estado.innerText =
-                    "❌ No se obtuvo la grabación.";
+                estado.innerText = "❌ No se obtuvo la grabación.";
 
                 boton.disabled = false;
-
-                boton.innerHTML =
-                    "🎙️ Hablar palabra clave";
+                boton.innerHTML = "🎙️ Hablar palabra clave";
 
                 grabandoVerificacionVoz = false;
                 procesandoVoz = false;
@@ -3060,60 +3049,33 @@ console.log(
                 return;
             }
 
-
             // ==========================================
-            // NORMALIZAR FRASE
+            // FRASE RECONOCIDA
             // ==========================================
 
-            const frase =
-                normalizarTextoVoz(
-                    fraseReconocida
-                );
+            const frase = normalizarTextoVoz(fraseReconocida);
 
+            const fraseEsperada = normalizarTextoVoz(fraseVozBD);
 
-            console.log(
-                "================================="
-            );
-
-            console.log(
-                "Frase reconocida:",
-                frase
-            );
-
-            console.log(
-                "Frase esperada:",
-                fraseEsperada
-            );
-
-            console.log(
-                "================================="
-            );
+            console.log("=================================");
+            console.log("FRASE RECONOCIDA:", frase);
+            console.log("FRASE ESPERADA:", fraseEsperada);
+            console.log("=================================");
 
 
             // ==========================================
             // COMPROBAR FRASE
             // ==========================================
 
-            if (
-                !frase.includes(
-                    fraseEsperada
-                )
-            ) {
+            if (!frase.includes(fraseEsperada)) {
+
+                console.log("❌ FRASE INCORRECTA");
 
                 estado.innerText =
-                    "❌ No se detectó correctamente la frase de seguridad.";
-
-
-                console.log(
-                    "❌ FRASE INCORRECTA"
-                );
-
+                    "❌ La frase de seguridad es incorrecta.";
 
                 boton.disabled = false;
-
-                boton.innerHTML =
-                    "🎙️ Hablar palabra clave";
-
+                boton.innerHTML = "🎙️ Hablar palabra clave";
 
                 grabandoVerificacionVoz = false;
                 procesandoVoz = false;
@@ -3126,17 +3088,17 @@ console.log(
             // FRASE CORRECTA
             // ==========================================
 
+            console.log("✅ FRASE CORRECTA");
+
             estado.innerText =
                 "✅ Frase correcta. Verificando tu voz...";
 
 
             // ==========================================
-            // PREPARAR AUDIO
+            // ENVIAR AUDIO AL CONTROLADOR
             // ==========================================
 
-            const formData =
-                new FormData();
-
+            const formData = new FormData();
 
             formData.append(
                 "audio",
@@ -3147,41 +3109,56 @@ console.log(
 
             try {
 
-                const respuesta =
-                    await fetch(
-                        "/Login/VerificarVozLogin",
-                        {
-                            method: "POST",
-                            body: formData
-                        }
-                    );
+                boton.disabled = true;
+
+                boton.innerHTML =
+                    '<span class="spinner-border spinner-border-sm"></span> Verificando...';
 
 
-                const resultado =
-                    await respuesta.json();
+                const respuesta = await fetch(
+                    "/Login/VerificarVozLogin",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+
+                const resultado = await respuesta.json();
 
 
                 console.log(
-                    "Resultado servidor:",
+                    "================================="
+                );
+
+                console.log(
+                    "RESPUESTA DEL SERVIDOR:"
+                );
+
+                console.log(
                     resultado
+                );
+
+                console.log(
+                    "================================="
                 );
 
 
                 // ==========================================
-                // VOZ NO COINCIDE
+                // SERVIDOR RECHAZÓ
                 // ==========================================
 
                 if (!resultado.ok) {
 
                     estado.innerText =
-                        "❌ La frase es correcta, pero la voz no coincide.";
-
+                        "❌ " +
+                        (resultado.mensaje ||
+                            "No se pudo verificar la voz.");
 
                     boton.disabled = false;
 
                     boton.innerHTML =
                         "🎙️ Hablar palabra clave";
-
 
                     grabandoVerificacionVoz = false;
                     procesandoVoz = false;
@@ -3191,49 +3168,73 @@ console.log(
 
 
                 // ==========================================
-                // TODO CORRECTO
+                // LOGIN CORRECTO
                 // ==========================================
 
+                console.log(
+                    "✅ LOGIN COMPLETADO CORRECTAMENTE"
+                );
+
+                console.log(
+                    "Redirigiendo a:",
+                    resultado.redirectUrl
+                );
+
+
                 estado.innerText =
-                    "🟢 Voz y palabra clave verificadas correctamente.";
+                    "🟢 Voz verificada correctamente. Ingresando...";
 
 
                 boton.innerHTML =
                     "✅ Verificación correcta";
 
 
-                setTimeout(function () {
+                // ==========================================
+                // REDIRECCIÓN
+                // ==========================================
 
-                    window.location.href =
-                        resultado.redirectUrl;
+                if (resultado.redirectUrl) {
 
-                }, 700);
+                    setTimeout(function () {
 
+                        window.location.href =
+                            resultado.redirectUrl;
+
+                    }, 500);
+
+                }
+                else {
+
+                    console.error(
+                        "El servidor no devolvió redirectUrl."
+                    );
+
+                    estado.innerText =
+                        "❌ Inicio de sesión correcto, pero no se recibió la dirección de destino.";
+
+                    boton.disabled = false;
+
+                }
 
             }
             catch (error) {
 
                 console.error(
-                    "Error verificando voz:",
+                    "ERROR VERIFICANDO VOZ:",
                     error
                 );
 
-
                 estado.innerText =
                     "❌ No se pudo verificar la voz.";
-
 
                 boton.disabled = false;
 
                 boton.innerHTML =
                     "🎙️ Hablar palabra clave";
 
-
                 grabandoVerificacionVoz = false;
                 procesandoVoz = false;
-
             }
-
         }
                     // ==========================================
         // CAMBIAR MODALES SIN SUPERPONERLOS
