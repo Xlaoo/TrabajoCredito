@@ -29,5 +29,12 @@ namespace trabajo.Models
         public bool NotificacionSistema { get; set; } = true;
 
         public bool NotificacionRecordatorio { get; set; } = false;
+        // ==========================================
+        // SEGURIDAD POR VOZ
+        // ==========================================
+
+        public string? FraseVoz { get; set; }
+        public string? AudioRegistro { get; set; }
+        public byte[]? EmbeddingVoz { get; set; }
     }
 }

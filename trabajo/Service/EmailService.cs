@@ -6,7 +6,7 @@ namespace trabajo.Service
     public class EmailService
     {
         private readonly string remitente = "rafaelhugorosalespapuico@gmail.com";
-        private readonly string password = "gvzkraxpqxosvjxk";
+        private readonly string password = "oyozzfnehrsobbrg";
 
         public async Task EnviarCodigoAsync(string destino, string codigo)
         {

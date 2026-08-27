@@ -192,6 +192,155 @@
                 margin-top: 40px;
             }
         }
+        /* ==========================================
+           SEGURIDAD POR VOZ
+           ========================================== */
+
+        .seguridad-voz-box {
+            background: rgba(255,255,255,.65);
+            border: 1px solid rgba(67,97,238,.15);
+            border-radius: 18px;
+            padding: 18px;
+        }
+
+        .seguridad-voz-titulo {
+            color: #3c096c;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .seguridad-voz-descripcion {
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .btn-grabar-voz {
+            width: 100%;
+            height: 50px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #4361ee, #7209b7);
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+            .btn-grabar-voz:hover {
+                opacity: .9;
+                color: white;
+            }
+
+            .btn-grabar-voz.grabando {
+                background: linear-gradient(135deg, #dc2626, #ef4444);
+            }
+
+        .estado-voz {
+            margin-top: 10px;
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+        }
+        /* ==========================================
+           MODAL CONFIRMACIÓN VOZ
+           ========================================== */
+
+        .modal-voz {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            inset: 0;
+            background: rgba(15, 23, 42, .65);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-voz-contenido {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 25px 70px rgba(0,0,0,.35);
+            animation: aparecerModal .25s ease;
+        }
+
+        @@keyframes aparecerModal {
+            from
+
+        {
+            opacity: 0;
+            transform: scale(.9);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        }
+
+        .modal-voz-icono {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+
+        .modal-voz-titulo {
+            color: #3c096c;
+            font-size: 27px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .modal-voz-texto {
+            color: #64748b;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .frase-detectada {
+            background: #f1f5f9;
+            border-radius: 14px;
+            padding: 15px;
+            margin: 15px 0 22px;
+            color: #3c096c;
+            font-size: 20px;
+            font-weight: bold;
+            min-height: 55px;
+        }
+
+        .modal-voz-botones {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-voz-cancelar,
+        .btn-voz-confirmar {
+            flex: 1;
+            height: 50px;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .btn-voz-cancelar {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .btn-voz-confirmar {
+            background: linear-gradient(135deg, #4361ee, #7209b7);
+            color: white;
+        }
+
+            .btn-voz-cancelar:hover,
+            .btn-voz-confirmar:hover {
+                opacity: .9;
+            }
     </style>
 </head>
 
@@ -218,7 +367,11 @@
             <h2>Crear Cuenta</h2>
             <p class="subtitle">Completa tus datos para registrarte</p>
 
-            <form asp-controller="Login" asp-action="Registro" method="post">
+            <form asp-controller="Login"
+                  asp-action="Registro"
+                  method="post"
+                  enctype="multipart/form-data"
+                  id="formRegistro">
 
                 <div class="input-util-wrap mb-2">
                     <input id="nombreInput"
@@ -373,7 +526,54 @@
                     </button>
 
                 </div>
+                <!-- ==========================================
+                SEGURIDAD POR VOZ
+                ========================================== -->
 
+                <div class="seguridad-voz-box mb-3">
+
+                    <div class="seguridad-voz-titulo">
+                        🔐 Seguridad por voz
+                    </div>
+
+                    <p class="seguridad-voz-descripcion">
+                        Graba una palabra o frase que usarás como seguridad.
+                    </p>
+
+                    <div class="input-util-wrap mb-2">
+
+                        <input id="fraseVoz"
+                               class="form-control"
+                               type="text"
+                               value="Mi voz protege mi cuenta"
+                               asp-for="FraseVoz"
+                               readonly />
+
+                        <button type="button"
+                                class="btn-clear"
+                                onclick="limpiarFraseVoz()">
+                            ✕
+                        </button>
+
+                    </div>
+
+                    <button type="button"
+                            id="btnGrabarVoz"
+                            class="btn btn-grabar-voz"
+                            onclick="iniciarGrabacionVoz()">
+
+                        🎙️ Grabar mi voz
+
+                    </button>
+
+                    <div id="estadoVoz"
+                         class="estado-voz">
+
+                        ⚪ Aún no has grabado tu voz
+
+                    </div>
+
+                </div>
                 <div class="d-grid gap-2 mb-3">
                     <button class="btn btn-register" type="submit">Registrate</button>
                 </div>
@@ -393,7 +593,53 @@
             </form>
         </div>
     </div>
+    <!-- ==========================================
+     MODAL CONFIRMACIÓN DE VOZ
+     ========================================== -->
 
+    <div id="modalConfirmarVoz" class="modal-voz">
+
+        <div class="modal-voz-contenido">
+
+            <div class="modal-voz-icono">
+                🎙️
+            </div>
+
+            <div class="modal-voz-titulo">
+                Voz detectada
+            </div>
+
+            <div class="modal-voz-texto">
+                Detectamos que dijiste:
+            </div>
+
+            <div id="textoDetectado" class="frase-detectada">
+                ...
+            </div>
+
+            <div class="modal-voz-texto">
+                ¿Deseas que esta sea tu voz de seguridad?
+            </div>
+
+            <div class="modal-voz-botones">
+
+                <button type="button"
+                        class="btn-voz-cancelar"
+                        onclick="rechazarVoz()">
+                    ❌ No, volver a grabar
+                </button>
+
+                <button type="button"
+                        class="btn-voz-confirmar"
+                        onclick="confirmarVoz()">
+                    ✅ Sí, usar esta voz
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
     <script>
 
         function enviarCodigo() {
@@ -463,6 +709,690 @@
                 minimo.style.color = "#64748b";
             }
         });
+
+                     // ==========================================
+        // VARIABLES DE GRABACIÓN
+        // ==========================================
+
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let audioBlob = null;
+
+        let grabando = false;
+        let finalizandoGrabacion = false;
+
+        // ==========================================
+        // RECONOCIMIENTO DE VOZ
+        // ==========================================
+
+        let reconocimientoVoz = null;
+        let textoDetectado = "";
+
+        const SpeechRecognition =
+            window.SpeechRecognition ||
+            window.webkitSpeechRecognition;
+
+        const reconocimientoDisponible = !!SpeechRecognition;
+
+
+        // ==========================================
+        // CONFIGURAR RECONOCIMIENTO
+        // ==========================================
+
+        if (reconocimientoDisponible) {
+
+            reconocimientoVoz = new SpeechRecognition();
+
+            reconocimientoVoz.lang = "es-PE";
+
+            // Escuchar continuamente
+            reconocimientoVoz.continuous = true;
+
+            // Necesitamos resultados intermedios
+            reconocimientoVoz.interimResults = true;
+
+            reconocimientoVoz.onresult = function (event) {
+
+                let textoFinal = "";
+
+                for (
+                    let i = event.resultIndex;
+                    i < event.results.length;
+                    i++
+                ) {
+
+                    const resultado = event.results[i];
+
+                    if (resultado.isFinal) {
+
+                        textoFinal +=
+                            resultado[0].transcript.trim() + " ";
+                    }
+                }
+
+
+                // Si reconoció una palabra o frase
+                if (textoFinal.trim() !== "") {
+
+                    textoDetectado += textoFinal;
+
+                    console.log(
+                        "Texto reconocido:",
+                        textoDetectado
+                    );
+
+                    // ==========================================
+                    // AQUÍ TERMINAMOS AUTOMÁTICAMENTE
+                    // ==========================================
+
+                    finalizarGrabacionAutomaticamente();
+                }
+
+            };
+
+
+            reconocimientoVoz.onerror = function (event) {
+
+                console.log(
+                    "Error reconocimiento:",
+                    event.error
+                );
+
+                /*
+                 * Si ocurre "no-speech" no queremos cerrar
+                 * la grabación.
+                 *
+                 * Simplemente seguimos esperando.
+                 */
+
+                if (event.error === "no-speech") {
+
+                    return;
+                }
+
+                if (event.error === "aborted") {
+
+                    return;
+                }
+
+                /*
+                 * Otros errores
+                 */
+
+                console.error(
+                    "Error de reconocimiento:",
+                    event.error
+                );
+
+            };
+
+
+            reconocimientoVoz.onend = function () {
+
+                console.log(
+                    "Reconocimiento terminado."
+                );
+
+            };
+
+        }
+
+
+        // ==========================================
+        // INICIAR GRABACIÓN
+        // ==========================================
+
+        async function iniciarGrabacionVoz() {
+
+            const boton =
+                document.getElementById("btnGrabarVoz");
+
+            const estado =
+                document.getElementById("estadoVoz");
+
+
+            // Si ya está grabando no hacemos nada
+            if (grabando) {
+
+                return;
+            }
+
+
+            // ==========================================
+            // VERIFICAR SOPORTE
+            // ==========================================
+
+            if (
+                !navigator.mediaDevices ||
+                !navigator.mediaDevices.getUserMedia
+            ) {
+
+                alert(
+                    "Tu navegador no permite grabar audio."
+                );
+
+                return;
+            }
+
+
+            if (!reconocimientoDisponible) {
+
+                alert(
+                    "Tu navegador no permite reconocer voz automáticamente. " +
+                    "Usa Google Chrome o Microsoft Edge."
+                );
+
+                return;
+            }
+
+
+            try {
+
+                // ==========================================
+                // PEDIR MICRÓFONO
+                // ==========================================
+
+                const stream =
+                    await navigator.mediaDevices.getUserMedia({
+                        audio: true
+                    });
+
+
+                // Limpiar grabación anterior
+                audioChunks = [];
+
+                audioBlob = null;
+
+                textoDetectado = "";
+
+                finalizandoGrabacion = false;
+
+
+                // ==========================================
+                // CREAR GRABADOR
+                // ==========================================
+
+                mediaRecorder =
+                    new MediaRecorder(stream);
+
+
+                mediaRecorder.ondataavailable =
+                    function (event) {
+
+                        if (event.data.size > 0) {
+
+                            audioChunks.push(
+                                event.data
+                            );
+
+                        }
+
+                    };
+
+
+                // ==========================================
+                // CUANDO TERMINE LA GRABACIÓN
+                // ==========================================
+
+                mediaRecorder.onstop =
+                    function () {
+
+                                audioBlob = new Blob(
+            audioChunks,
+            {
+                type: "audio/webm"
+            }
+        );
+
+
+                        // Liberar micrófono
+                        stream
+                            .getTracks()
+                            .forEach(track => {
+                                track.stop();
+                            });
+
+
+                        grabando = false;
+
+                        boton.disabled = false;
+
+                        boton.innerHTML =
+                            "🎙️ Grabar mi voz";
+
+                        boton.classList.remove(
+                            "grabando"
+                        );
+
+
+                        // ==========================================
+                        // MOSTRAR MODAL
+                        // ==========================================
+
+                        mostrarModalVoz();
+
+                    };
+
+
+                // ==========================================
+                // COMENZAR GRABACIÓN
+                // ==========================================
+
+                mediaRecorder.start();
+
+                grabando = true;
+
+
+                // ==========================================
+                // CAMBIAR INTERFAZ
+                // ==========================================
+
+                boton.disabled = true;
+
+                boton.innerHTML =
+                    "🎙️ Escuchando...";
+
+                boton.classList.add(
+                    "grabando"
+                );
+
+
+                estado.innerText =
+                    "🟡 Esperando señal de voz... Habla ahora";
+
+
+                // ==========================================
+                // COMENZAR RECONOCIMIENTO
+                // ==========================================
+
+                textoDetectado = "";
+
+                try {
+
+                    reconocimientoVoz.start();
+
+                }
+                catch (error) {
+
+                    console.log(
+                        "El reconocimiento ya estaba iniciado.",
+                        error
+                    );
+
+                }
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                grabando = false;
+
+                alert(
+                    "No se pudo acceder al micrófono. " +
+                    "Verifica los permisos del navegador."
+                );
+
+            }
+
+        }
+
+
+        // ==========================================
+        // FINALIZAR AUTOMÁTICAMENTE
+        // ==========================================
+
+        function finalizarGrabacionAutomaticamente() {
+
+            // Evitar que se ejecute dos veces
+            if (finalizandoGrabacion) {
+
+                return;
+            }
+
+            if (!grabando) {
+
+                return;
+            }
+
+
+            finalizandoGrabacion = true;
+
+
+            const estado =
+                document.getElementById("estadoVoz");
+
+
+            estado.innerText =
+                "🟢 Voz detectada. Procesando...";
+
+
+            // ==========================================
+            // DETENER RECONOCIMIENTO
+            // ==========================================
+
+            if (reconocimientoVoz) {
+
+                try {
+
+                    reconocimientoVoz.stop();
+
+                }
+                catch (error) {
+
+                    console.log(error);
+
+                }
+
+            }
+
+
+            // ==========================================
+            // DETENER GRABACIÓN
+            // ==========================================
+
+            if (
+                mediaRecorder &&
+                mediaRecorder.state !== "inactive"
+            ) {
+
+                mediaRecorder.stop();
+
+            }
+
+        }
+
+
+        // ==========================================
+        // MOSTRAR MODAL
+        // ==========================================
+
+        function mostrarModalVoz() {
+
+            const modal =
+                document.getElementById(
+                    "modalConfirmarVoz"
+                );
+
+            const texto =
+                document.getElementById(
+                    "textoDetectado"
+                );
+
+
+            let frase =
+                textoDetectado.trim();
+
+
+            // ==========================================
+            // SI NO RECONOCIÓ NADA
+            // ==========================================
+
+            if (frase === "") {
+
+                audioBlob = null;
+
+                const estado =
+                    document.getElementById(
+                        "estadoVoz"
+                    );
+
+                estado.innerText =
+                    "⚪ No pudimos reconocer tu voz. Intenta nuevamente.";
+
+                finalizandoGrabacion = false;
+
+                return;
+            }
+
+
+            // ==========================================
+            // MOSTRAR TEXTO RECONOCIDO
+            // ==========================================
+
+            texto.innerText =
+                frase;
+
+
+            // ==========================================
+            // ABRIR MODAL
+            // ==========================================
+
+            modal.style.display =
+                "flex";
+
+        }
+
+
+        // ==========================================
+        // CONFIRMAR VOZ
+        // ==========================================
+
+        function confirmarVoz() {
+
+            const modal =
+                document.getElementById(
+                    "modalConfirmarVoz"
+                );
+
+            const estado =
+                document.getElementById(
+                    "estadoVoz"
+                );
+
+            const fraseInput =
+                document.getElementById(
+                    "fraseVoz"
+                );
+
+
+            const frase =
+                textoDetectado.trim();
+
+
+            // ==========================================
+            // GUARDAR FRASE RECONOCIDA
+            // ==========================================
+
+            if (frase !== "") {
+
+                fraseInput.value =
+                    frase;
+
+            }
+
+
+            // ==========================================
+            // CERRAR MODAL
+            // ==========================================
+
+            modal.style.display =
+                "none";
+
+
+            finalizandoGrabacion = false;
+
+
+            estado.innerText =
+                "🟢 Voz confirmada. Puedes registrarte.";
+
+        }
+
+
+        // ==========================================
+        // RECHAZAR VOZ
+        // ==========================================
+
+        function rechazarVoz() {
+
+            const modal =
+                document.getElementById(
+                    "modalConfirmarVoz"
+                );
+
+            const estado =
+                document.getElementById(
+                    "estadoVoz"
+                );
+
+
+            // ==========================================
+            // ELIMINAR GRABACIÓN
+            // ==========================================
+
+            audioBlob = null;
+
+            audioChunks = [];
+
+            textoDetectado = "";
+
+            finalizandoGrabacion = false;
+
+
+            // ==========================================
+            // CERRAR MODAL
+            // ==========================================
+
+            modal.style.display =
+                "none";
+
+
+            estado.innerText =
+                "⚪ Grabación descartada. Pulsa «Grabar mi voz» para intentarlo nuevamente.";
+
+        }
+
+
+        // ==========================================
+        // LIMPIAR FRASE
+        // ==========================================
+
+        function limpiarFraseVoz() {
+
+            const fraseInput =
+                document.getElementById(
+                    "fraseVoz"
+                );
+
+            fraseInput.value = "";
+
+            audioBlob = null;
+
+            audioChunks = [];
+
+            textoDetectado = "";
+
+
+            const estado =
+                document.getElementById(
+                    "estadoVoz"
+                );
+
+            estado.innerText =
+                "⚪ Aún no has grabado tu voz.";
+
+        }
+
+
+        // ==========================================
+        // ENVIAR FORMULARIO
+        // ==========================================
+
+        document
+            .getElementById("formRegistro")
+            .addEventListener(
+                "submit",
+                function (event) {
+
+
+                    // ==========================================
+                    // VERIFICAR AUDIO
+                    // ==========================================
+
+                    if (!audioBlob) {
+
+                        event.preventDefault();
+
+                        alert(
+                            "Debes grabar y confirmar tu voz antes de registrarte."
+                        );
+
+                        return;
+                    }
+
+
+                    const formulario = this;
+
+
+                    const formData =
+                        new FormData(
+                            formulario
+                        );
+
+
+                    formData.delete(
+                        "audio"
+                    );
+
+
+                    formData.append(
+                        "audio",
+                        audioBlob,
+                        "audioRegistro.webm"
+                    );
+
+
+                    // ==========================================
+                    // ENVIAR REGISTRO
+                    // ==========================================
+
+                    fetch(
+                        formulario.action,
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    )
+                    .then(response => {
+
+                        if (response.redirected) {
+
+                            window.location.href =
+                                response.url;
+
+                            return;
+                        }
+
+                        return response.text();
+
+                    })
+                    .then(html => {
+
+                        if (html) {
+
+                            document.open();
+
+                            document.write(html);
+
+                            document.close();
+
+                        }
+
+                    })
+                    .catch(error => {
+
+                        console.error(error);
+
+                        alert(
+                            "Ocurrió un error al registrar el usuario."
+                        );
+
+                    });
+
+                }
+            );
+
+
     </script>
     <script src="~/js/utilidades-ui.js"></script>
 </body>

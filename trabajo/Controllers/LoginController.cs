@@ -76,7 +76,11 @@ namespace trabajo.Controllers
         }
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> Registro(Usuario usuario, string confirmarClave, string codigoVerificacion)
+        public async Task<IActionResult> Registro(
+    Usuario usuario,
+    string confirmarClave,
+    string codigoVerificacion,
+    IFormFile? audio)
         {
             if (!Regex.IsMatch(usuario.Dni, @"^\d{8}$"))
             {
@@ -124,13 +128,69 @@ namespace trabajo.Controllers
                 ViewData["mensaje"] = "El DNI, celular o correo ya está registrado.";
                 return View(usuario);
             }
+            if (audio == null || audio.Length == 0)
+            {
+                ViewData["mensaje"] = "Debes realizar y enviar una grabación de audio por motivos de seguridad.";
+                return View(usuario);
+            }
+            if (audio.Length > 5 * 1024 * 1024)
+            {
+                ViewData["mensaje"] = "El audio no puede superar los 5 MB.";
+                return View(usuario);
+            }
+            var tiposAudioPermitidos = new[]
+ {
+    "audio/webm",
+    "audio/wav",
+    "audio/mpeg",
+    "audio/mp4",
+    "audio/ogg"
+};
 
+            bool audioValido = tiposAudioPermitidos.Any(tipo =>
+                audio.ContentType.StartsWith(tipo, StringComparison.OrdinalIgnoreCase)
+            );
+
+            if (!audioValido)
+            {
+                ViewData["mensaje"] = "El archivo enviado no es un audio válido.";
+                return View(usuario);
+            }
             if (codigoVerificacion != codigoGlobal)
             {
                 ViewData["mensaje"] = "El código de verificación es incorrecto.";
                 return View(usuario);
             }
+            string carpetaAudio = Path.Combine(
+    Directory.GetCurrentDirectory(),
+    "wwwroot",
+    "audiosRegistro"
+);
 
+            if (!Directory.Exists(carpetaAudio))
+            {
+                Directory.CreateDirectory(carpetaAudio);
+            }
+
+            string nombreAudio =
+                Guid.NewGuid().ToString() +
+                Path.GetExtension(audio.FileName);
+
+            string rutaAudio =
+                Path.Combine(carpetaAudio, nombreAudio);
+
+            using (var stream = new FileStream(rutaAudio, FileMode.Create))
+            {
+                await audio.CopyToAsync(stream);
+            }
+            usuario.AudioRegistro = "/audiosRegistro/" + nombreAudio;
+
+            // Guardar también los bytes del audio
+            using (var memoryStream = new MemoryStream())
+            {
+                await audio.CopyToAsync(memoryStream);
+                usuario.EmbeddingVoz = memoryStream.ToArray();
+            }
             usuario.clave = utilidades.EncriptarClave(usuario.clave);
             usuario.Rol = "Cliente";
             usuario.FechaRegistro = DateTime.Now;
@@ -174,7 +234,6 @@ namespace trabajo.Controllers
                     });
                 }
 
-
                 // ==========================================
                 // VERIFICAR SI EL DNI EXISTE
                 // ==========================================
@@ -191,7 +250,6 @@ namespace trabajo.Controllers
                     });
                 }
 
-
                 // ==========================================
                 // VERIFICAR DNI + CONTRASEÑA
                 // ==========================================
@@ -205,11 +263,6 @@ namespace trabajo.Controllers
                         x.clave == claveEncriptada
                     );
 
-
-                // ==========================================
-                // CONTRASEÑA INCORRECTA
-                // ==========================================
-
                 if (usuarioEncontrado == null)
                 {
                     return Json(new
@@ -219,22 +272,49 @@ namespace trabajo.Controllers
                     });
                 }
 
+                // ==========================================
+                // GUARDAR USUARIO PENDIENTE
+                // ==========================================
+
+                dniLoginPendiente = usuarioEncontrado.Dni;
 
                 // ==========================================
-                // DNI + CONTRASEÑA CORRECTOS
+                // VERIFICAR REGISTRO DE VOZ
                 // ==========================================
-                // TODAVÍA NO INICIAMOS SESIÓN.
-                // Primero pedimos el código de seguridad.
 
-                dniLoginPendiente =
-                    usuarioEncontrado.Dni;
+                bool tieneRegistroVoz =
+                    !string.IsNullOrWhiteSpace(usuarioEncontrado.AudioRegistro);
 
+                // ==========================================
+                // NO TIENE REGISTRO DE VOZ
+                // ==========================================
+
+                if (!tieneRegistroVoz)
+                {
+                    return Json(new
+                    {
+                        ok = true,
+                        necesitaRegistroVoz = true,
+                        tieneRegistroVoz = false,
+                        mensaje =
+                            "Para continuar debes registrar tu voz por motivos de seguridad."
+                    });
+                }
+
+                // ==========================================
+                // YA TIENE REGISTRO DE VOZ
+                // ==========================================
 
                 return Json(new
                 {
                     ok = true,
+                    necesitaRegistroVoz = false,
+                    tieneRegistroVoz = true,
                     mostrarVerificacion = true,
-                    correo = usuarioEncontrado.Correo
+                    correo = usuarioEncontrado.Correo,
+
+                    // Frase de seguridad guardada en la BD
+                    fraseVoz = usuarioEncontrado.FraseVoz
                 });
             }
             catch (Exception ex)
@@ -246,7 +326,460 @@ namespace trabajo.Controllers
                 });
             }
         }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> RegistrarVozLogin(IFormFile? audio)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dniLoginPendiente))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La sesión de seguridad ha expirado. Inicia sesión nuevamente."
+                    });
+                }
 
+                if (audio == null || audio.Length == 0)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Debes realizar una grabación de voz."
+                    });
+                }
+
+                if (audio.Length > 5 * 1024 * 1024)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El audio no puede superar los 5 MB."
+                    });
+                }
+
+                var tiposAudioPermitidos = new[]
+                {
+            "audio/webm",
+            "audio/wav",
+            "audio/mpeg",
+            "audio/mp4",
+            "audio/ogg"
+        };
+
+                bool audioValido = tiposAudioPermitidos.Any(tipo =>
+                    audio.ContentType.StartsWith(
+                        tipo,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                );
+
+                if (!audioValido)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El archivo enviado no es un audio válido."
+                    });
+                }
+
+                // ==========================================
+                // BUSCAR USUARIO
+                // ==========================================
+
+                Usuario usuario = _Context.Usuario.FirstOrDefault(
+                    x => x.Dni == dniLoginPendiente
+                );
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró el usuario."
+                    });
+                }
+
+                // ==========================================
+                // LEER AUDIO COMO BYTES
+                // ==========================================
+
+                byte[] bytesAudio;
+
+                using (var memoryStream = new MemoryStream())
+                {
+                    await audio.CopyToAsync(memoryStream);
+                    bytesAudio = memoryStream.ToArray();
+                }
+
+                // ==========================================
+                // CREAR CARPETA
+                // ==========================================
+
+                string carpetaAudio = Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "wwwroot",
+                    "audiosRegistro"
+                );
+
+                if (!Directory.Exists(carpetaAudio))
+                {
+                    Directory.CreateDirectory(carpetaAudio);
+                }
+
+                // ==========================================
+                // CREAR NOMBRE DEL AUDIO
+                // ==========================================
+
+                string nombreAudio =
+                    Guid.NewGuid().ToString() + ".webm";
+
+                string rutaAudio =
+                    Path.Combine(carpetaAudio, nombreAudio);
+
+                // ==========================================
+                // GUARDAR AUDIO EN ARCHIVO
+                // ==========================================
+
+                await System.IO.File.WriteAllBytesAsync(
+                    rutaAudio,
+                    bytesAudio
+                );
+
+                // ==========================================
+                // GUARDAR INFORMACIÓN EN BASE DE DATOS
+                // ==========================================
+
+                usuario.AudioRegistro =
+                    "/audiosRegistro/" + nombreAudio;
+
+                // IMPORTANTE
+                // Guardamos los bytes del audio
+                // en EmbeddingVoz.
+                usuario.EmbeddingVoz = bytesAudio;
+
+                _Context.Usuario.Update(usuario);
+
+                await _Context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = "Registro de voz realizado correctamente."
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "No se pudo registrar la voz: " + ex.Message
+                });
+            }
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerificarVozLogin(IFormFile? audio)
+        {
+            try
+            {
+                // ==========================================
+                // COMPROBAR SESIÓN PENDIENTE
+                // ==========================================
+
+                if (string.IsNullOrWhiteSpace(dniLoginPendiente))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La sesión de seguridad ha expirado. Inicia sesión nuevamente."
+                    });
+                }
+
+
+                // ==========================================
+                // COMPROBAR AUDIO
+                // ==========================================
+
+                if (audio == null || audio.Length == 0)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se recibió ninguna grabación de voz."
+                    });
+                }
+
+
+                // ==========================================
+                // TAMAÑO MÁXIMO
+                // ==========================================
+
+                if (audio.Length > 5 * 1024 * 1024)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El audio no puede superar los 5 MB."
+                    });
+                }
+
+
+                // ==========================================
+                // BUSCAR USUARIO
+                // ==========================================
+
+                Usuario usuario =
+                    _Context.Usuario.FirstOrDefault(
+                        x => x.Dni == dniLoginPendiente
+                    );
+
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró el usuario."
+                    });
+                }
+
+
+                // ==========================================
+                // COMPROBAR QUE TIENE VOZ REGISTRADA
+                // ==========================================
+
+                if (string.IsNullOrWhiteSpace(usuario.AudioRegistro))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No tienes una voz registrada."
+                    });
+                }
+                if (usuario.EmbeddingVoz == null || usuario.EmbeddingVoz.Length == 0)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El usuario tiene registrada la ruta de voz, pero no tiene los datos de voz guardados."
+                    });
+                }
+
+                // ==========================================
+                // LEER AUDIO ACTUAL
+                // ==========================================
+
+                byte[] audioActual;
+
+                using (var memoryStream = new MemoryStream())
+                {
+                    await audio.CopyToAsync(memoryStream);
+
+                    audioActual = memoryStream.ToArray();
+                }
+
+
+                // ==========================================
+                // COMPROBAR QUE SE RECIBIÓ AUDIO
+                // ==========================================
+
+                if (audioActual.Length == 0)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La grabación recibida está vacía."
+                    });
+                }
+
+
+                // ==========================================
+                // MOSTRAR INFORMACIÓN EN CONSOLA
+                // PARA PRUEBAS
+                // ==========================================
+
+                Console.WriteLine(
+                    "=========================================="
+                );
+
+                Console.WriteLine(
+                    "VERIFICACIÓN DE VOZ"
+                );
+
+                Console.WriteLine(
+                    "DNI: " + usuario.Dni
+                );
+
+                Console.WriteLine(
+                    "Audio registrado: " + usuario.AudioRegistro
+                );
+
+                Console.WriteLine(
+                    "Tamaño audio actual: " +
+                    audioActual.Length +
+                    " bytes"
+                );
+
+                Console.WriteLine(
+                    "=========================================="
+                );
+
+
+                // ==========================================
+                // IMPORTANTE
+                // ==========================================
+                //
+                // AQUÍ TODAVÍA NO HACEMOS COMPARACIÓN
+                // BIOMÉTRICA DE VOZ.
+                //
+                // Solo comprobamos que:
+                //
+                // 1. El usuario existe
+                // 2. Tiene voz registrada
+                // 3. Se recibió un audio nuevo
+                //
+                // ==========================================
+
+
+                // ==========================================
+                // CREAR AUTENTICACIÓN
+                // ==========================================
+
+                List<Claim> claims =
+                    new List<Claim>()
+                    {
+                new Claim(
+                    ClaimTypes.Name,
+                    usuario.Nombre
+                ),
+
+                new Claim(
+                    "Apellido",
+                    usuario.Apellido
+                ),
+
+                new Claim(
+                    "Dni",
+                    usuario.Dni
+                ),
+
+                new Claim(
+                    "Celular",
+                    usuario.Celular
+                ),
+
+                new Claim(
+                    "Correo",
+                    usuario.Correo
+                ),
+
+                new Claim(
+                    ClaimTypes.Role,
+                    usuario.Rol
+                )
+                    };
+
+
+                ClaimsIdentity claimsIdentity =
+                    new ClaimsIdentity(
+                        claims,
+                        CookieAuthenticationDefaults.AuthenticationScheme
+                    );
+
+
+                AuthenticationProperties properties =
+                    new AuthenticationProperties
+                    {
+                        AllowRefresh = true
+                    };
+
+
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults.AuthenticationScheme,
+                    new ClaimsPrincipal(claimsIdentity),
+                    properties
+                );
+
+
+                // ==========================================
+                // ACTUALIZAR USUARIO
+                // ==========================================
+
+                usuario.EstadoActivo = true;
+
+                usuario.UltimaConexion = DateTime.Now;
+
+
+                await _Context.SaveChangesAsync();
+
+
+                // ==========================================
+                // LIMPIAR DNI PENDIENTE
+                // ==========================================
+
+                dniLoginPendiente = "";
+
+
+                // ==========================================
+                // REDIRECCIÓN
+                // ==========================================
+
+                string url;
+
+
+                if (usuario.Rol == "Analista")
+                {
+                    url = Url.Action(
+                        "ProgramaAnalista",
+                        "Analista"
+                    );
+                }
+                else if (usuario.Rol == "Administrador")
+                {
+                    url = Url.Action(
+                        "ProgramaAdministrador",
+                        "Administrador"
+                    );
+                }
+                else
+                {
+                    url = Url.Action(
+                        "DashboardCliente",
+                        "Login"
+                    );
+                }
+
+
+                return Json(new
+                {
+                    ok = true,
+
+                    mensaje =
+                        "Audio recibido correctamente.",
+
+                    redirectUrl = url
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR VERIFICANDO VOZ: " +
+                    ex.Message
+                );
+
+
+                return Json(new
+                {
+                    ok = false,
+
+                    mensaje =
+                        "No se pudo verificar la voz: " +
+                        ex.Message
+                });
+            }
+        }
         [HttpGet]
         [AllowAnonymous]
         public IActionResult OlvideContrasena()
@@ -1633,7 +2166,6 @@ string titularCuenta
 
             return Ok();
         }
-
 
 
 
