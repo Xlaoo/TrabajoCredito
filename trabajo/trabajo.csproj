@@ -45,10 +45,12 @@
 	<ItemGroup>
 		<None Update="ModelosVoz\ecapa-speaker-v1.onnx">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</None>
 
 		<None Update="ModelosVoz\fbank-80x201-f32.bin">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
 		</None>
 	</ItemGroup>
 </Project>
