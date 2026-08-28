@@ -18,6 +18,7 @@ namespace trabajo.Controllers
     {
         private readonly IusuarioServices _UsuarioService;
         private readonly UsuarioContext _Context;
+        private readonly ServicioEmbeddingVoz _ServicioEmbeddingVoz;
         private static string codigoGlobal = "";
         private readonly EmailService _emailService = new EmailService();
         private static string codigoLogin = "";
@@ -26,10 +27,11 @@ namespace trabajo.Controllers
         // Hora en la que vence el código de inicio de sesión
         private static DateTime codigoLoginExpira = DateTime.MinValue;
 
-        public LoginController(IusuarioServices usuarioService, UsuarioContext context)
+        public LoginController(IusuarioServices usuarioService, UsuarioContext context, ServicioEmbeddingVoz servicioEmbeddingVoz)
         {
             _UsuarioService = usuarioService;
             _Context = context;
+            _ServicioEmbeddingVoz = servicioEmbeddingVoz;
         }
 
         [AllowAnonymous]
@@ -185,12 +187,23 @@ namespace trabajo.Controllers
             }
             usuario.AudioRegistro = "/audiosRegistro/" + nombreAudio;
 
-            // Guardar también los bytes del audio
-            using (var memoryStream = new MemoryStream())
+            float[] embedding = await _ServicioEmbeddingVoz.GenerarEmbeddingDesdeAudio(audio);
+
+            if (embedding == null || embedding.Length != 192)
             {
-                await audio.CopyToAsync(memoryStream);
-                usuario.EmbeddingVoz = memoryStream.ToArray();
+                ViewData["mensaje"] = "No se pudo generar correctamente la identificación de voz.";
+                return View(usuario);
             }
+
+            usuario.EmbeddingVoz = new byte[embedding.Length * sizeof(float)];
+
+            Buffer.BlockCopy(
+                embedding,
+                0,
+                usuario.EmbeddingVoz,
+                0,
+                usuario.EmbeddingVoz.Length
+            );
             usuario.clave = utilidades.EncriptarClave(usuario.clave);
             usuario.Rol = "Cliente";
             usuario.FechaRegistro = DateTime.Now;
@@ -641,7 +654,30 @@ namespace trabajo.Controllers
                 // 3. Se recibió un audio nuevo
                 //
                 // ==========================================
+                // ==========================================
+                // PRUEBA DE AUDIO REGISTRADO
+                // ==========================================
 
+                Console.WriteLine("==========================================");
+                Console.WriteLine("COMPARACIÓN DE AUDIO - PRUEBA");
+                Console.WriteLine("DNI: " + usuario.Dni);
+
+                Console.WriteLine(
+                    "Audio registrado: " +
+                    usuario.AudioRegistro
+                );
+
+                Console.WriteLine(
+                    "Bytes del audio nuevo: " +
+                    audioActual.Length
+                );
+
+                Console.WriteLine(
+                    "Bytes guardados en EmbeddingVoz: " +
+                    (usuario.EmbeddingVoz?.Length ?? 0)
+                );
+
+                Console.WriteLine("==========================================");
 
                 // ==========================================
                 // CREAR AUTENTICACIÓN
@@ -2166,7 +2202,7 @@ string titularCuenta
 
             return Ok();
         }
-
+        
 
 
     }

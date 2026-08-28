@@ -2780,57 +2780,75 @@ console.log(
                     };
 
 
+                        
+        mediaRecorderVerificacion.onstop =
+            async function () {
+
+                console.log(
+                    "🎙️ Grabación terminada."
+                );
+
                 // ==========================================
-                // CUANDO SE DETIENE AUTOMÁTICAMENTE
+                // DETENER MICRÓFONO
                 // ==========================================
 
-                mediaRecorderVerificacion.onstop =
-                    async function () {
-
-                        console.log(
-                            "🎙️ Grabación terminada."
-                        );
+                stream.getTracks()
+                    .forEach(track => {
+                        track.stop();
+                    });
 
 
-                        stream.getTracks()
-                            .forEach(track => {
-                                track.stop();
-                            });
+                // ==========================================
+                // DETENER RECONOCIMIENTO
+                // ==========================================
+
+                if (reconocimientoVoz) {
+
+                    try {
+                        reconocimientoVoz.stop();
+                    }
+                    catch (error) {
+                        console.log(error);
+                    }
+
+                }
 
 
-                        if (reconocimientoVoz) {
+                // ==========================================
+                // CREAR AUDIO
+                // ==========================================
 
-                            try {
-                                reconocimientoVoz.stop();
-                            }
-                            catch (error) {
-                                console.log(error);
-                            }
-
+                const audio =
+                    new Blob(
+                        audioChunksVerificacion,
+                        {
+                            type: "audio/webm"
                         }
+                    );
 
 
-                        const audio =
-                            new Blob(
-                                audioChunksVerificacion,
-                                {
-                                    type: "audio/webm"
-                                }
-                            );
+                console.log(
+                    "🎙️ Audio creado:",
+                    audio.size,
+                    "bytes"
+                );
 
 
-                        if (!procesandoVoz) {
+                // ==========================================
+                // ENVIAR AL SERVIDOR
+                // ==========================================
 
-                            estado.innerText =
-                                "⏳ Procesando grabación...";
+                estado.innerText =
+                    "⏳ Procesando grabación...";
 
-                            await enviarVerificacionVoz(
-                                audio
-                            );
 
-                        }
+                await enviarVerificacionVoz(
+                    audio
+                );
 
-                    };
+            };
+       
+
 
 
                 // ==========================================
@@ -2920,19 +2938,28 @@ console.log(
         }
 
 
+               
         // ==========================================
         // DETENER AUTOMÁTICAMENTE
         // ==========================================
 
         function detenerVerificacionVoz() {
 
-            if (procesandoVoz) {
+            if (!grabandoVerificacionVoz) {
                 return;
             }
 
 
+            // ==========================================
+            // MARCAR QUE YA SE ESTÁ PROCESANDO
+            // ==========================================
+
             procesandoVoz = true;
 
+
+            // ==========================================
+            // CANCELAR TEMPORIZADOR
+            // ==========================================
 
             if (temporizadorVoz) {
 
@@ -2941,9 +2968,12 @@ console.log(
                 );
 
                 temporizadorVoz = null;
-
             }
 
+
+            // ==========================================
+            // DETENER RECONOCIMIENTO
+            // ==========================================
 
             if (reconocimientoVoz) {
 
@@ -2954,12 +2984,18 @@ console.log(
                 }
                 catch (error) {
 
-                    console.log(error);
+                    console.log(
+                        "Reconocimiento ya detenido."
+                    );
 
                 }
 
             }
 
+
+            // ==========================================
+            // DETENER GRABACIÓN
+            // ==========================================
 
             if (
                 mediaRecorderVerificacion &&
@@ -2971,6 +3007,8 @@ console.log(
             }
 
         }
+        
+
 
 
         // ==========================================

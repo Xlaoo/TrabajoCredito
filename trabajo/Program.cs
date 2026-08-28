@@ -5,6 +5,7 @@ using QuestPDF.Infrastructure;
 using trabajo.Hubs;
 using trabajo.Models;
 using trabajo.Service;
+using Microsoft.ML.OnnxRuntime;
 QuestPDF.Settings.License = LicenseType.Community;
 
 
@@ -38,6 +39,7 @@ builder.Services.AddDbContext<UsuarioContext>(options =>
     )
 );
 builder.Services.AddScoped<IusuarioServices, UsuariService>();
+builder.Services.AddSingleton<ServicioEmbeddingVoz>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -54,7 +56,36 @@ builder.Services.AddControllersWithViews(options =>
         }
         );
 });
+string modeloVoz = Path.Combine(
+    Directory.GetCurrentDirectory(),
+    "ModelosVoz",
+    "ecapa-speaker-v1.onnx"
+);
 
+using (var sessionVoz = new InferenceSession(modeloVoz))
+{
+    Console.WriteLine("========== MODELO ECAPA ==========");
+
+    foreach (var entrada in sessionVoz.InputMetadata)
+    {
+        Console.WriteLine($"ENTRADA: {entrada.Key}");
+        Console.WriteLine($"TIPO: {entrada.Value.ElementType}");
+        Console.WriteLine(
+            $"DIMENSIONES: {string.Join(", ", entrada.Value.Dimensions)}"
+        );
+    }
+
+    foreach (var salida in sessionVoz.OutputMetadata)
+    {
+        Console.WriteLine($"SALIDA: {salida.Key}");
+        Console.WriteLine($"TIPO: {salida.Value.ElementType}");
+        Console.WriteLine(
+            $"DIMENSIONES: {string.Join(", ", salida.Value.Dimensions)}"
+        );
+    }
+
+    Console.WriteLine("=================================");
+}
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

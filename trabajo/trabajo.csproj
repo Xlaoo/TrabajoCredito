@@ -25,9 +25,13 @@
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0" />
     <PackageReference Include="QuestPDF" Version="2026.6.1" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
     <PackageReference Include="Twilio" Version="7.14.9" />
     <PackageReference Include="Vonage" Version="8.35.0" />
     <PackageReference Include="Vosk" Version="0.3.38" />
+    <PackageReference Include="Xabe.FFmpeg" Version="6.0.2" />
+    <PackageReference Include="Xabe.FFmpeg.Downloader" Version="6.0.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -38,4 +42,13 @@
     <Folder Include="wwwroot\imagenes\" />
   </ItemGroup>
 
+	<ItemGroup>
+		<None Update="ModelosVoz\ecapa-speaker-v1.onnx">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+
+		<None Update="ModelosVoz\fbank-80x201-f32.bin">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 </Project>

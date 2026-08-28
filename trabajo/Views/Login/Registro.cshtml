@@ -1292,105 +1292,166 @@
                 "⚪ Aún no has grabado tu voz.";
 
         }
-
-
         // ==========================================
         // ENVIAR FORMULARIO
         // ==========================================
 
+        let enviandoRegistro = false;
+
         document
             .getElementById("formRegistro")
-            .addEventListener(
-                "submit",
-                function (event) {
+            .addEventListener("submit", async function (event) {
 
+                // ==========================================
+                // EVITAR DOBLE CLIC
+                // ==========================================
+
+                event.preventDefault();
+
+                if (enviandoRegistro) {
+                    return;
+                }
+
+                enviandoRegistro = true;
+
+                const formulario = this;
+                const botonRegistro = formulario.querySelector(
+                    'button[type="submit"]'
+                );
+
+                // Bloquear botón inmediatamente
+                if (botonRegistro) {
+                    botonRegistro.disabled = true;
+                    botonRegistro.innerText = "Registrando...";
+                }
+
+                // ==========================================
+                // VERIFICAR AUDIO
+                // ==========================================
+
+                if (!audioBlob) {
+
+                    alert(
+                        "Debes grabar y confirmar tu voz antes de registrarte."
+                    );
+
+                    enviandoRegistro = false;
+
+                    if (botonRegistro) {
+                        botonRegistro.disabled = false;
+                        botonRegistro.innerText = "Registrate";
+                    }
+
+                    return;
+                }
+
+                // ==========================================
+                // CREAR FORMDATA
+                // ==========================================
+
+                const formData = new FormData(formulario);
+
+                // Eliminar cualquier audio anterior
+                formData.delete("audio");
+
+                // Agregar audio grabado
+                formData.append(
+                    "audio",
+                    audioBlob,
+                    "audioRegistro.webm"
+                );
+
+                // ==========================================
+                // INFORMACIÓN EN CONSOLA
+                // ==========================================
+
+                console.log("=================================");
+                console.log("Enviando registro...");
+                console.log("Tamaño del audio:", audioBlob.size);
+                console.log("Tipo del audio:", audioBlob.type);
+                console.log("=================================");
+
+                try {
 
                     // ==========================================
-                    // VERIFICAR AUDIO
+                    // ENVIAR AL CONTROLADOR
                     // ==========================================
 
-                    if (!audioBlob) {
+                    const response = await fetch(
+                        formulario.action,
+                        {
+                            method: "POST",
+                            body: formData,
+                            redirect: "follow"
+                        }
+                    );
 
-                        event.preventDefault();
+                    console.log(
+                        "Respuesta del servidor:",
+                        response.status
+                    );
 
-                        alert(
-                            "Debes grabar y confirmar tu voz antes de registrarte."
+                    console.log(
+                        "¿Hubo redirección?:",
+                        response.redirected
+                    );
+
+                    console.log(
+                        "URL respuesta:",
+                        response.url
+                    );
+
+                    // ==========================================
+                    // SI EL REGISTRO FUE CORRECTO
+                    // ==========================================
+
+                    if (response.ok && response.redirected) {
+
+                        console.log(
+                            "Registro exitoso. Redirigiendo..."
                         );
+
+                        window.location.href = response.url;
 
                         return;
                     }
 
-
-                    const formulario = this;
-
-
-                    const formData =
-                        new FormData(
-                            formulario
-                        );
-
-
-                    formData.delete(
-                        "audio"
-                    );
-
-
-                    formData.append(
-                        "audio",
-                        audioBlob,
-                        "audioRegistro.webm"
-                    );
-
-
                     // ==========================================
-                    // ENVIAR REGISTRO
+                    // SI EL SERVIDOR DEVOLVIÓ OTRA RESPUESTA
                     // ==========================================
 
-                    fetch(
-                        formulario.action,
-                        {
-                            method: "POST",
-                            body: formData
-                        }
-                    )
-                    .then(response => {
+                    const html = await response.text();
 
-                        if (response.redirected) {
-
-                            window.location.href =
-                                response.url;
-
-                            return;
-                        }
-
-                        return response.text();
-
-                    })
-                    .then(html => {
-
-                        if (html) {
-
-                            document.open();
-
-                            document.write(html);
-
-                            document.close();
-
-                        }
-
-                    })
-                    .catch(error => {
-
-                        console.error(error);
-
-                        alert(
-                            "Ocurrió un error al registrar el usuario."
-                        );
-
-                    });
+                    document.open();
+                    document.write(html);
+                    document.close();
 
                 }
-            );
+                catch (error) {
+
+                    console.error(
+                        "Error al registrar:",
+                        error
+                    );
+
+                    alert(
+                        "Ocurrió un error al registrar el usuario."
+                    );
+
+                    // Permitir volver a intentar
+                    enviandoRegistro = false;
+
+                    if (botonRegistro) {
+                        botonRegistro.disabled = false;
+                        botonRegistro.innerText = "Registrate";
+                    }
+                }
+
+            });
+        
+
+        
+
 
 
     </script>

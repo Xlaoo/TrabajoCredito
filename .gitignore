@@ -2,3 +2,6 @@
 bin/
 obj/
 appsettings.Development.json
+trabajo/ffmpeg.exe
+trabajo/ffprobe.exe
+trabajo/ModelosVoz/ecapa-speaker-v1.onnx
