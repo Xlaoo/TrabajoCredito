@@ -36,5 +36,6 @@ namespace trabajo.Models
         public string? FraseVoz { get; set; }
         public string? AudioRegistro { get; set; }
         public byte[]? EmbeddingVoz { get; set; }
+        public bool VozHabilitadaLogin { get; set; }
     }
 }

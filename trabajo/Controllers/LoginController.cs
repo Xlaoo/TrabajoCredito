@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 using trabajo.Models;
 using trabajo.Models.Patterns.Observer;
 using trabajo.Service;
-
+using System.Security.Cryptography;
 namespace trabajo.Controllers
 {
     [Authorize]
@@ -19,11 +19,16 @@ namespace trabajo.Controllers
         private readonly IusuarioServices _UsuarioService;
         private readonly UsuarioContext _Context;
         private readonly ServicioEmbeddingVoz _ServicioEmbeddingVoz;
-        private static string codigoGlobal = "";
+        
         private readonly EmailService _emailService = new EmailService();
         private static string codigoLogin = "";
         private static string dniLoginPendiente = "";
+        // ==========================================
+        // SEGURIDAD - INTENTOS DE VOZ
+        // ==========================================
 
+        private const int MAX_INTENTOS_VOZ = 3;
+        private const int MINUTOS_BLOQUEO_VOZ = 5;
         // Hora en la que vence el código de inicio de sesión
         private static DateTime codigoLoginExpira = DateTime.MinValue;
 
@@ -70,7 +75,7 @@ namespace trabajo.Controllers
 
             return RedirectToAction("PantallaPrincipal", "Login");
         }
-
+        [HttpGet]
         [AllowAnonymous]
         public IActionResult Registro()
         {
@@ -84,90 +89,403 @@ namespace trabajo.Controllers
     string codigoVerificacion,
     IFormFile? audio)
         {
-            if (!Regex.IsMatch(usuario.Dni, @"^\d{8}$"))
+            // ==========================================
+            // DNI
+            // ==========================================
+
+            if (string.IsNullOrWhiteSpace(usuario.Dni) ||
+                !Regex.IsMatch(usuario.Dni, @"^\d{8}$"))
             {
-                ViewData["mensaje"] = "El DNI debe tener exactamente 8 números.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    campo = "dniRegistro",
+                    mensaje = "El DNI debe tener exactamente 8 números."
+                });
             }
 
-            if (!Regex.IsMatch(usuario.Celular, @"^9\d{8}$"))
+            // ==========================================
+            // CELULAR
+            // ==========================================
+
+            if (string.IsNullOrWhiteSpace(usuario.Celular) ||
+                !Regex.IsMatch(usuario.Celular, @"^9\d{8}$"))
             {
-                ViewData["mensaje"] = "El celular debe tener 9 números y empezar con 9.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    campo = "celularRegistro",
+                    mensaje =
+                        "El celular debe tener 9 números y empezar con 9."
+                });
             }
 
-            if (!Regex.IsMatch(usuario.Correo, @"^[A-Za-z0-9._%+-]+@gmail\.com$"))
+            // ==========================================
+            // CORREO
+            // ==========================================
+
+            if (string.IsNullOrWhiteSpace(usuario.Correo) ||
+                !Regex.IsMatch(
+                    usuario.Correo,
+                    @"^[A-Za-z0-9._%+-]+@gmail\.com$"))
             {
-                ViewData["mensaje"] = "El correo debe ser Gmail.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    campo = "correoRegistro",
+                    mensaje = "El correo debe ser Gmail."
+                });
             }
+
+            // ==========================================
+            // GÉNERO
+            // ==========================================
+
             if (string.IsNullOrWhiteSpace(usuario.Genero))
             {
-                ViewData["mensaje"] = "Debe seleccionar un género.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "Debe seleccionar un género."
+                });
             }
 
-            if (!Regex.IsMatch(usuario.clave, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$"))
+            // ==========================================
+            // CONTRASEÑA
+            // ==========================================
+
+            if (string.IsNullOrWhiteSpace(usuario.clave) ||
+                !Regex.IsMatch(
+                    usuario.clave,
+                    @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$"))
             {
-                ViewData["mensaje"] = "La contraseña debe tener mínimo 6 caracteres, una mayúscula, una minúscula y un número.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    campo = "clave",
+                    mensaje =
+                        "La contraseña debe tener mínimo 6 caracteres, una mayúscula, una minúscula y un número."
+                });
             }
+
+            // ==========================================
+            // CONFIRMACIÓN
+            // ==========================================
 
             if (usuario.clave != confirmarClave)
             {
-                ViewData["mensaje"] = "Las contraseñas no coinciden.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    campo = "confirmarClaveRegistro",
+                    mensaje = "Las contraseñas no coinciden."
+                });
             }
 
-            bool existe = _Context.Usuario.Any(x =>
-                x.Dni == usuario.Dni ||
-                x.Celular == usuario.Celular ||
-                x.Correo == usuario.Correo
-            );
+            // ==========================================
+            // DATOS DUPLICADOS
+            // ==========================================
 
-            if (existe)
+            bool dniExiste =
+                await _Context.Usuario.AnyAsync(
+                    x => x.Dni == usuario.Dni);
+
+            if (dniExiste)
             {
-                ViewData["mensaje"] = "El DNI, celular o correo ya está registrado.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    campo = "dniRegistro",
+                    mensaje = "Este DNI ya está registrado."
+                });
             }
+
+            bool celularExiste =
+                await _Context.Usuario.AnyAsync(
+                    x => x.Celular == usuario.Celular);
+
+            if (celularExiste)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    campo = "celularRegistro",
+                    mensaje = "Este número de celular ya está registrado."
+                });
+            }
+
+            bool correoExiste =
+                await _Context.Usuario.AnyAsync(
+                    x => x.Correo == usuario.Correo);
+
+            if (correoExiste)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    campo = "correoRegistro",
+                    mensaje = "Este correo ya está registrado."
+                });
+            }
+
+            // ==========================================
+            // AUDIO
+            // ==========================================
+
             if (audio == null || audio.Length == 0)
             {
-                ViewData["mensaje"] = "Debes realizar y enviar una grabación de audio por motivos de seguridad.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    campo = "btnGrabarVoz",
+                    mensaje =
+                        "Debes grabar y confirmar tu voz antes de registrarte."
+                });
             }
+
             if (audio.Length > 5 * 1024 * 1024)
             {
-                ViewData["mensaje"] = "El audio no puede superar los 5 MB.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    campo = "btnGrabarVoz",
+                    mensaje = "El audio no puede superar los 5 MB."
+                });
             }
-            var tiposAudioPermitidos = new[]
- {
-    "audio/webm",
-    "audio/wav",
-    "audio/mpeg",
-    "audio/mp4",
-    "audio/ogg"
-};
 
-            bool audioValido = tiposAudioPermitidos.Any(tipo =>
-                audio.ContentType.StartsWith(tipo, StringComparison.OrdinalIgnoreCase)
-            );
+            var tiposAudioPermitidos = new[]
+            {
+        "audio/webm",
+        "audio/wav",
+        "audio/mpeg",
+        "audio/mp4",
+        "audio/ogg"
+    };
+
+            bool audioValido =
+                tiposAudioPermitidos.Any(tipo =>
+                    audio.ContentType.StartsWith(
+                        tipo,
+                        StringComparison.OrdinalIgnoreCase));
 
             if (!audioValido)
             {
-                ViewData["mensaje"] = "El archivo enviado no es un audio válido.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    campo = "btnGrabarVoz",
+                    mensaje = "El archivo enviado no es un audio válido."
+                });
             }
-            if (codigoVerificacion != codigoGlobal)
+
+            // ==========================================
+            // CÓDIGO
+            // ==========================================
+
+            // ==========================================
+            // CÓDIGO DE VERIFICACIÓN
+            // ==========================================
+
+            if (string.IsNullOrWhiteSpace(codigoVerificacion))
             {
-                ViewData["mensaje"] = "El código de verificación es incorrecto.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    campo = "codigoRegistro",
+                    mensaje =
+                        "Ingresa el código de verificación."
+                });
             }
-            string carpetaAudio = Path.Combine(
-    Directory.GetCurrentDirectory(),
-    "wwwroot",
-    "audiosRegistro"
-);
+
+
+            string codigoGuardado =
+                HttpContext.Session.GetString(
+                    "CodigoRegistro"
+                );
+
+            string correoCodigo =
+                HttpContext.Session.GetString(
+                    "CodigoRegistroCorreo"
+                );
+
+            string expiracionTexto =
+                HttpContext.Session.GetString(
+                    "CodigoRegistroExpira"
+                );
+
+
+            // ==========================================
+            // NO SE SOLICITÓ CÓDIGO
+            // ==========================================
+
+            if (string.IsNullOrWhiteSpace(codigoGuardado))
+            {
+                return Json(new
+                {
+                    ok = false,
+                    campo = "codigoRegistro",
+                    mensaje =
+                        "Primero debes solicitar un código de verificación."
+                });
+            }
+
+
+            // ==========================================
+            // VERIFICAR EXPIRACIÓN
+            // ==========================================
+
+            if (!long.TryParse(
+                    expiracionTexto,
+                    out long expiracionUnix))
+            {
+                HttpContext.Session.Remove(
+                    "CodigoRegistro"
+                );
+
+                HttpContext.Session.Remove(
+                    "CodigoRegistroCorreo"
+                );
+
+                HttpContext.Session.Remove(
+                    "CodigoRegistroExpira"
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    campo = "codigoRegistro",
+                    codigoExpirado = true,
+
+                    mensaje =
+                        "El código ya no es válido. Solicita uno nuevo."
+                });
+            }
+
+
+            // ==========================================
+            // OBTENER HORA ACTUAL
+            // ==========================================
+
+            long ahoraUnix =
+                DateTimeOffset.UtcNow
+                    .ToUnixTimeSeconds();
+
+
+            // ==========================================
+            // CÓDIGO REALMENTE EXPIRADO
+            // ==========================================
+
+            if (ahoraUnix >= expiracionUnix)
+            {
+                HttpContext.Session.Remove(
+                    "CodigoRegistro"
+                );
+
+                HttpContext.Session.Remove(
+                    "CodigoRegistroCorreo"
+                );
+
+                HttpContext.Session.Remove(
+                    "CodigoRegistroExpira"
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    campo = "codigoRegistro",
+                    codigoExpirado = true,
+
+                    mensaje =
+                        "El código de verificación ha expirado. Pulsa «Enviar nuevamente el código»."
+                });
+            }
+
+
+            // ==========================================
+            // CORREO DEBE SER EL MISMO
+            // ==========================================
+
+            if (!string.Equals(
+                    usuario.Correo?.Trim(),
+                    correoCodigo,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return Json(new
+                {
+                    ok = false,
+                    campo = "correoRegistro",
+                    mensaje =
+                        "El correo cambió después de enviar el código. Debes solicitar un nuevo código para este correo."
+                });
+            }
+            if (codigoVerificacion.Trim().Length != 6)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    campo = "codigoRegistro",
+
+                    mensaje =
+                        "El código de verificación debe tener 6 caracteres."
+                });
+            }
+
+            // ==========================================
+            // NORMALIZAR CÓDIGO INGRESADO
+            // ==========================================
+
+            string codigoIngresado =
+                codigoVerificacion
+                    .Trim()
+                    .ToUpperInvariant();
+
+            string codigoCorrecto =
+                codigoGuardado
+                    .Trim()
+                    .ToUpperInvariant();
+
+
+            // ==========================================
+            // COMPROBAR CÓDIGO
+            // ==========================================
+
+            if (!string.Equals(
+                    codigoIngresado,
+                    codigoCorrecto,
+                    StringComparison.Ordinal))
+            {
+                Console.WriteLine(
+                    "CÓDIGO INGRESADO: [" +
+                    codigoIngresado +
+                    "]"
+                );
+
+                Console.WriteLine(
+                    "CÓDIGO GUARDADO: [" +
+                    codigoCorrecto +
+                    "]"
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    campo = "codigoRegistro",
+
+                    mensaje =
+                        "El código de verificación es incorrecto. Revisa el código enviado a tu correo."
+                });
+            }
+
+            // ==========================================
+            // GUARDAR AUDIO
+            // ==========================================
+
+            string carpetaAudio =
+                Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "wwwroot",
+                    "audiosRegistro"
+                );
 
             if (!Directory.Exists(carpetaAudio))
             {
@@ -179,23 +497,46 @@ namespace trabajo.Controllers
                 Path.GetExtension(audio.FileName);
 
             string rutaAudio =
-                Path.Combine(carpetaAudio, nombreAudio);
+                Path.Combine(
+                    carpetaAudio,
+                    nombreAudio
+                );
 
-            using (var stream = new FileStream(rutaAudio, FileMode.Create))
+            using (var stream =
+                new FileStream(
+                    rutaAudio,
+                    FileMode.Create))
             {
                 await audio.CopyToAsync(stream);
             }
-            usuario.AudioRegistro = "/audiosRegistro/" + nombreAudio;
 
-            float[] embedding = await _ServicioEmbeddingVoz.GenerarEmbeddingDesdeAudio(audio);
+            usuario.AudioRegistro =
+                "/audiosRegistro/" + nombreAudio;
 
-            if (embedding == null || embedding.Length != 192)
+            // ==========================================
+            // EMBEDDING
+            // ==========================================
+
+            float[] embedding =
+                await _ServicioEmbeddingVoz
+                    .GenerarEmbeddingDesdeAudio(audio);
+
+            if (embedding == null ||
+                embedding.Length != 192)
             {
-                ViewData["mensaje"] = "No se pudo generar correctamente la identificación de voz.";
-                return View(usuario);
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo generar correctamente la identificación de voz."
+                });
             }
 
-            usuario.EmbeddingVoz = new byte[embedding.Length * sizeof(float)];
+            usuario.EmbeddingVoz =
+                new byte[
+                    embedding.Length *
+                    sizeof(float)
+                ];
 
             Buffer.BlockCopy(
                 embedding,
@@ -204,27 +545,87 @@ namespace trabajo.Controllers
                 0,
                 usuario.EmbeddingVoz.Length
             );
-            usuario.clave = utilidades.EncriptarClave(usuario.clave);
+
+            // ==========================================
+            // CREAR USUARIO
+            // ==========================================
+
+            usuario.clave =
+                utilidades.EncriptarClave(
+                    usuario.clave
+                );
+
             usuario.Rol = "Cliente";
             usuario.FechaRegistro = DateTime.Now;
             usuario.EstadoActivo = false;
             usuario.UltimaConexion = DateTime.Now;
 
-            Usuario usuarioCreado = await _UsuarioService.SaveUsuario(usuario);
+            // ==========================================
+            // VOZ HABILITADA DESDE EL REGISTRO
+            // ==========================================
+            // El usuario ya verificó su correo
+            // y confirmó su propia grabación de voz.
+
+            usuario.VozHabilitadaLogin = true;
+            Usuario usuarioCreado =
+                await _UsuarioService
+                    .SaveUsuario(usuario);
 
             if (usuarioCreado.Id > 0)
             {
-                TempData["Mensaje"] = "Usuario registrado exitosamente";
-                return RedirectToAction("IniciarSesion", "Login");
+                // ==========================================
+                // ELIMINAR CÓDIGO YA UTILIZADO
+                // ==========================================
+
+                HttpContext.Session.Remove(
+                    "CodigoRegistro"
+                );
+
+                HttpContext.Session.Remove(
+                    "CodigoRegistroCorreo"
+                );
+
+                HttpContext.Session.Remove(
+                    "CodigoRegistroExpira"
+                );
+
+
+                TempData["Mensaje"] =
+                    "Usuario registrado exitosamente";
+
+
+                return Json(new
+                {
+                    ok = true,
+
+                    mensaje =
+                        "Usuario registrado exitosamente",
+
+                    redirectUrl =
+                        Url.Action(
+                            "IniciarSesion",
+                            "Login"
+                        )
+                });
             }
 
-            ViewData["mensaje"] = "No se pudo crear el usuario.";
-            return View(usuario);
+            return Json(new
+            {
+                ok = false,
+                mensaje =
+                    "No se pudo crear el usuario."
+            });
         }
+
         [HttpGet]
         [AllowAnonymous]
         public IActionResult IniciarSesion()
         {
+            if (TempData["Mensaje"] != null)
+            {
+                ViewBag.MensajeRegistro = TempData["Mensaje"];
+            }
+
             return View();
         }
         [HttpPost]
@@ -321,13 +722,21 @@ namespace trabajo.Controllers
                 return Json(new
                 {
                     ok = true,
-                    necesitaRegistroVoz = false,
-                    tieneRegistroVoz = true,
-                    mostrarVerificacion = true,
-                    correo = usuarioEncontrado.Correo,
 
-                    // Frase de seguridad guardada en la BD
-                    fraseVoz = usuarioEncontrado.FraseVoz
+                    necesitaRegistroVoz = false,
+
+                    tieneRegistroVoz = true,
+
+                    vozHabilitada =
+        usuarioEncontrado.VozHabilitadaLogin,
+
+                    mostrarVerificacion = true,
+
+                    correo =
+        usuarioEncontrado.Correo,
+
+                    fraseVoz =
+        usuarioEncontrado.FraseVoz
                 });
             }
             catch (Exception ex)
@@ -341,7 +750,9 @@ namespace trabajo.Controllers
         }
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> RegistrarVozLogin(IFormFile? audio)
+        public async Task<IActionResult> RegistrarVozLogin(
+    IFormFile? audio,
+    string? fraseVoz)
         {
             try
             {
@@ -362,7 +773,19 @@ namespace trabajo.Controllers
                         mensaje = "Debes realizar una grabación de voz."
                     });
                 }
+                // ==========================================
+                // VALIDAR FRASE RECONOCIDA
+                // ==========================================
 
+                if (string.IsNullOrWhiteSpace(fraseVoz))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se recibió la frase de seguridad."
+                    });
+                }
                 if (audio.Length > 5 * 1024 * 1024)
                 {
                     return Json(new
@@ -460,18 +883,54 @@ namespace trabajo.Controllers
                     bytesAudio
                 );
 
-                // ==========================================
-                // GUARDAR INFORMACIÓN EN BASE DE DATOS
-                // ==========================================
-
                 usuario.AudioRegistro =
                     "/audiosRegistro/" + nombreAudio;
 
-                // IMPORTANTE
-                // Guardamos los bytes del audio
-                // en EmbeddingVoz.
-                usuario.EmbeddingVoz = bytesAudio;
+                // ==========================================
+                // GENERAR EMBEDDING BIOMÉTRICO
+                // ==========================================
 
+                float[] embedding =
+                    await _ServicioEmbeddingVoz
+                        .GenerarEmbeddingDesdeAudio(audio);
+
+                if (embedding == null ||
+                    embedding.Length != 192)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se pudo generar correctamente la identificación de voz."
+                    });
+                }
+
+                // ==========================================
+                // CONVERTIR FLOAT[] A BYTE[]
+                // ==========================================
+
+                usuario.EmbeddingVoz =
+                    new byte[embedding.Length * sizeof(float)];
+
+                Buffer.BlockCopy(
+                    embedding,
+                    0,
+                    usuario.EmbeddingVoz,
+                    0,
+                    usuario.EmbeddingVoz.Length
+                );
+                // ==========================================
+                // GUARDAR FRASE QUE EL USUARIO CONFIRMÓ
+                // ==========================================
+
+                usuario.FraseVoz =
+                    fraseVoz.Trim();
+                // ==========================================
+                // ACABA DE REGISTRAR SU VOZ
+                // TODAVÍA DEBE VALIDARSE POR CORREO
+                // ==========================================
+
+                usuario.VozHabilitadaLogin = false;
                 _Context.Usuario.Update(usuario);
 
                 await _Context.SaveChangesAsync();
@@ -479,7 +938,8 @@ namespace trabajo.Controllers
                 return Json(new
                 {
                     ok = true,
-                    mensaje = "Registro de voz realizado correctamente."
+                    mensaje =
+                        "Registro de voz realizado correctamente."
                 });
             }
             catch (Exception ex)
@@ -493,7 +953,8 @@ namespace trabajo.Controllers
         }
         [HttpPost]
         [AllowAnonymous]
-        public async Task<IActionResult> VerificarVozLogin(IFormFile? audio)
+        public async Task<IActionResult> VerificarVozLogin(
+    IFormFile? audio)
         {
             try
             {
@@ -501,43 +962,109 @@ namespace trabajo.Controllers
                 // COMPROBAR SESIÓN PENDIENTE
                 // ==========================================
 
-                if (string.IsNullOrWhiteSpace(dniLoginPendiente))
+                if (string.IsNullOrWhiteSpace(
+                    dniLoginPendiente))
                 {
                     return Json(new
                     {
                         ok = false,
-                        mensaje = "La sesión de seguridad ha expirado. Inicia sesión nuevamente."
+                        mensaje =
+                            "La sesión de seguridad ha expirado. Inicia sesión nuevamente."
                     });
                 }
+                // ==========================================
+                // COMPROBAR BLOQUEO DE VOZ
+                // ==========================================
+
+                string claveBloqueo =
+                    "BloqueoVoz_" + dniLoginPendiente;
+
+                string claveIntentos =
+                    "IntentosVoz_" + dniLoginPendiente;
 
 
+                string bloqueoTexto =
+                    HttpContext.Session.GetString(
+                        claveBloqueo
+                    );
+
+
+                if (!string.IsNullOrWhiteSpace(
+                        bloqueoTexto) &&
+                    long.TryParse(
+                        bloqueoTexto,
+                        out long bloqueoHastaUnix))
+                {
+                    long ahoraUnix =
+                        DateTimeOffset.UtcNow
+                            .ToUnixTimeSeconds();
+
+
+                    // ==========================================
+                    // TODAVÍA ESTÁ BLOQUEADO
+                    // ==========================================
+
+                    if (ahoraUnix < bloqueoHastaUnix)
+                    {
+                        int segundosRestantes =
+                            (int)(
+                                bloqueoHastaUnix -
+                                ahoraUnix
+                            );
+
+
+                        return Json(new
+                        {
+                            ok = false,
+
+                            bloqueadoVoz = true,
+
+                            segundosRestantes =
+                                segundosRestantes,
+
+                            mensaje =
+                                "La verificación por voz está bloqueada temporalmente por demasiados intentos fallidos."
+                        });
+                    }
+
+
+                    // ==========================================
+                    // YA TERMINARON LOS 5 MINUTOS
+                    // ==========================================
+
+                    HttpContext.Session.Remove(
+                        claveBloqueo
+                    );
+
+                    HttpContext.Session.Remove(
+                        claveIntentos
+                    );
+                }
                 // ==========================================
                 // COMPROBAR AUDIO
                 // ==========================================
 
-                if (audio == null || audio.Length == 0)
+                if (audio == null ||
+                    audio.Length == 0)
                 {
                     return Json(new
                     {
                         ok = false,
-                        mensaje = "No se recibió ninguna grabación de voz."
+                        mensaje =
+                            "No se recibió ninguna grabación de voz."
                     });
                 }
 
-
-                // ==========================================
-                // TAMAÑO MÁXIMO
-                // ==========================================
-
-                if (audio.Length > 5 * 1024 * 1024)
+                if (audio.Length >
+                    5 * 1024 * 1024)
                 {
                     return Json(new
                     {
                         ok = false,
-                        mensaje = "El audio no puede superar los 5 MB."
+                        mensaje =
+                            "El audio no puede superar los 5 MB."
                     });
                 }
-
 
                 // ==========================================
                 // BUSCAR USUARIO
@@ -545,80 +1072,118 @@ namespace trabajo.Controllers
 
                 Usuario usuario =
                     _Context.Usuario.FirstOrDefault(
-                        x => x.Dni == dniLoginPendiente
+                        x => x.Dni ==
+                             dniLoginPendiente
                     );
-
 
                 if (usuario == null)
                 {
                     return Json(new
                     {
                         ok = false,
-                        mensaje = "No se encontró el usuario."
+                        mensaje =
+                            "No se encontró el usuario."
                     });
                 }
-
-
                 // ==========================================
-                // COMPROBAR QUE TIENE VOZ REGISTRADA
+                // VERIFICAR SI EL ACCESO POR VOZ
+                // ESTÁ HABILITADO
                 // ==========================================
 
-                if (string.IsNullOrWhiteSpace(usuario.AudioRegistro))
+                if (!usuario.VozHabilitadaLogin)
                 {
                     return Json(new
                     {
                         ok = false,
-                        mensaje = "No tienes una voz registrada."
+
+                        requiereCorreoPrimero = true,
+
+                        mensaje =
+                            "Por seguridad debes iniciar sesión una vez mediante correo electrónico antes de utilizar el acceso por voz."
                     });
                 }
-                if (usuario.EmbeddingVoz == null || usuario.EmbeddingVoz.Length == 0)
+                // ==========================================
+                // COMPROBAR VOZ REGISTRADA
+                // ==========================================
+
+                if (usuario.EmbeddingVoz == null ||
+                    usuario.EmbeddingVoz.Length == 0)
                 {
                     return Json(new
                     {
                         ok = false,
-                        mensaje = "El usuario tiene registrada la ruta de voz, pero no tiene los datos de voz guardados."
+                        mensaje =
+                            "No tienes una identificación de voz registrada."
                     });
                 }
 
-                // ==========================================
-                // LEER AUDIO ACTUAL
-                // ==========================================
+                // Un embedding de 192 float ocupa:
+                // 192 * 4 = 768 bytes.
 
-                byte[] audioActual;
-
-                using (var memoryStream = new MemoryStream())
-                {
-                    await audio.CopyToAsync(memoryStream);
-
-                    audioActual = memoryStream.ToArray();
-                }
-
-
-                // ==========================================
-                // COMPROBAR QUE SE RECIBIÓ AUDIO
-                // ==========================================
-
-                if (audioActual.Length == 0)
+                if (usuario.EmbeddingVoz.Length !=
+                    192 * sizeof(float))
                 {
                     return Json(new
                     {
                         ok = false,
-                        mensaje = "La grabación recibida está vacía."
+                        necesitaRegrabarVoz = true,
+                        mensaje =
+                            "Tu registro de voz anterior no tiene el formato biométrico correcto. Debes registrar nuevamente tu voz."
                     });
                 }
 
+                // ==========================================
+                // RECUPERAR EMBEDDING REGISTRADO
+                // ==========================================
+
+                float[] embeddingRegistrado =
+                    new float[192];
+
+                Buffer.BlockCopy(
+                    usuario.EmbeddingVoz,
+                    0,
+                    embeddingRegistrado,
+                    0,
+                    usuario.EmbeddingVoz.Length
+                );
 
                 // ==========================================
-                // MOSTRAR INFORMACIÓN EN CONSOLA
-                // PARA PRUEBAS
+                // GENERAR EMBEDDING DE LA VOZ ACTUAL
                 // ==========================================
+
+                float[] embeddingActual =
+                    await _ServicioEmbeddingVoz
+                        .GenerarEmbeddingDesdeAudio(
+                            audio
+                        );
+
+                if (embeddingActual == null ||
+                    embeddingActual.Length != 192)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se pudo analizar correctamente la voz. Inténtalo nuevamente."
+                    });
+                }
+
+                // ==========================================
+                // COMPARAR LAS DOS VOCES
+                // ==========================================
+
+                double similitud =
+                    CalcularSimilitudCoseno(
+                        embeddingRegistrado,
+                        embeddingActual
+                    );
 
                 Console.WriteLine(
                     "=========================================="
                 );
 
                 Console.WriteLine(
-                    "VERIFICACIÓN DE VOZ"
+                    "VERIFICACIÓN BIOMÉTRICA DE VOZ"
                 );
 
                 Console.WriteLine(
@@ -626,59 +1191,171 @@ namespace trabajo.Controllers
                 );
 
                 Console.WriteLine(
-                    "Audio registrado: " + usuario.AudioRegistro
-                );
-
-                Console.WriteLine(
-                    "Tamaño audio actual: " +
-                    audioActual.Length +
-                    " bytes"
+                    $"SIMILITUD: {similitud:F4}"
                 );
 
                 Console.WriteLine(
                     "=========================================="
                 );
 
+                // ==========================================
+                // UMBRAL
+                // ==========================================
+                //
+                // Empieza con 0.75 y luego lo calibramos
+                // haciendo pruebas con tu voz y otras personas.
+                //
+
+                const double UMBRAL_VOZ = 0.75;
 
                 // ==========================================
-                // IMPORTANTE
-                // ==========================================
-                //
-                // AQUÍ TODAVÍA NO HACEMOS COMPARACIÓN
-                // BIOMÉTRICA DE VOZ.
-                //
-                // Solo comprobamos que:
-                //
-                // 1. El usuario existe
-                // 2. Tiene voz registrada
-                // 3. Se recibió un audio nuevo
-                //
-                // ==========================================
-                // ==========================================
-                // PRUEBA DE AUDIO REGISTRADO
+                // VOZ NO COINCIDE
                 // ==========================================
 
-                Console.WriteLine("==========================================");
-                Console.WriteLine("COMPARACIÓN DE AUDIO - PRUEBA");
-                Console.WriteLine("DNI: " + usuario.Dni);
+                if (similitud < UMBRAL_VOZ)
+                {
+                    Console.WriteLine(
+                        "❌ VOZ RECHAZADA"
+                    );
+
+
+                    // ==========================================
+                    // RECUPERAR INTENTOS ANTERIORES
+                    // ==========================================
+
+                    // claveIntentos y claveBloqueo
+                    // ya fueron creadas al inicio del método.
+
+                    int intentosFallidos =
+                        HttpContext.Session.GetInt32(
+                            claveIntentos
+                        ) ?? 0;
+
+
+                    // Nuevo fallo
+                    intentosFallidos++;
+
+
+                    // ==========================================
+                    // TERCER INTENTO FALLIDO
+                    // ==========================================
+
+                    if (intentosFallidos >=
+                        MAX_INTENTOS_VOZ)
+                    {
+                        // Bloquear durante 5 minutos
+
+                        long bloqueoHasta =
+                            DateTimeOffset.UtcNow
+                                .AddMinutes(
+                                    MINUTOS_BLOQUEO_VOZ
+                                )
+                                .ToUnixTimeSeconds();
+
+
+                        HttpContext.Session.SetString(
+                            claveBloqueo,
+                            bloqueoHasta.ToString()
+                        );
+
+
+                        // Ya no necesitamos conservar
+                        // el contador viejo.
+                        HttpContext.Session.Remove(
+                            claveIntentos
+                        );
+
+
+                        Console.WriteLine(
+                            "🔒 VERIFICACIÓN POR VOZ BLOQUEADA"
+                        );
+
+                        Console.WriteLine(
+                            "DNI: " +
+                            usuario.Dni
+                        );
+
+                        Console.WriteLine(
+                            "Tiempo: 5 minutos"
+                        );
+
+
+                        return Json(new
+                        {
+                            ok = false,
+
+                            bloqueadoVoz = true,
+
+                            segundosRestantes = 300,
+
+                            intentosRestantes = 0,
+
+                            mensaje =
+                                "Has agotado los 3 intentos de verificación por voz. Esta opción ha sido bloqueada durante 5 minutos."
+                        });
+                    }
+
+
+                    // ==========================================
+                    // TODAVÍA QUEDAN INTENTOS
+                    // ==========================================
+
+                    HttpContext.Session.SetInt32(
+                        claveIntentos,
+                        intentosFallidos
+                    );
+
+
+                    int intentosRestantes =
+                        MAX_INTENTOS_VOZ -
+                        intentosFallidos;
+
+
+                    return Json(new
+                    {
+                        ok = false,
+
+                        bloqueadoVoz = false,
+
+                        intentosRestantes =
+                            intentosRestantes,
+
+                        mensaje =
+                            intentosRestantes == 1
+
+                            ? "La voz no coincide. Te queda 1 intento."
+
+                            : $"La voz no coincide. Te quedan {intentosRestantes} intentos.",
+
+                        similitud =
+                            Math.Round(
+                                similitud,
+                                4
+                            )
+                    });
+                }
+
+                // ==========================================
+                // VOZ CORRECTA
+                // ==========================================
 
                 Console.WriteLine(
-                    "Audio registrado: " +
-                    usuario.AudioRegistro
+                    "✅ VOZ ACEPTADA"
+                );
+                // ==========================================
+                // VOZ CORRECTA
+                // REINICIAR INTENTOS FALLIDOS
+                // ==========================================
+
+                HttpContext.Session.Remove(
+                    "IntentosVoz_" +
+                    usuario.Dni
                 );
 
-                Console.WriteLine(
-                    "Bytes del audio nuevo: " +
-                    audioActual.Length
+                HttpContext.Session.Remove(
+                    "BloqueoVoz_" +
+                    usuario.Dni
                 );
-
-                Console.WriteLine(
-                    "Bytes guardados en EmbeddingVoz: " +
-                    (usuario.EmbeddingVoz?.Length ?? 0)
-                );
-
-                Console.WriteLine("==========================================");
-
                 // ==========================================
                 // CREAR AUTENTICACIÓN
                 // ==========================================
@@ -717,13 +1394,12 @@ namespace trabajo.Controllers
                 )
                     };
 
-
                 ClaimsIdentity claimsIdentity =
                     new ClaimsIdentity(
                         claims,
-                        CookieAuthenticationDefaults.AuthenticationScheme
+                        CookieAuthenticationDefaults
+                            .AuthenticationScheme
                     );
-
 
                 AuthenticationProperties properties =
                     new AuthenticationProperties
@@ -731,39 +1407,32 @@ namespace trabajo.Controllers
                         AllowRefresh = true
                     };
 
-
                 await HttpContext.SignInAsync(
-                    CookieAuthenticationDefaults.AuthenticationScheme,
-                    new ClaimsPrincipal(claimsIdentity),
+                    CookieAuthenticationDefaults
+                        .AuthenticationScheme,
+
+                    new ClaimsPrincipal(
+                        claimsIdentity
+                    ),
+
                     properties
                 );
-
 
                 // ==========================================
                 // ACTUALIZAR USUARIO
                 // ==========================================
 
                 usuario.EstadoActivo = true;
-
-                usuario.UltimaConexion = DateTime.Now;
-
+                usuario.UltimaConexion =
+                    DateTime.Now;
 
                 await _Context.SaveChangesAsync();
 
-
                 // ==========================================
-                // LIMPIAR DNI PENDIENTE
-                // ==========================================
-
-                dniLoginPendiente = "";
-
-
-                // ==========================================
-                // REDIRECCIÓN
+                // DESTINO
                 // ==========================================
 
                 string url;
-
 
                 if (usuario.Rol == "Analista")
                 {
@@ -772,7 +1441,9 @@ namespace trabajo.Controllers
                         "Analista"
                     );
                 }
-                else if (usuario.Rol == "Administrador")
+                else if (
+                    usuario.Rol ==
+                    "Administrador")
                 {
                     url = Url.Action(
                         "ProgramaAdministrador",
@@ -787,13 +1458,22 @@ namespace trabajo.Controllers
                     );
                 }
 
+                // Limpiarlo SOLO después
+                // de verificar correctamente la voz.
+                dniLoginPendiente = "";
 
                 return Json(new
                 {
                     ok = true,
 
                     mensaje =
-                        "Audio recibido correctamente.",
+                        "Voz verificada correctamente.",
+
+                    similitud =
+                        Math.Round(
+                            similitud,
+                            4
+                        ),
 
                     redirectUrl = url
                 });
@@ -802,9 +1482,8 @@ namespace trabajo.Controllers
             {
                 Console.WriteLine(
                     "ERROR VERIFICANDO VOZ: " +
-                    ex.Message
+                    ex
                 );
-
 
                 return Json(new
                 {
@@ -871,19 +1550,198 @@ namespace trabajo.Controllers
         {
             try
             {
-                string caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-                Random random = new Random();
+                // ==========================================
+                // VALIDAR CORREO
+                // ==========================================
 
-                codigoGlobal = new string(Enumerable.Repeat(caracteres, 6)
-                    .Select(s => s[random.Next(s.Length)]).ToArray());
+                if (string.IsNullOrWhiteSpace(correo))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "Primero debes ingresar tu correo."
+                    });
+                }
 
-                await _emailService.EnviarCodigoAsync(correo, codigoGlobal);
+                correo =
+                    correo.Trim().ToLowerInvariant();
 
-                return Json(new { ok = true, mensaje = "Código enviado correctamente" });
+                if (!Regex.IsMatch(
+                        correo,
+                        @"^[A-Za-z0-9._%+-]+@gmail\.com$"))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "Ingresa un correo Gmail válido."
+                    });
+                }
+
+
+                // ==========================================
+                // VERIFICAR SI TODAVÍA HAY
+                // UN CÓDIGO VÁLIDO
+                // ==========================================
+
+                string expiracionTexto =
+                    HttpContext.Session.GetString(
+                        "CodigoRegistroExpira"
+                    );
+
+                if (long.TryParse(
+                        expiracionTexto,
+                        out long expiracionUnix))
+                {
+                    long ahoraUnix =
+                        DateTimeOffset.UtcNow
+                            .ToUnixTimeSeconds();
+
+                    if (ahoraUnix < expiracionUnix)
+                    {
+                        int segundosRestantes =
+                            (int)(
+                                expiracionUnix -
+                                ahoraUnix
+                            );
+
+                        return Json(new
+                        {
+                            ok = false,
+                            esperando = true,
+                            segundosRestantes =
+                                segundosRestantes,
+
+                            mensaje =
+                                $"Ya enviamos un código. Espera {segundosRestantes} segundos para solicitar otro."
+                        });
+                    }
+                }
+
+
+                // ==========================================
+                // GENERAR CÓDIGO:
+                // LETRAS + NÚMEROS
+                // ==========================================
+
+                const string caracteres =
+                    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+                char[] codigoArray =
+                    new char[6];
+
+                for (int i = 0;
+                     i < codigoArray.Length;
+                     i++)
+                {
+                    int posicion =
+                        RandomNumberGenerator.GetInt32(
+                            caracteres.Length
+                        );
+
+                    codigoArray[i] =
+                        caracteres[posicion];
+                }
+
+                string codigo =
+                    new string(codigoArray);
+
+
+                // ==========================================
+                // EXPIRA EN 60 SEGUNDOS
+                // USAMOS UNIX PARA EVITAR PROBLEMAS
+                // DE ZONA HORARIA
+                // ==========================================
+
+                long expiracion =
+                    DateTimeOffset.UtcNow
+                        .AddMinutes(1)
+                        .ToUnixTimeSeconds();
+
+
+                // ==========================================
+                // GUARDAR TODO EN SESSION
+                // ==========================================
+
+                HttpContext.Session.SetString(
+                    "CodigoRegistro",
+                    codigo
+                );
+
+                HttpContext.Session.SetString(
+                    "CodigoRegistroCorreo",
+                    correo
+                );
+
+                HttpContext.Session.SetString(
+                    "CodigoRegistroExpira",
+                    expiracion.ToString()
+                );
+
+
+                // ==========================================
+                // DEBUG
+                // ==========================================
+
+                Console.WriteLine(
+                    "===================================="
+                );
+
+                Console.WriteLine(
+                    "CÓDIGO REGISTRO GENERADO: " +
+                    codigo
+                );
+
+                Console.WriteLine(
+                    "CORREO: " +
+                    correo
+                );
+
+                Console.WriteLine(
+                    "EXPIRA UNIX: " +
+                    expiracion
+                );
+
+                Console.WriteLine(
+                    "===================================="
+                );
+
+
+                // ==========================================
+                // ENVIAR CORREO
+                // ==========================================
+
+                await _emailService
+                    .EnviarCodigoAsync(
+                        correo,
+                        codigo
+                    );
+
+
+                return Json(new
+                {
+                    ok = true,
+
+                    mensaje =
+                        "Código enviado correctamente. Tienes 1 minuto para utilizarlo.",
+
+                    segundos = 60
+                });
             }
             catch (Exception ex)
             {
-                return Json(new { ok = false, mensaje = ex.ToString() });
+                Console.WriteLine(
+                    "ERROR ENVIANDO CÓDIGO: " +
+                    ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo enviar el código de verificación."
+                });
             }
         }
         [HttpPost]
@@ -1033,10 +1891,43 @@ namespace trabajo.Controllers
                     properties
                 );
 
-                usuarioEncontrado.EstadoActivo = true;
-                usuarioEncontrado.UltimaConexion = DateTime.Now;
+                usuarioEncontrado.EstadoActivo =
+    true;
 
-                _Context.SaveChanges();
+                usuarioEncontrado.UltimaConexion =
+                    DateTime.Now;
+
+
+                // ==========================================
+                // CORREO VERIFICADO CORRECTAMENTE
+                // ==========================================
+
+                // Solamente habilitamos voz si realmente
+                // existe un registro biométrico válido.
+
+                bool tieneVozValida =
+                    !string.IsNullOrWhiteSpace(
+                        usuarioEncontrado.AudioRegistro
+                    )
+                    &&
+                    usuarioEncontrado.EmbeddingVoz != null
+                    &&
+                    usuarioEncontrado.EmbeddingVoz.Length ==
+                        192 * sizeof(float);
+
+
+                if (tieneVozValida)
+                {
+                    usuarioEncontrado.VozHabilitadaLogin =
+                        true;
+                }
+
+
+                _Context.Usuario.Update(
+                    usuarioEncontrado
+                );
+
+                await _Context.SaveChangesAsync();
 
                 // Limpiar código utilizado
                 codigoLogin = "";
@@ -2202,7 +3093,50 @@ string titularCuenta
 
             return Ok();
         }
-        
+        private static double CalcularSimilitudCoseno(
+    float[] embeddingRegistrado,
+    float[] embeddingActual)
+        {
+            if (embeddingRegistrado == null ||
+                embeddingActual == null ||
+                embeddingRegistrado.Length == 0 ||
+                embeddingActual.Length == 0 ||
+                embeddingRegistrado.Length != embeddingActual.Length)
+            {
+                return 0;
+            }
+
+            double productoPunto = 0;
+            double normaRegistrada = 0;
+            double normaActual = 0;
+
+            for (int i = 0; i < embeddingRegistrado.Length; i++)
+            {
+                productoPunto +=
+                    embeddingRegistrado[i] *
+                    embeddingActual[i];
+
+                normaRegistrada +=
+                    embeddingRegistrado[i] *
+                    embeddingRegistrado[i];
+
+                normaActual +=
+                    embeddingActual[i] *
+                    embeddingActual[i];
+            }
+
+            if (normaRegistrada == 0 ||
+                normaActual == 0)
+            {
+                return 0;
+            }
+
+            return productoPunto /
+                (
+                    Math.Sqrt(normaRegistrada) *
+                    Math.Sqrt(normaActual)
+                );
+        }
 
 
     }

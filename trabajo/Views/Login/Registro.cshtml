@@ -453,19 +453,43 @@
                     </button>
                 </div>
 
-                <div class="d-grid gap-2 mb-2">
-                    <button class="btn btn-code" type="button" onclick="enviarCodigo()">
+                <div class="d-grid gap-2 mb-1">
+
+                    <button id="btnEnviarCodigo"
+                            class="btn btn-code"
+                            type="button"
+                            onclick="enviarCodigo()">
+
                         Obtener código de verificación
+
                     </button>
+
                 </div>
 
+                <div id="contadorCodigo"
+                     class="text-center mb-2"
+                     style="
+        display:none;
+        font-size:14px;
+        font-weight:bold;
+        color:#475569;
+     ">
+                </div>
                 <div class="input-util-wrap mb-2">
                     <input id="codigoRegistro"
                            class="form-control"
                            type="text"
                            placeholder="Código de verificación"
                            name="codigoVerificacion"
-                           required />
+                           maxlength="6"
+                           autocomplete="one-time-code"
+                           required
+                           oninput="
+           this.value =
+               this.value
+                   .replace(/[^A-Za-z0-9]/g, '')
+                   .toUpperCase();
+       " />
 
                     <button type="button"
                             class="btn-clear"
@@ -640,30 +664,356 @@
         </div>
 
     </div>
+    <div id="modalMensajeRegistro"
+         class="modal-voz">
+
+        <div class="modal-voz-contenido"
+             style="max-width: 380px;">
+
+            <div id="iconoMensajeRegistro"
+                 style="font-size:55px;">
+                ✅
+            </div>
+
+            <div id="tituloMensajeRegistro"
+                 class="modal-voz-titulo">
+                CrediPlus
+            </div>
+
+            <div id="textoMensajeRegistro"
+                 class="modal-voz-texto"
+                 style="font-size:17px;">
+            </div>
+
+            <button type="button"
+                    class="btn btn-primary w-100 mt-3"
+                    onclick="cerrarMensajeRegistro()">
+                OK
+            </button>
+
+        </div>
+
+    </div>
     <script>
 
-        function enviarCodigo() {
-            let correo = document.querySelector('[name="Correo"]').value;
+                // ==========================================
+        // CÓDIGO DE VERIFICACIÓN - REGISTRO
+        // ==========================================
 
-            if (correo.trim() === "") {
-                alert("Primero escribe tu correo Gmail");
+        let intervaloCodigoRegistro = null;
+        let segundosCodigoRegistro = 60;
+        let codigoEnEspera = false;
+
+
+        async function enviarCodigo() {
+
+            const correo =
+                document
+                    .getElementById("correoRegistro")
+                    .value
+                    .trim();
+
+            const boton =
+                document.getElementById(
+                    "btnEnviarCodigo"
+                );
+
+            const contador =
+                document.getElementById(
+                    "contadorCodigo"
+                );
+
+
+            // ==========================================
+            // EVITAR DOBLE ENVÍO
+            // ==========================================
+
+            if (codigoEnEspera) {
                 return;
             }
 
-            fetch('/Login/EnviarCodigo', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: 'correo=' + encodeURIComponent(correo)
-            })
-            .then(res => res.json())
-            .then(data => {
-                alert(data.mensaje);
-            })
-            .catch(error => {
-                alert("No se pudo enviar el código");
-            });
+
+            // ==========================================
+            // VALIDAR CORREO
+            // ==========================================
+
+            if (correo === "") {
+
+                mostrarMensajeRegistro(
+                    "Primero escribe tu correo Gmail.",
+                    true
+                );
+
+                return;
+            }
+
+
+                const correoValido =
+        /^[A-Za-z0-9._%+-]+@@gmail\.com$/i
+            .test(correo);
+
+            if (!correoValido) {
+
+                mostrarMensajeRegistro(
+                    "Ingresa un correo Gmail válido.",
+                    true
+                );
+
+                document
+                    .getElementById(
+                        "correoRegistro"
+                    )
+                    .focus();
+
+                return;
+            }
+
+
+            // ==========================================
+            // BLOQUEAR BOTÓN MIENTRAS ENVÍA
+            // ==========================================
+
+            codigoEnEspera = true;
+
+            boton.disabled = true;
+
+            boton.innerText =
+                "Enviando código...";
+
+
+            try {
+
+                const respuesta =
+                    await fetch(
+                        "/Login/EnviarCodigo",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/x-www-form-urlencoded"
+                            },
+
+                            body:
+                                "correo=" +
+                                encodeURIComponent(
+                                    correo
+                                )
+                        }
+                    );
+
+
+                const resultado =
+                    await respuesta.json();
+
+
+                // ==========================================
+                // ERROR
+                // ==========================================
+
+                if (!resultado.ok) {
+
+                    codigoEnEspera = false;
+
+                    boton.disabled = false;
+
+                    boton.innerText =
+                        "Obtener código de verificación";
+
+                    mostrarMensajeRegistro(
+                        resultado.mensaje ||
+                        "No se pudo enviar el código.",
+                        true
+                    );
+
+                    return;
+                }
+
+
+                // ==========================================
+                // CÓDIGO ENVIADO
+                // ==========================================
+
+                mostrarMensajeRegistro(
+                    resultado.mensaje ||
+                    "Código enviado correctamente.",
+                    false
+                );
+
+
+                // Limpiar cualquier código escrito anteriormente
+                document
+                    .getElementById(
+                        "codigoRegistro"
+                    )
+                    .value = "";
+
+
+                // ==========================================
+                // INICIAR CUENTA REGRESIVA
+                // ==========================================
+
+                iniciarContadorCodigoRegistro();
+
+            }
+            catch (error) {
+
+                console.error(
+                    "Error enviando código:",
+                    error
+                );
+
+                codigoEnEspera = false;
+
+                boton.disabled = false;
+
+                boton.innerText =
+                    "Obtener código de verificación";
+
+                mostrarMensajeRegistro(
+                    "No se pudo enviar el código de verificación.",
+                    true
+                );
+            }
+        }
+
+
+        // ==========================================
+        // CONTADOR DE 60 SEGUNDOS
+        // ==========================================
+
+        function iniciarContadorCodigoRegistro() {
+
+            const boton =
+                document.getElementById(
+                    "btnEnviarCodigo"
+                );
+
+            const contador =
+                document.getElementById(
+                    "contadorCodigo"
+                );
+
+
+            // Eliminar contador anterior
+            if (intervaloCodigoRegistro) {
+
+                clearInterval(
+                    intervaloCodigoRegistro
+                );
+            }
+
+
+            segundosCodigoRegistro = 60;
+
+            codigoEnEspera = true;
+
+            boton.disabled = true;
+
+            boton.innerText =
+                "Código enviado";
+
+
+            contador.style.display =
+                "block";
+
+
+            actualizarContadorCodigoRegistro();
+
+
+            intervaloCodigoRegistro =
+                setInterval(
+                    function () {
+
+                        segundosCodigoRegistro--;
+
+
+                        actualizarContadorCodigoRegistro();
+
+
+                        // ==========================================
+                        // TERMINÓ EL MINUTO
+                        // ==========================================
+
+                        if (
+                            segundosCodigoRegistro <= 0
+                        ) {
+
+                            clearInterval(
+                                intervaloCodigoRegistro
+                            );
+
+                            intervaloCodigoRegistro =
+                                null;
+
+                            codigoEnEspera = false;
+
+
+                            contador.innerText =
+                                "⏰ El código ha expirado.";
+
+                            contador.style.color =
+                                "#dc2626";
+
+
+                            boton.disabled =
+                                false;
+
+                            boton.innerText =
+                                "🔄 Enviar nuevamente el código";
+
+
+                            // Borrar el código escrito porque ya expiró
+                            const inputCodigo =
+                                document.getElementById(
+                                    "codigoRegistro"
+                                );
+
+                            if (inputCodigo) {
+
+                                inputCodigo.value =
+                                    "";
+                            }
+                        }
+
+                    },
+                    1000
+                );
+        }
+
+
+        // ==========================================
+        // ACTUALIZAR TEXTO 00:59, 00:58...
+        // ==========================================
+
+        function actualizarContadorCodigoRegistro() {
+
+            const contador =
+                document.getElementById(
+                    "contadorCodigo"
+                );
+
+            const segundos =
+                Math.max(
+                    segundosCodigoRegistro,
+                    0
+                );
+
+            const textoSegundos =
+                segundos
+                    .toString()
+                    .padStart(
+                        2,
+                        "0"
+                    );
+
+
+            contador.style.color =
+                "#475569";
+
+            contador.innerText =
+                "⏳ Código válido por 00:" +
+                textoSegundos;
         }
     </script>
     <script>
@@ -1168,7 +1518,7 @@
         // CONFIRMAR VOZ
         // ==========================================
 
-        function confirmarVoz() {
+               function confirmarVoz() {
 
             const modal =
                 document.getElementById(
@@ -1185,37 +1535,40 @@
                     "fraseVoz"
                 );
 
+            const boton =
+                document.getElementById(
+                    "btnGrabarVoz"
+                );
 
             const frase =
                 textoDetectado.trim();
-
-
-            // ==========================================
-            // GUARDAR FRASE RECONOCIDA
-            // ==========================================
 
             if (frase !== "") {
 
                 fraseInput.value =
                     frase;
-
             }
-
-
-            // ==========================================
-            // CERRAR MODAL
-            // ==========================================
 
             modal.style.display =
                 "none";
 
-
             finalizandoGrabacion = false;
 
-
             estado.innerText =
-                "🟢 Voz confirmada. Puedes registrarte.";
+                "✅ Voz grabada y confirmada correctamente.";
 
+            estado.style.color =
+                "#16a34a";
+
+            if (boton) {
+
+                boton.innerHTML =
+                    "✅ Voz lista para registrar";
+
+                boton.classList.remove(
+                    "grabando"
+                );
+            }
         }
 
 
@@ -1371,85 +1724,197 @@
                 console.log("Tipo del audio:", audioBlob.type);
                 console.log("=================================");
 
-                try {
+        try {
 
-                    // ==========================================
-                    // ENVIAR AL CONTROLADOR
-                    // ==========================================
+            const response = await fetch(
+                formulario.action,
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
 
-                    const response = await fetch(
-                        formulario.action,
-                        {
-                            method: "POST",
-                            body: formData,
-                            redirect: "follow"
-                        }
+            // ==========================================
+            // COMPROBAR TIPO DE RESPUESTA
+            // ==========================================
+
+            const contentType =
+                response.headers.get("content-type") || "";
+
+            // ==========================================
+            // RESPUESTA JSON = REGISTRO CORRECTO
+            // ==========================================
+
+            if (contentType.includes("application/json")) {
+
+                const resultado =
+                    await response.json();
+
+                console.log(
+                    "Respuesta registro:",
+                    resultado
+                );
+
+        if (!resultado.ok) {
+
+            mostrarMensajeRegistro(
+                resultado.mensaje ||
+                "No se pudo registrar el usuario."
+            );
+
+            // Si sabemos qué campo tiene el error,
+            // solamente seleccionamos ese campo.
+            // NO limpiamos el formulario.
+            // NO eliminamos audioBlob.
+
+            if (resultado.campo) {
+
+                const campo =
+                    document.getElementById(
+                        resultado.campo
                     );
 
-                    console.log(
-                        "Respuesta del servidor:",
-                        response.status
-                    );
+                if (campo) {
 
-                    console.log(
-                        "¿Hubo redirección?:",
-                        response.redirected
-                    );
-
-                    console.log(
-                        "URL respuesta:",
-                        response.url
-                    );
-
-                    // ==========================================
-                    // SI EL REGISTRO FUE CORRECTO
-                    // ==========================================
-
-                    if (response.ok && response.redirected) {
-
-                        console.log(
-                            "Registro exitoso. Redirigiendo..."
-                        );
-
-                        window.location.href = response.url;
-
-                        return;
-                    }
-
-                    // ==========================================
-                    // SI EL SERVIDOR DEVOLVIÓ OTRA RESPUESTA
-                    // ==========================================
-
-                    const html = await response.text();
-
-                    document.open();
-                    document.write(html);
-                    document.close();
+                    campo.focus();
 
                 }
-                catch (error) {
 
-                    console.error(
-                        "Error al registrar:",
-                        error
-                    );
+            }
 
-                    alert(
-                        "Ocurrió un error al registrar el usuario."
-                    );
+            enviandoRegistro = false;
 
-                    // Permitir volver a intentar
-                    enviandoRegistro = false;
+            if (botonRegistro) {
 
-                    if (botonRegistro) {
-                        botonRegistro.disabled = false;
-                        botonRegistro.innerText = "Registrate";
-                    }
+                botonRegistro.disabled = false;
+
+                botonRegistro.innerText =
+                    "Registrate";
+
+            }
+
+            return;
+        }
+
+                // ==========================================
+                // MOSTRAR ÉXITO EN REGISTRO
+                // ==========================================
+
+                const estado =
+                    document.getElementById("estadoVoz");
+
+                if (estado) {
+                    estado.innerText =
+                        "✅ Usuario registrado exitosamente.";
+
+                    estado.style.color =
+                        "#16a34a";
                 }
+
+                if (botonRegistro) {
+
+                    botonRegistro.innerText =
+                        "✅ Registrado correctamente";
+
+                    botonRegistro.disabled = true;
+                }
+
+                // ==========================================
+                // IR AL LOGIN
+                // ==========================================
+
+                setTimeout(function () {
+
+                    window.location.href =
+                        resultado.redirectUrl;
+
+                }, 1200);
+
+                return;
+            }
+
+        }
+        catch (error) {
+
+            console.error(
+                "Error al registrar:",
+                error
+            );
+
+            alert(
+                "Ocurrió un error al registrar el usuario."
+            );
+
+            enviandoRegistro = false;
+
+            if (botonRegistro) {
+                botonRegistro.disabled = false;
+                botonRegistro.innerText = "Registrate";
+            }
+        }
 
             });
-        
 
+        function mostrarMensajeRegistro(
+            mensaje,
+            esError = true
+        ) {
+
+            const modal =
+                document.getElementById(
+                    "modalMensajeRegistro"
+                );
+
+            const texto =
+                document.getElementById(
+                    "textoMensajeRegistro"
+                );
+
+            const icono =
+                document.getElementById(
+                    "iconoMensajeRegistro"
+                );
+
+            const titulo =
+                document.getElementById(
+                    "tituloMensajeRegistro"
+                );
+
+            texto.innerText =
+                mensaje;
+
+            if (esError) {
+
+                icono.innerText = "⚠️";
+
+                titulo.innerText =
+                    "Revisa tus datos";
+
+            }
+            else {
+
+                icono.innerText = "✅";
+
+                titulo.innerText =
+                    "CrediPlus";
+
+            }
+
+            modal.style.display =
+                "flex";
+        }
+
+
+        function cerrarMensajeRegistro() {
+
+            const modal =
+                document.getElementById(
+                    "modalMensajeRegistro"
+                );
+
+            modal.style.display =
+                "none";
+        }
         
 
 

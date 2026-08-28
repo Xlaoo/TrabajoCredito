@@ -3,7 +3,7 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 using NAudio.Wave;
 using Xabe.FFmpeg;
 using Xabe.FFmpeg.Downloader;
-
+using System.Numerics;
 namespace trabajo.Service
 {
     public class ServicioEmbeddingVoz
@@ -325,7 +325,7 @@ namespace trabajo.Service
                         .AsTensor<float>();
 
                 float[] embedding =
-                    salida.ToArray();
+    salida.ToArray();
 
                 if (embedding.Length != 192)
                 {
@@ -333,6 +333,65 @@ namespace trabajo.Service
                         $"El modelo devolvió {embedding.Length} valores. Se esperaban 192."
                     );
                 }
+
+
+                // ==========================================
+                // NORMALIZACIÓN L2 DEL EMBEDDING
+                // ==========================================
+
+                double norma = 0;
+
+                for (int i = 0;
+                     i < embedding.Length;
+                     i++)
+                {
+                    norma +=
+                        embedding[i] *
+                        embedding[i];
+                }
+
+                norma =
+                    Math.Sqrt(norma);
+
+                if (norma <= 1e-12)
+                {
+                    throw new Exception(
+                        "El modelo generó un embedding inválido."
+                    );
+                }
+
+                for (int i = 0;
+                     i < embedding.Length;
+                     i++)
+                {
+                    embedding[i] =
+                        (float)(
+                            embedding[i] /
+                            norma
+                        );
+                }
+
+
+                // ==========================================
+                // DEBUG
+                // ==========================================
+
+                Console.WriteLine(
+                    "Embedding generado correctamente."
+                );
+
+                Console.WriteLine(
+                    $"Tamaño embedding: {embedding.Length}"
+                );
+
+                Console.WriteLine(
+                    $"Primeros valores: " +
+                    $"{embedding[0]:F4}, " +
+                    $"{embedding[1]:F4}, " +
+                    $"{embedding[2]:F4}, " +
+                    $"{embedding[3]:F4}, " +
+                    $"{embedding[4]:F4}"
+                );
 
                 return embedding;
             }
@@ -407,110 +466,402 @@ namespace trabajo.Service
         }
 
         private float[,] GenerarFbank(
-            float[] audio,
-            int sampleRate,
-            int cantidadFiltros,
-            int cantidadFrames)
+     float[] audio,
+     int sampleRate,
+     int cantidadFiltros,
+     int cantidadFrames)
         {
-            int tamanoFrame = 400;
-            int saltoFrame = 160;
+            // ==========================================
+            // CONFIGURACIÓN ECAPA
+            // ==========================================
+
+            const int tamanoFrame = 400; // 25 ms a 16 kHz
+            const int saltoFrame = 160;  // 10 ms
+            const int fftSize = 512;
 
             float[,] resultado =
-                new float[
-                    cantidadFiltros,
-                    cantidadFrames
-                ];
+                new float[cantidadFiltros, cantidadFrames];
 
-            for (
-                int frame = 0;
-                frame < cantidadFrames;
-                frame++
-            )
+            // ==========================================
+            // CREAR BANCO MEL
+            // ==========================================
+
+            double frecuenciaMinima = 20.0;
+            double frecuenciaMaxima = sampleRate / 2.0;
+
+            double melMin =
+                HertzAMel(frecuenciaMinima);
+
+            double melMax =
+                HertzAMel(frecuenciaMaxima);
+
+            double[] puntosMel =
+                new double[cantidadFiltros + 2];
+
+            int[] bins =
+                new int[cantidadFiltros + 2];
+
+            for (int i = 0;
+                 i < puntosMel.Length;
+                 i++)
+            {
+                puntosMel[i] =
+                    melMin +
+                    (
+                        (melMax - melMin) *
+                        i /
+                        (cantidadFiltros + 1)
+                    );
+
+                double hz =
+                    MelAHertz(
+                        puntosMel[i]
+                    );
+
+                bins[i] =
+                    (int)Math.Floor(
+                        (fftSize + 1) *
+                        hz /
+                        sampleRate
+                    );
+
+                bins[i] =
+                    Math.Clamp(
+                        bins[i],
+                        0,
+                        fftSize / 2
+                    );
+            }
+
+            // ==========================================
+            // RECORRER FRAMES
+            // ==========================================
+
+            for (int frame = 0;
+                 frame < cantidadFrames;
+                 frame++)
             {
                 int inicio =
                     frame * saltoFrame;
 
-                float[] energia =
-                    new float[257];
+                Complex[] fft =
+                    new Complex[fftSize];
 
-                for (
-                    int k = 0;
-                    k < 257;
-                    k++
-                )
+                // ==========================================
+                // VENTANA HAMMING
+                // ==========================================
+
+                for (int i = 0;
+                     i < tamanoFrame;
+                     i++)
                 {
-                    double frecuencia =
-                        (double)k *
-                        sampleRate /
-                        512.0;
+                    float muestra = 0f;
 
-                    int muestra =
-                        inicio +
-                        Math.Min(
-                            k,
-                            tamanoFrame - 1
+                    int indiceAudio =
+                        inicio + i;
+
+                    if (indiceAudio >= 0 &&
+                        indiceAudio < audio.Length)
+                    {
+                        muestra =
+                            audio[indiceAudio];
+                    }
+
+                    // Hamming
+                    double ventana =
+                        0.54 -
+                        0.46 *
+                        Math.Cos(
+                            2.0 *
+                            Math.PI *
+                            i /
+                            (tamanoFrame - 1)
                         );
 
-                    if (muestra >= audio.Length)
-                        muestra =
-                            audio.Length - 1;
-
-                    if (muestra >= 0)
-                    {
-                        float valor =
-                            audio[muestra];
-
-                        energia[k] =
-                            valor * valor;
-                    }
+                    fft[i] =
+                        new Complex(
+                            muestra * ventana,
+                            0
+                        );
                 }
 
-                for (
-                    int filtro = 0;
-                    filtro < cantidadFiltros;
-                    filtro++
-                )
+                // Resto ya queda como cero:
+                // zero-padding hasta 512.
+
+                // ==========================================
+                // FFT
+                // ==========================================
+
+                EjecutarFFT(fft);
+
+                // ==========================================
+                // ESPECTRO DE POTENCIA
+                // ==========================================
+
+                double[] potencia =
+                    new double[
+                        fftSize / 2 + 1
+                    ];
+
+                for (int k = 0;
+                     k < potencia.Length;
+                     k++)
                 {
-                    int inicioFiltro =
-                        filtro * 3;
+                    double real =
+                        fft[k].Real;
 
-                    float suma = 0;
+                    double imaginario =
+                        fft[k].Imaginary;
 
-                    for (
-                        int k = 0;
-                        k < 257;
-                        k++
-                    )
+                    potencia[k] =
+                        (
+                            real * real +
+                            imaginario * imaginario
+                        ) /
+                        fftSize;
+                }
+
+                // ==========================================
+                // FILTROS MEL
+                // ==========================================
+
+                for (int filtro = 0;
+                     filtro < cantidadFiltros;
+                     filtro++)
+                {
+                    int izquierda =
+                        bins[filtro];
+
+                    int centro =
+                        bins[filtro + 1];
+
+                    int derecha =
+                        bins[filtro + 2];
+
+                    double energiaMel = 0;
+
+                    // Parte ascendente
+                    if (centro > izquierda)
                     {
-                        int distancia =
-                            Math.Abs(
-                                k -
-                                inicioFiltro
-                            );
+                        for (int k = izquierda;
+                             k < centro;
+                             k++)
+                        {
+                            double peso =
+                                (double)(
+                                    k - izquierda
+                                ) /
+                                (
+                                    centro - izquierda
+                                );
 
-                        float peso =
-                            Math.Max(
-                                0,
-                                1f -
-                                distancia / 10f
-                            );
-
-                        suma +=
-                            energia[k] *
-                            peso;
+                            energiaMel +=
+                                potencia[k] *
+                                peso;
+                        }
                     }
+
+                    // Parte descendente
+                    if (derecha > centro)
+                    {
+                        for (int k = centro;
+                             k < derecha;
+                             k++)
+                        {
+                            double peso =
+                                (double)(
+                                    derecha - k
+                                ) /
+                                (
+                                    derecha - centro
+                                );
+
+                            energiaMel +=
+                                potencia[k] *
+                                peso;
+                        }
+                    }
+
+                    // ==========================================
+                    // LOG MEL
+                    // ==========================================
 
                     resultado[
                         filtro,
                         frame
                     ] =
                         (float)Math.Log(
-                            suma + 1e-10
+                            Math.Max(
+                                energiaMel,
+                                1e-10
+                            )
                         );
                 }
             }
 
+            // ==========================================
+            // NORMALIZACIÓN POR FRECUENCIA
+            // Cepstral Mean Normalization simplificada
+            // ==========================================
+
+            for (int filtro = 0;
+                 filtro < cantidadFiltros;
+                 filtro++)
+            {
+                double media = 0;
+
+                for (int frame = 0;
+                     frame < cantidadFrames;
+                     frame++)
+                {
+                    media +=
+                        resultado[
+                            filtro,
+                            frame
+                        ];
+                }
+
+                media /=
+                    cantidadFrames;
+
+                for (int frame = 0;
+                     frame < cantidadFrames;
+                     frame++)
+                {
+                    resultado[
+                        filtro,
+                        frame
+                    ] -=
+                        (float)media;
+                }
+            }
+
             return resultado;
+        }
+        private static double HertzAMel(
+    double hz)
+        {
+            return 2595.0 *
+                Math.Log10(
+                    1.0 +
+                    hz / 700.0
+                );
+        }
+
+
+        private static double MelAHertz(
+            double mel)
+        {
+            return 700.0 *
+                (
+                    Math.Pow(
+                        10.0,
+                        mel / 2595.0
+                    ) -
+                    1.0
+                );
+        }
+
+
+        private static void EjecutarFFT(
+            Complex[] buffer)
+        {
+            int n =
+                buffer.Length;
+
+            // ==========================================
+            // BIT REVERSAL
+            // ==========================================
+
+            int j = 0;
+
+            for (int i = 1;
+                 i < n;
+                 i++)
+            {
+                int bit =
+                    n >> 1;
+
+                while (
+                    (j & bit) != 0)
+                {
+                    j ^= bit;
+                    bit >>= 1;
+                }
+
+                j ^= bit;
+
+                if (i < j)
+                {
+                    Complex temporal =
+                        buffer[i];
+
+                    buffer[i] =
+                        buffer[j];
+
+                    buffer[j] =
+                        temporal;
+                }
+            }
+
+            // ==========================================
+            // FFT COOLEY-TUKEY
+            // ==========================================
+
+            for (int longitud = 2;
+                 longitud <= n;
+                 longitud <<= 1)
+            {
+                double angulo =
+                    -2.0 *
+                    Math.PI /
+                    longitud;
+
+                Complex wLongitud =
+                    new Complex(
+                        Math.Cos(angulo),
+                        Math.Sin(angulo)
+                    );
+
+                for (int i = 0;
+                     i < n;
+                     i += longitud)
+                {
+                    Complex w =
+                        Complex.One;
+
+                    int mitad =
+                        longitud / 2;
+
+                    for (int k = 0;
+                         k < mitad;
+                         k++)
+                    {
+                        Complex u =
+                            buffer[
+                                i + k
+                            ];
+
+                        Complex v =
+                            buffer[
+                                i + k + mitad
+                            ] * w;
+
+                        buffer[
+                            i + k
+                        ] =
+                            u + v;
+
+                        buffer[
+                            i + k + mitad
+                        ] =
+                            u - v;
+
+                        w *=
+                            wLongitud;
+                    }
+                }
+            }
         }
     }
 }
