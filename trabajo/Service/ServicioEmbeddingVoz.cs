@@ -70,37 +70,27 @@ namespace trabajo.Service
                 // CONFIGURAR FFmpeg
                 // ==========================================
 
-                string carpetaFFmpeg = Path.Combine(
-                    carpetaTemporal,
-                    "ffmpeg"
-                );
-
-                Directory.CreateDirectory(carpetaFFmpeg);
-
-                // Descargar FFmpeg dentro de la carpeta indicada
-                await FFmpegDownloader.GetLatestVersion(
-                    FFmpegVersion.Official,
-                    carpetaFFmpeg
-                );
-
-                // Indicar a Xabe dónde están los ejecutables
-                FFmpeg.SetExecutablesPath(carpetaFFmpeg);
-
-                // ==========================================
-                // VERIFICAR QUE FFmpeg EXISTE
-                // ==========================================
-
-                string rutaFFmpegExe = Path.Combine(
-                    carpetaFFmpeg,
-                    "ffmpeg.exe"
-                );
-
-                if (!File.Exists(rutaFFmpegExe))
+                if (OperatingSystem.IsWindows())
                 {
-                    throw new FileNotFoundException(
-                        "FFmpeg no fue descargado correctamente.",
-                        rutaFFmpegExe
+                    string carpetaFFmpeg = Path.Combine(
+                        carpetaTemporal,
+                        "ffmpeg"
                     );
+
+                    Directory.CreateDirectory(carpetaFFmpeg);
+
+                    await FFmpegDownloader.GetLatestVersion(
+                        FFmpegVersion.Official,
+                        carpetaFFmpeg
+                    );
+
+                    FFmpeg.SetExecutablesPath(carpetaFFmpeg);
+                }
+                else
+                {
+                    // Northflank usa Linux.
+                    // FFmpeg estará instalado desde el Dockerfile.
+                    FFmpeg.SetExecutablesPath("/usr/bin");
                 }
 
                 // ==========================================
