@@ -1206,7 +1206,7 @@ namespace trabajo.Controllers
                 // haciendo pruebas con tu voz y otras personas.
                 //
 
-                const double UMBRAL_VOZ = 0.75;
+                const double UMBRAL_VOZ = 0.72;
 
                 // ==========================================
                 // VOZ NO COINCIDE
