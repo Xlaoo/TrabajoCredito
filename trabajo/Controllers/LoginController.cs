@@ -22,7 +22,7 @@ namespace trabajo.Controllers
         
         private readonly EmailService _emailService = new EmailService();
         private static string codigoLogin = "";
-        private static string dniLoginPendiente = "";
+        
         // ==========================================
         // SEGURIDAD - INTENTOS DE VOZ
         // ==========================================
@@ -690,7 +690,57 @@ namespace trabajo.Controllers
                 // GUARDAR USUARIO PENDIENTE
                 // ==========================================
 
-                dniLoginPendiente = usuarioEncontrado.Dni;
+                HttpContext.Session.SetString(
+    "DniLoginPendiente",
+    usuarioEncontrado.Dni
+);
+                // ==========================================
+                // CONSULTAR BLOQUEO DE VOZ DE ESTA CUENTA
+                // ==========================================
+
+                string claveBloqueoVoz =
+                    "BloqueoVoz_" + usuarioEncontrado.Dni;
+
+                string bloqueoTexto =
+                    HttpContext.Session.GetString(
+                        claveBloqueoVoz
+                    );
+
+                bool vozBloqueada = false;
+                int segundosBloqueoVoz = 0;
+
+                if (!string.IsNullOrWhiteSpace(bloqueoTexto) &&
+                    long.TryParse(
+                        bloqueoTexto,
+                        out long bloqueoHastaUnix))
+                {
+                    long ahoraUnix =
+                        DateTimeOffset.UtcNow
+                            .ToUnixTimeSeconds();
+
+                    if (ahoraUnix < bloqueoHastaUnix)
+                    {
+                        vozBloqueada = true;
+
+                        segundosBloqueoVoz =
+                            (int)(
+                                bloqueoHastaUnix -
+                                ahoraUnix
+                            );
+                    }
+                    else
+                    {
+                        // El bloqueo ya terminó.
+                        HttpContext.Session.Remove(
+                            claveBloqueoVoz
+                        );
+
+                        HttpContext.Session.Remove(
+                            "IntentosVoz_" +
+                            usuarioEncontrado.Dni
+                        );
+                    }
+                }
 
                 // ==========================================
                 // VERIFICAR REGISTRO DE VOZ
@@ -736,7 +786,13 @@ namespace trabajo.Controllers
         usuarioEncontrado.Correo,
 
                     fraseVoz =
-        usuarioEncontrado.FraseVoz
+        usuarioEncontrado.FraseVoz,
+
+                    // Bloqueo exclusivo de esta cuenta
+                    vozBloqueada = vozBloqueada,
+
+                    segundosBloqueoVoz =
+        segundosBloqueoVoz
                 });
             }
             catch (Exception ex)
@@ -756,6 +812,10 @@ namespace trabajo.Controllers
         {
             try
             {
+                string? dniLoginPendiente =
+    HttpContext.Session.GetString(
+        "DniLoginPendiente"
+    );
                 if (string.IsNullOrWhiteSpace(dniLoginPendiente))
                 {
                     return Json(new
@@ -958,6 +1018,10 @@ namespace trabajo.Controllers
         {
             try
             {
+                string dniLoginPendiente =
+    HttpContext.Session.GetString(
+        "DniLoginPendiente"
+    );
                 // ==========================================
                 // COMPROBAR SESIÓN PENDIENTE
                 // ==========================================
@@ -1352,10 +1416,6 @@ namespace trabajo.Controllers
                     usuario.Dni
                 );
 
-                HttpContext.Session.Remove(
-                    "BloqueoVoz_" +
-                    usuario.Dni
-                );
                 // ==========================================
                 // CREAR AUTENTICACIÓN
                 // ==========================================
@@ -1460,7 +1520,9 @@ namespace trabajo.Controllers
 
                 // Limpiarlo SOLO después
                 // de verificar correctamente la voz.
-                dniLoginPendiente = "";
+                HttpContext.Session.Remove(
+    "DniLoginPendiente"
+);
 
                 return Json(new
                 {
@@ -1750,6 +1812,10 @@ namespace trabajo.Controllers
         {
             try
             {
+                string? dniLoginPendiente =
+    HttpContext.Session.GetString(
+        "DniLoginPendiente"
+    );
                 if (string.IsNullOrWhiteSpace(dniLoginPendiente))
                 {
                     return Json(new
@@ -1809,6 +1875,10 @@ namespace trabajo.Controllers
         {
             try
             {
+                string? dniLoginPendiente =
+           HttpContext.Session.GetString(
+               "DniLoginPendiente"
+           );
                 if (string.IsNullOrWhiteSpace(dniLoginPendiente))
                 {
                     return Json(new
@@ -1931,7 +2001,10 @@ namespace trabajo.Controllers
 
                 // Limpiar código utilizado
                 codigoLogin = "";
-                dniLoginPendiente = "";
+
+                HttpContext.Session.Remove(
+                    "DniLoginPendiente"
+                );
                 codigoLoginExpira = DateTime.MinValue;
                 string url;
 
@@ -2464,7 +2537,19 @@ string titularCuenta
         {
             string dniActual = User.FindFirst("Dni")?.Value;
 
-            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dniActual);
+            var usuario =
+    _Context.Usuario.FirstOrDefault(
+        x => x.Dni == dniActual
+    );
+
+            if (usuario == null)
+            {
+                return RedirectToAction(
+                    "IniciarSesion",
+                    "Login"
+                );
+            }
+
             if (usuarioEditado.Correo != usuario.Correo)
             {
                 var codigoGuardado = HttpContext.Session.GetString("CodigoPerfil");
@@ -2496,10 +2581,7 @@ string titularCuenta
                 HttpContext.Session.Remove("CorreoPerfil");
             }
 
-            if (usuario == null)
-            {
-                return RedirectToAction("IniciarSesion", "Login");
-            }
+
 
             if (usuarioEditado.Dni.Length != 8 || !usuarioEditado.Dni.All(char.IsDigit))
             {
@@ -2578,13 +2660,90 @@ string titularCuenta
                 usuario.clave = utilidades.EncriptarClave(usuarioEditado.clave);
             }
 
-            _Context.SaveChanges();
+            // ==========================================
+            // GUARDAR CAMBIOS EN BASE DE DATOS
+            // ==========================================
 
-            TempData["Mensaje"] = "Perfil actualizado correctamente. Vuelve a iniciar sesión para ver los cambios.";
+            await _Context.SaveChangesAsync();
 
-            _Context.SaveChanges();
-            TempData["MensajeOk"] = "Perfil actualizado correctamente.";
-            return RedirectToAction("PerfilPersonal", "Login");
+
+            // ==========================================
+            // ACTUALIZAR DATOS DE LA SESIÓN / COOKIE
+            // ==========================================
+
+            List<Claim> claims = new List<Claim>()
+{
+    new Claim(
+        ClaimTypes.Name,
+        usuario.Nombre ?? ""
+    ),
+
+    new Claim(
+        "Apellido",
+        usuario.Apellido ?? ""
+    ),
+
+    new Claim(
+        "Dni",
+        usuario.Dni ?? ""
+    ),
+
+    new Claim(
+        "Celular",
+        usuario.Celular ?? ""
+    ),
+
+    new Claim(
+        "Correo",
+        usuario.Correo ?? ""
+    ),
+
+    new Claim(
+        ClaimTypes.Role,
+        usuario.Rol ?? ""
+    )
+};
+
+
+            // ==========================================
+            // CREAR NUEVA IDENTIDAD
+            // ==========================================
+
+            ClaimsIdentity claimsIdentity =
+                new ClaimsIdentity(
+                    claims,
+                    CookieAuthenticationDefaults.AuthenticationScheme
+                );
+
+
+            // ==========================================
+            // REEMPLAZAR COOKIE ANTIGUA
+            // ==========================================
+
+            AuthenticationProperties properties =
+                new AuthenticationProperties
+                {
+                    AllowRefresh = true
+                };
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity),
+                properties
+            );
+
+
+            // ==========================================
+            // MENSAJE DE ÉXITO
+            // ==========================================
+
+            TempData["MensajeOk"] =
+                "Perfil actualizado correctamente.";
+
+            return RedirectToAction(
+                "PerfilPersonal",
+                "Login"
+            );
         }
         [HttpPost]
         public async Task<IActionResult> EnviarCodigoPerfil(string correo)

@@ -14,6 +14,8 @@ using System.Net.Mail;
     using trabajo.Models;
     using trabajo.Models.ViewModels;
     using trabajo.Service;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace trabajo.Controllers
     {
@@ -4711,8 +4713,10 @@ $"La notificación fue enviada correctamente a {usuario.Nombre} {usuario.Apellid
             }
             [HttpPost]
             [ValidateAntiForgeryToken]
-            public IActionResult ActualizarPerfil(Usuario usuario, string? ConfirmarClave)
-            {
+        public async Task<IActionResult> ActualizarPerfil(
+    Usuario usuario,
+    string? ConfirmarClave)
+        {
                 var correoAdmin =
                     User.FindFirst(ClaimTypes.Email)?.Value ??
                     User.FindFirst("Correo")?.Value ??
@@ -4777,19 +4781,96 @@ $"La notificación fue enviada correctamente a {usuario.Nombre} {usuario.Apellid
                     admin.clave = utilidades.EncriptarClave(usuario.clave);
                 }
 
-                _context.SaveChanges();
+            // ==========================================
+            // GUARDAR CAMBIOS EN LA BASE DE DATOS
+            // ==========================================
 
-                if (cambios.Any())
+            await _context.SaveChangesAsync();
+
+
+            // ==========================================
+            // ACTUALIZAR COOKIE DEL ADMINISTRADOR
+            // ==========================================
+
+            var claims = new List<Claim>
+{
+    new Claim(
+        ClaimTypes.Name,
+        admin.Nombre ?? ""
+    ),
+
+    new Claim(
+        "Apellido",
+        admin.Apellido ?? ""
+    ),
+
+    new Claim(
+        "Dni",
+        admin.Dni ?? ""
+    ),
+
+    new Claim(
+        "Celular",
+        admin.Celular ?? ""
+    ),
+
+    new Claim(
+        "Correo",
+        admin.Correo ?? ""
+    ),
+
+    new Claim(
+        ClaimTypes.Role,
+        admin.Rol ?? "Administrador"
+    )
+};
+
+
+            var identity =
+                new ClaimsIdentity(
+                    claims,
+                    CookieAuthenticationDefaults.AuthenticationScheme
+                );
+
+
+            var properties =
+                new AuthenticationProperties
                 {
-                    RegistrarActividadAdmin(
-                        "Perfil actualizado",
-                        string.Join(" ", cambios)
-                    );
-                }
+                    AllowRefresh = true
+                };
 
-                TempData["MensajeOk"] = "Perfil actualizado correctamente.";
-                return RedirectToAction("PerfilAdministrador");
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(identity),
+                properties
+            );
+
+
+            // ==========================================
+            // REGISTRAR ACTIVIDAD
+            // ==========================================
+
+            if (cambios.Any())
+            {
+                RegistrarActividadAdmin(
+                    "Perfil actualizado",
+                    string.Join(" ", cambios)
+                );
             }
+
+
+            // ==========================================
+            // MENSAJE
+            // ==========================================
+
+            TempData["MensajeOk"] =
+                "Perfil actualizado correctamente.";
+
+            return RedirectToAction(
+                "PerfilAdministrador"
+            );
+        }
             [HttpPost]
             public JsonResult ActualizarPreferenciasNotificaciones(
         bool notificacionCorreo,

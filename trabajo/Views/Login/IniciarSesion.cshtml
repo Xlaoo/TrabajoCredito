@@ -896,11 +896,13 @@
                         <div class="seguridad-voz-box">
 
                             <p style="font-weight:700;color:#3c096c;">
-                                🎙️ Di la siguiente frase:
+                                🎙️ HABLA:
                             </p>
 
                             <div class="alert alert-light text-center">
-                                <strong>Mi voz protege mi cuenta</strong>
+                                <strong id="fraseVozMostrarLogin">
+                                    Tu frase de seguridad
+                                </strong>
                             </div>
 
                             <button type="button"
@@ -950,11 +952,11 @@
                         <div class="seguridad-voz-box">
 
                             <p style="font-weight:700;color:#3c096c;">
-                                🎙️ Di la siguiente frase:
+                                🎙️ HABLA:
                             </p>
 
                             <div class="alert alert-light text-center">
-                                <strong>Mi voz protege mi cuenta</strong>
+                                <strong>Di tu palabra clave</strong>
                             </div>
 
                             <button type="button"
@@ -2391,8 +2393,18 @@
                 });
 
                 const resultado = await respuesta.json();
-                        if (resultado.fraseVoz) {
+                                if (resultado.fraseVoz) {
+
             fraseVozBD = resultado.fraseVoz;
+
+            const textoFrase =
+                document.getElementById(
+                    "fraseVozMostrarLogin"
+                );
+
+            if (textoFrase) {
+                textoFrase.innerText = fraseVozBD;
+            }
 
             console.log(
                 "Frase de seguridad recibida desde BD:",
@@ -2490,9 +2502,47 @@
         if (opcionAplicacion) {
             opcionAplicacion.style.display = "flex";
         }
+                       // ==========================================
+        // LIMPIAR BLOQUEO VISUAL DE LA CUENTA ANTERIOR
+        // ==========================================
+
+        if (intervaloBloqueoVoz) {
+
+            clearInterval(
+                intervaloBloqueoVoz
+            );
+
+            intervaloBloqueoVoz = null;
+        }
+
 
         if (opcionVoz) {
+
             opcionVoz.style.display = "flex";
+
+            opcionVoz.style.opacity = "1";
+            opcionVoz.style.cursor = "pointer";
+            opcionVoz.style.pointerEvents = "auto";
+
+            opcionVoz.onclick = function () {
+                seleccionarMetodo("voz");
+            };
+
+
+            // ==========================================
+            // RESTAURAR TEXTO NORMAL
+            // ==========================================
+
+            const descripcionVoz =
+                opcionVoz.querySelector(
+                    ".opcion-contenido p"
+                );
+
+            if (descripcionVoz) {
+
+                descripcionVoz.innerText =
+                    "Habla tu palabra o frase de seguridad registrada.";
+            }
         }
 
 
@@ -2548,7 +2598,19 @@
         // ==========================================
 
         seleccionarMetodo("correo");
+                // ==========================================
+        // APLICAR BLOQUEO SOLO A ESTA CUENTA
+        // ==========================================
 
+        if (
+            resultado.vozBloqueada === true &&
+            resultado.segundosBloqueoVoz > 0
+        ) {
+
+            bloquearOpcionVoz(
+                resultado.segundosBloqueoVoz
+            );
+        }
         
 
 
@@ -2666,11 +2728,16 @@
                 // PEDIR MICRÓFONO
                 // ==========================================
 
-                const stream =
-                    await navigator.mediaDevices
-                        .getUserMedia({
-                            audio: true
-                        });
+                        const stream =
+            await navigator.mediaDevices
+                .getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        channelCount: 1
+                    }
+                });
 
 
                 // ==========================================
@@ -3580,10 +3647,15 @@ console.log(
                 // ACCEDER AL MICRÓFONO
                 // ==========================================
 
-                const stream =
-                    await navigator.mediaDevices.getUserMedia({
-                        audio: true
-                    });
+                        const stream =
+            await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    channelCount: 1
+                }
+            });
 
 
                 // ==========================================
@@ -3706,8 +3778,8 @@ console.log(
                     "🎙️ Escuchando...";
 
 
-                estado.innerText =
-                    "🔴 Di: Mi voz protege mi cuenta";
+                                estado.innerText =
+            "🔴 Di tu palabra clave";
 
 
                 // ==========================================
