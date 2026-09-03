@@ -1561,49 +1561,599 @@ namespace trabajo.Controllers
         [AllowAnonymous]
         public IActionResult OlvideContrasena()
         {
+            bool validado =
+                HttpContext.Session.GetString(
+                    "RecuperacionValidada"
+                ) == "true";
+
+            ViewBag.RecuperacionValidada = validado;
+
+            if (validado)
+            {
+                ViewBag.DniRecuperacion =
+                    HttpContext.Session.GetString(
+                        "RecuperacionDni"
+                    );
+
+                ViewBag.CorreoRecuperacion =
+                    HttpContext.Session.GetString(
+                        "RecuperacionCorreo"
+                    );
+            }
+
             return View();
         }
 
+
+        // ==========================================
+        // SOLICITAR RECUPERACIÓN
+        // ==========================================
+
         [HttpPost]
         [AllowAnonymous]
-        public IActionResult OlvideContrasena(string dni, string nuevaClave, string confirmarClave)
+        public async Task<IActionResult> SolicitarRecuperacion(
+            string dni,
+            string correo)
         {
-            if (string.IsNullOrWhiteSpace(dni) || !Regex.IsMatch(dni, @"^\d{8}$"))
+            try
             {
-                ViewData["Mensaje"] = "El DNI debe tener exactamente 8 números.";
-                return View();
+                // ==========================================
+                // VALIDAR DNI
+                // ==========================================
+
+                if (string.IsNullOrWhiteSpace(dni) ||
+                    !Regex.IsMatch(dni, @"^\d{8}$"))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "El DNI debe tener exactamente 8 números."
+                    });
+                }
+
+                // ==========================================
+                // VALIDAR CORREO
+                // ==========================================
+
+                if (string.IsNullOrWhiteSpace(correo) ||
+                    !Regex.IsMatch(
+                        correo,
+                        @"^[A-Za-z0-9._%+-]+@gmail\.com$"))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "Ingresa un correo Gmail válido."
+                    });
+                }
+
+                correo =
+                    correo.Trim().ToLowerInvariant();
+
+                // ==========================================
+                // BUSCAR DNI + CORREO
+                // ==========================================
+
+                Usuario usuario =
+                    _Context.Usuario.FirstOrDefault(
+                        x =>
+                            x.Dni == dni &&
+                            x.Correo.ToLower() == correo
+                    );
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "El DNI y el correo no corresponden a la misma cuenta."
+                    });
+                }
+
+                // ==========================================
+                // GENERAR TOKEN SEGURO
+                // ==========================================
+
+                string token =
+                    Convert.ToHexString(
+                        RandomNumberGenerator.GetBytes(32)
+                    );
+
+                long expiracion =
+                    DateTimeOffset.UtcNow
+                        .AddMinutes(10)
+                        .ToUnixTimeSeconds();
+
+                // ==========================================
+                // GUARDAR TEMPORALMENTE EN SESSION
+                // ==========================================
+
+                HttpContext.Session.SetString(
+                    "RecuperacionToken",
+                    token
+                );
+
+                HttpContext.Session.SetString(
+                    "RecuperacionDni",
+                    usuario.Dni
+                );
+
+                HttpContext.Session.SetString(
+                    "RecuperacionCorreo",
+                    usuario.Correo
+                );
+
+                HttpContext.Session.SetString(
+                    "RecuperacionExpira",
+                    expiracion.ToString()
+                );
+
+                HttpContext.Session.Remove(
+                    "RecuperacionValidada"
+                );
+
+                // ==========================================
+                // CREAR ENLACE
+                // ==========================================
+
+                string baseUrl =
+                    $"{Request.Scheme}://{Request.Host}";
+
+                string enlace =
+                    $"{baseUrl}/Login/ValidarRecuperacion?token={token}";
+
+                // ==========================================
+                // DISEÑO DEL CORREO CREDIPLUS
+                // ==========================================
+
+                string cuerpoHtml = $@"
+<div style='
+    background:#f4f6fb;
+    padding:40px 15px;
+    font-family:Arial,sans-serif;
+'>
+
+    <div style='
+        max-width:600px;
+        margin:auto;
+        background:white;
+        border-radius:20px;
+        overflow:hidden;
+        box-shadow:0 10px 30px rgba(0,0,0,.12);
+    '>
+
+        <div style='
+            background:linear-gradient(135deg,#4361ee,#7209b7);
+            color:white;
+            padding:30px;
+            text-align:center;
+        '>
+            <div style='font-size:36px;'>💳</div>
+
+            <h1 style='
+                margin:10px 0 0;
+                font-size:28px;
+            '>
+                CrediPlus
+            </h1>
+
+            <p style='
+                margin:5px 0 0;
+                opacity:.9;
+            '>
+                Seguridad de tu cuenta
+            </p>
+        </div>
+
+        <div style='padding:35px;'>
+
+            <h2 style='
+                color:#4c1d95;
+                margin-top:0;
+            '>
+                Recuperación de contraseña
+            </h2>
+
+            <p style='
+                color:#475569;
+                font-size:16px;
+                line-height:1.6;
+            '>
+                Hola {usuario.Nombre},
+            </p>
+
+            <p style='
+                color:#475569;
+                font-size:16px;
+                line-height:1.6;
+            '>
+                Recibimos una solicitud para cambiar
+                la contraseña de tu cuenta CrediPlus.
+            </p>
+
+            <p style='
+                color:#475569;
+                font-size:16px;
+                line-height:1.6;
+            '>
+                Para confirmar que realmente eres tú,
+                presiona el siguiente botón:
+            </p>
+
+            <div style='
+                text-align:center;
+                margin:30px 0;
+            '>
+
+                <a href='{enlace}'
+                   style='
+                       display:inline-block;
+                       padding:16px 30px;
+                       background:linear-gradient(135deg,#4361ee,#7209b7);
+                       color:white;
+                       text-decoration:none;
+                       border-radius:12px;
+                       font-weight:bold;
+                       font-size:16px;
+                   '>
+                    🔐 Validar recuperación
+                </a>
+
+            </div>
+
+            <div style='
+                background:#fff7ed;
+                border-left:4px solid #f59e0b;
+                padding:15px;
+                border-radius:8px;
+                color:#92400e;
+                font-size:14px;
+            '>
+                Este enlace será válido durante
+                10 minutos.
+            </div>
+
+            <p style='
+                margin-top:25px;
+                color:#64748b;
+                font-size:14px;
+                line-height:1.6;
+            '>
+                Si tú no solicitaste este cambio,
+                puedes ignorar este mensaje.
+                Tu contraseña actual seguirá funcionando.
+            </p>
+
+        </div>
+
+        <div style='
+            background:#f8fafc;
+            padding:20px;
+            text-align:center;
+            color:#94a3b8;
+            font-size:13px;
+        '>
+            © {DateTime.Now.Year} CrediPlus
+            <br>
+            Protegemos la seguridad de tu cuenta.
+        </div>
+
+    </div>
+
+</div>
+";
+
+                // ==========================================
+                // ENVIAR CORREO
+                // ==========================================
+
+                await _emailService.EnviarCorreoAsync(
+                    usuario.Correo,
+                    "Recuperación de contraseña - CrediPlus",
+                    cuerpoHtml
+                );
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje =
+                        "Te enviamos un enlace de validación a tu correo. Revisa tu bandeja de entrada."
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR RECUPERACIÓN: " +
+                    ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo enviar el correo de recuperación."
+                });
+            }
+        }
+
+
+        // ==========================================
+        // VALIDAR BOTÓN DEL CORREO
+        // ==========================================
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ValidarRecuperacion(
+            string token)
+        {
+            string tokenGuardado =
+                HttpContext.Session.GetString(
+                    "RecuperacionToken"
+                );
+
+            string expiracionTexto =
+                HttpContext.Session.GetString(
+                    "RecuperacionExpira"
+                );
+
+            // ==========================================
+            // COMPROBAR TOKEN
+            // ==========================================
+
+            if (string.IsNullOrWhiteSpace(token) ||
+                string.IsNullOrWhiteSpace(tokenGuardado))
+            {
+                TempData["RecuperacionError"] =
+                    "El enlace de recuperación no es válido.";
+
+                return RedirectToAction(
+                    "OlvideContrasena"
+                );
             }
 
-            if (!Regex.IsMatch(nuevaClave, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$"))
+            // ==========================================
+            // COMPROBAR EXPIRACIÓN
+            // ==========================================
+
+            if (!long.TryParse(
+                    expiracionTexto,
+                    out long expiracion))
             {
-                ViewData["Mensaje"] = "La contraseña debe tener mínimo 6 caracteres, una mayúscula, una minúscula y un número.";
-                return View();
+                TempData["RecuperacionError"] =
+                    "El enlace de recuperación no es válido.";
+
+                return RedirectToAction(
+                    "OlvideContrasena"
+                );
             }
+
+            long ahora =
+                DateTimeOffset.UtcNow
+                    .ToUnixTimeSeconds();
+
+            if (ahora >= expiracion)
+            {
+                HttpContext.Session.Remove(
+                    "RecuperacionToken"
+                );
+
+                HttpContext.Session.Remove(
+                    "RecuperacionExpira"
+                );
+
+                TempData["RecuperacionError"] =
+                    "El enlace de recuperación ha expirado. Solicita uno nuevo.";
+
+                return RedirectToAction(
+                    "OlvideContrasena"
+                );
+            }
+
+            // ==========================================
+            // TOKEN INCORRECTO
+            // ==========================================
+
+            if (!string.Equals(
+                    token,
+                    tokenGuardado,
+                    StringComparison.Ordinal))
+            {
+                TempData["RecuperacionError"] =
+                    "El enlace de recuperación no es válido.";
+
+                return RedirectToAction(
+                    "OlvideContrasena"
+                );
+            }
+
+            // ==========================================
+            // VALIDACIÓN CORRECTA
+            // ==========================================
+
+            HttpContext.Session.SetString(
+                "RecuperacionValidada",
+                "true"
+            );
+
+            // El token ya no puede volver a utilizarse
+            HttpContext.Session.Remove(
+                "RecuperacionToken"
+            );
+
+            HttpContext.Session.Remove(
+                "RecuperacionExpira"
+            );
+
+            TempData["MostrarModalRecuperacion"] = "true";
+
+            return RedirectToAction(
+                "OlvideContrasena"
+            );
+        }
+
+
+        // ==========================================
+        // CAMBIAR CONTRASEÑA DESPUÉS DE VALIDAR
+        // ==========================================
+
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult CambiarContrasenaRecuperada(
+            string nuevaClave,
+            string confirmarClave)
+        {
+            // ==========================================
+            // COMPROBAR QUE VALIDÓ EL CORREO
+            // ==========================================
+
+            bool validado =
+                HttpContext.Session.GetString(
+                    "RecuperacionValidada"
+                ) == "true";
+
+            if (!validado)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "Primero debes validar la recuperación desde tu correo."
+                });
+            }
+
+            string dni =
+                HttpContext.Session.GetString(
+                    "RecuperacionDni"
+                );
+
+            if (string.IsNullOrWhiteSpace(dni))
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "La sesión de recuperación ha expirado."
+                });
+            }
+
+            // ==========================================
+            // VALIDAR CONTRASEÑA
+            // ==========================================
+
+            if (string.IsNullOrWhiteSpace(nuevaClave) ||
+                !Regex.IsMatch(
+                    nuevaClave,
+                    @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$"))
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "La contraseña debe tener mínimo 6 caracteres, una mayúscula, una minúscula y un número."
+                });
+            }
+
+            // ==========================================
+            // CONFIRMAR CONTRASEÑA
+            // ==========================================
 
             if (nuevaClave != confirmarClave)
             {
-                ViewData["Mensaje"] = "Las contraseñas no coinciden.";
-                return View();
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "Las contraseñas no coinciden."
+                });
             }
 
-            Usuario usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+            // ==========================================
+            // BUSCAR USUARIO
+            // ==========================================
+
+            Usuario usuario =
+                _Context.Usuario.FirstOrDefault(
+                    x => x.Dni == dni
+                );
 
             if (usuario == null)
             {
-                ViewData["Mensaje"] = "No existe un usuario con ese DNI.";
-                return View();
-            }
-            if (usuario.clave == utilidades.EncriptarClave(nuevaClave))
-            {
-                ViewData["Mensaje"] = "La nueva contraseña no puede ser igual a la contraseña actual.";
-                return View();
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se encontró la cuenta."
+                });
             }
 
-            usuario.clave = utilidades.EncriptarClave(nuevaClave);
+            // ==========================================
+            // NO PERMITIR MISMA CONTRASEÑA
+            // ==========================================
+
+            string nuevaClaveEncriptada =
+                utilidades.EncriptarClave(
+                    nuevaClave
+                );
+
+            if (usuario.clave ==
+                nuevaClaveEncriptada)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "La nueva contraseña no puede ser igual a la contraseña actual."
+                });
+            }
+
+            // ==========================================
+            // GUARDAR
+            // ==========================================
+
+            usuario.clave =
+                nuevaClaveEncriptada;
+
             _Context.SaveChanges();
 
-            TempData["Mensaje"] = "Contraseña actualizada correctamente";
-            return RedirectToAction("IniciarSesion", "Login");
+            // ==========================================
+            // BORRAR RECUPERACIÓN
+            // ==========================================
+
+            HttpContext.Session.Remove(
+                "RecuperacionValidada"
+            );
+
+            HttpContext.Session.Remove(
+                "RecuperacionDni"
+            );
+
+            HttpContext.Session.Remove(
+                "RecuperacionCorreo"
+            );
+
+            HttpContext.Session.Remove(
+                "RecuperacionToken"
+            );
+
+            HttpContext.Session.Remove(
+                "RecuperacionExpira"
+            );
+
+            return Json(new
+            {
+                ok = true,
+                mensaje =
+                    "Contraseña actualizada correctamente.",
+
+                redirectUrl =
+                    Url.Action(
+                        "IniciarSesion",
+                        "Login"
+                    )
+            });
         }
 
         [HttpPost]
