@@ -11,6 +11,7 @@ using trabajo.Models;
 using trabajo.Models.Patterns.Observer;
 using trabajo.Service;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.DataProtection;
 namespace trabajo.Controllers
 {
     [Authorize]
@@ -19,7 +20,7 @@ namespace trabajo.Controllers
         private readonly IusuarioServices _UsuarioService;
         private readonly UsuarioContext _Context;
         private readonly ServicioEmbeddingVoz _ServicioEmbeddingVoz;
-        
+        private readonly IDataProtector _protectorRecuperacion;
         private readonly EmailService _emailService = new EmailService();
         private static string codigoLogin = "";
         
@@ -32,11 +33,20 @@ namespace trabajo.Controllers
         // Hora en la que vence el código de inicio de sesión
         private static DateTime codigoLoginExpira = DateTime.MinValue;
 
-        public LoginController(IusuarioServices usuarioService, UsuarioContext context, ServicioEmbeddingVoz servicioEmbeddingVoz)
+        public LoginController(
+    IusuarioServices usuarioService,
+    UsuarioContext context,
+    ServicioEmbeddingVoz servicioEmbeddingVoz,
+    IDataProtectionProvider dataProtectionProvider)
         {
             _UsuarioService = usuarioService;
             _Context = context;
             _ServicioEmbeddingVoz = servicioEmbeddingVoz;
+
+            _protectorRecuperacion =
+                dataProtectionProvider.CreateProtector(
+                    "CrediPlus.RecuperacionPassword.v1"
+                );
         }
 
         [AllowAnonymous]
@@ -1654,59 +1664,56 @@ namespace trabajo.Controllers
                 }
 
                 // ==========================================
-                // GENERAR TOKEN SEGURO
+                // CREAR TOKEN AUTOCONTENIDO
                 // ==========================================
-
-                string token =
-                    Convert.ToHexString(
-                        RandomNumberGenerator.GetBytes(32)
-                    );
 
                 long expiracion =
                     DateTimeOffset.UtcNow
                         .AddMinutes(10)
                         .ToUnixTimeSeconds();
 
+                string datosToken =
+                    usuario.Dni +
+                    "|" +
+                    usuario.Correo +
+                    "|" +
+                    expiracion;
+
+                string tokenProtegido =
+                    _protectorRecuperacion.Protect(
+                        datosToken
+                    );
+
                 // ==========================================
-                // GUARDAR TEMPORALMENTE EN SESSION
+                // LIMPIAR RECUPERACIÓN ANTERIOR
                 // ==========================================
-
-                HttpContext.Session.SetString(
-                    "RecuperacionToken",
-                    token
-                );
-
-                HttpContext.Session.SetString(
-                    "RecuperacionDni",
-                    usuario.Dni
-                );
-
-                HttpContext.Session.SetString(
-                    "RecuperacionCorreo",
-                    usuario.Correo
-                );
-
-                HttpContext.Session.SetString(
-                    "RecuperacionExpira",
-                    expiracion.ToString()
-                );
 
                 HttpContext.Session.Remove(
                     "RecuperacionValidada"
                 );
 
+                HttpContext.Session.Remove(
+                    "RecuperacionDni"
+                );
+
+                HttpContext.Session.Remove(
+                    "RecuperacionCorreo"
+                );
+
                 // ==========================================
                 // CREAR ENLACE
+                // LOCALHOST O NORTHFLANK AUTOMÁTICAMENTE
                 // ==========================================
 
                 string baseUrl =
                     $"{Request.Scheme}://{Request.Host}";
 
                 string enlace =
-                    $"{baseUrl}/Login/ValidarRecuperacion?token={token}";
+                    $"{baseUrl}/Login/ValidarRecuperacion" +
+                    $"?token={Uri.EscapeDataString(tokenProtegido)}";
 
                 // ==========================================
-                // DISEÑO DEL CORREO CREDIPLUS
+                // DISEÑO DEL CORREO
                 // ==========================================
 
                 string cuerpoHtml = $@"
@@ -1731,7 +1738,10 @@ namespace trabajo.Controllers
             padding:30px;
             text-align:center;
         '>
-            <div style='font-size:36px;'>💳</div>
+
+            <div style='font-size:36px;'>
+                🔐
+            </div>
 
             <h1 style='
                 margin:10px 0 0;
@@ -1746,6 +1756,7 @@ namespace trabajo.Controllers
             '>
                 Seguridad de tu cuenta
             </p>
+
         </div>
 
         <div style='padding:35px;'>
@@ -1779,8 +1790,8 @@ namespace trabajo.Controllers
                 font-size:16px;
                 line-height:1.6;
             '>
-                Para confirmar que realmente eres tú,
-                presiona el siguiente botón:
+                Para confirmar tu identidad,
+                presiona el siguiente botón.
             </p>
 
             <div style='
@@ -1792,7 +1803,11 @@ namespace trabajo.Controllers
                    style='
                        display:inline-block;
                        padding:16px 30px;
-                       background:linear-gradient(135deg,#4361ee,#7209b7);
+                       background:linear-gradient(
+                           135deg,
+                           #4361ee,
+                           #7209b7
+                       );
                        color:white;
                        text-decoration:none;
                        border-radius:12px;
@@ -1823,8 +1838,8 @@ namespace trabajo.Controllers
                 line-height:1.6;
             '>
                 Si tú no solicitaste este cambio,
-                puedes ignorar este mensaje.
-                Tu contraseña actual seguirá funcionando.
+                ignora este mensaje.
+                Tu contraseña seguirá funcionando.
             </p>
 
         </div>
@@ -1845,10 +1860,6 @@ namespace trabajo.Controllers
 
 </div>
 ";
-
-                // ==========================================
-                // ENVIAR CORREO
-                // ==========================================
 
                 await _emailService.EnviarCorreoAsync(
                     usuario.Correo,
@@ -1879,7 +1890,6 @@ namespace trabajo.Controllers
             }
         }
 
-
         // ==========================================
         // VALIDAR BOTÓN DEL CORREO
         // ==========================================
@@ -1889,109 +1899,147 @@ namespace trabajo.Controllers
         public IActionResult ValidarRecuperacion(
             string token)
         {
-            string tokenGuardado =
-                HttpContext.Session.GetString(
-                    "RecuperacionToken"
-                );
-
-            string expiracionTexto =
-                HttpContext.Session.GetString(
-                    "RecuperacionExpira"
-                );
-
-            // ==========================================
-            // COMPROBAR TOKEN
-            // ==========================================
-
-            if (string.IsNullOrWhiteSpace(token) ||
-                string.IsNullOrWhiteSpace(tokenGuardado))
+            try
             {
-                TempData["RecuperacionError"] =
-                    "El enlace de recuperación no es válido.";
+                // ==========================================
+                // TOKEN VACÍO
+                // ==========================================
+
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    TempData["RecuperacionError"] =
+                        "El enlace de recuperación no es válido.";
+
+                    return RedirectToAction(
+                        "OlvideContrasena"
+                    );
+                }
+
+                // ==========================================
+                // DESPROTEGER TOKEN
+                // ==========================================
+
+                string datosToken =
+                    _protectorRecuperacion.Unprotect(
+                        token
+                    );
+
+                string[] partes =
+                    datosToken.Split('|');
+
+                if (partes.Length != 3)
+                {
+                    TempData["RecuperacionError"] =
+                        "El enlace de recuperación no es válido.";
+
+                    return RedirectToAction(
+                        "OlvideContrasena"
+                    );
+                }
+
+                string dni =
+                    partes[0];
+
+                string correo =
+                    partes[1];
+
+                // ==========================================
+                // LEER EXPIRACIÓN
+                // ==========================================
+
+                if (!long.TryParse(
+                        partes[2],
+                        out long expiracion))
+                {
+                    TempData["RecuperacionError"] =
+                        "El enlace de recuperación no es válido.";
+
+                    return RedirectToAction(
+                        "OlvideContrasena"
+                    );
+                }
+
+                long ahora =
+                    DateTimeOffset.UtcNow
+                        .ToUnixTimeSeconds();
+
+                // ==========================================
+                // ENLACE EXPIRADO
+                // ==========================================
+
+                if (ahora >= expiracion)
+                {
+                    TempData["RecuperacionError"] =
+                        "El enlace de recuperación ha expirado. Solicita uno nuevo.";
+
+                    return RedirectToAction(
+                        "OlvideContrasena"
+                    );
+                }
+
+                // ==========================================
+                // COMPROBAR QUE LA CUENTA SIGUE EXISTIENDO
+                // ==========================================
+
+                Usuario usuario =
+                    _Context.Usuario.FirstOrDefault(
+                        x =>
+                            x.Dni == dni &&
+                            x.Correo.ToLower() ==
+                            correo.ToLower()
+                    );
+
+                if (usuario == null)
+                {
+                    TempData["RecuperacionError"] =
+                        "La cuenta asociada a este enlace ya no es válida.";
+
+                    return RedirectToAction(
+                        "OlvideContrasena"
+                    );
+                }
+
+                // ==========================================
+                // VALIDACIÓN CORRECTA
+                // AHORA SE CREA LA SESIÓN EN EL DISPOSITIVO
+                // QUE ABRIÓ EL CORREO
+                // ==========================================
+
+                HttpContext.Session.SetString(
+                    "RecuperacionValidada",
+                    "true"
+                );
+
+                HttpContext.Session.SetString(
+                    "RecuperacionDni",
+                    usuario.Dni
+                );
+
+                HttpContext.Session.SetString(
+                    "RecuperacionCorreo",
+                    usuario.Correo
+                );
+
+                // Mostrar modal profesional
+                TempData["MostrarModalRecuperacion"] =
+                    "true";
 
                 return RedirectToAction(
                     "OlvideContrasena"
                 );
             }
-
-            // ==========================================
-            // COMPROBAR EXPIRACIÓN
-            // ==========================================
-
-            if (!long.TryParse(
-                    expiracionTexto,
-                    out long expiracion))
+            catch
             {
+                // Si alguien modifica el token,
+                // Data Protection no permitirá leerlo.
+
                 TempData["RecuperacionError"] =
-                    "El enlace de recuperación no es válido.";
+                    "El enlace de recuperación no es válido o ya no puede utilizarse.";
 
                 return RedirectToAction(
                     "OlvideContrasena"
                 );
             }
-
-            long ahora =
-                DateTimeOffset.UtcNow
-                    .ToUnixTimeSeconds();
-
-            if (ahora >= expiracion)
-            {
-                HttpContext.Session.Remove(
-                    "RecuperacionToken"
-                );
-
-                HttpContext.Session.Remove(
-                    "RecuperacionExpira"
-                );
-
-                TempData["RecuperacionError"] =
-                    "El enlace de recuperación ha expirado. Solicita uno nuevo.";
-
-                return RedirectToAction(
-                    "OlvideContrasena"
-                );
-            }
-
-            // ==========================================
-            // TOKEN INCORRECTO
-            // ==========================================
-
-            if (!string.Equals(
-                    token,
-                    tokenGuardado,
-                    StringComparison.Ordinal))
-            {
-                TempData["RecuperacionError"] =
-                    "El enlace de recuperación no es válido.";
-
-                return RedirectToAction(
-                    "OlvideContrasena"
-                );
-            }
-
-            // ==========================================
-            // VALIDACIÓN CORRECTA
-            // ==========================================
-
-            HttpContext.Session.SetString(
-                "RecuperacionValidada",
-                "true"
-            );
-
-            // El token ya no puede volver a utilizarse
-            HttpContext.Session.Remove(
-                "RecuperacionToken"
-            );
-
-            HttpContext.Session.Remove(
-                "RecuperacionExpira"
-            );
-
-            TempData["MostrarModalRecuperacion"] = "true";
-
-            return RedirectToAction(
-                "OlvideContrasena"
-            );
         }
 
 
@@ -2134,13 +2182,6 @@ namespace trabajo.Controllers
                 "RecuperacionCorreo"
             );
 
-            HttpContext.Session.Remove(
-                "RecuperacionToken"
-            );
-
-            HttpContext.Session.Remove(
-                "RecuperacionExpira"
-            );
 
             return Json(new
             {

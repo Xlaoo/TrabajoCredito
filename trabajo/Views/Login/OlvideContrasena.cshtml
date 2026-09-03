@@ -601,6 +601,23 @@
             font-size: 16px;
             background: linear-gradient( 135deg, #4361ee, #7209b7 );
         }
+
+        .btn-otra-cuenta {
+            width: 100%;
+            height: 52px;
+            margin-top: 12px;
+            border: 1px solid #6366f1;
+            border-radius: 14px;
+            background: white;
+            color: #4f46e5;
+            font-weight: bold;
+            font-size: 15px;
+            transition: .2s;
+        }
+
+            .btn-otra-cuenta:hover {
+                background: #eef2ff;
+            }
     </style>
 
 </head>
@@ -769,6 +786,15 @@
 
                     </button>
 
+                    <button id="btnOtraCuenta"
+                            type="button"
+                            class="btn-otra-cuenta"
+                            onclick="usarOtraCuenta()"
+                            style="display:none;">
+
+                        ↻ Usar otro DNI o correo
+
+                    </button>
                 </div>
 
 
@@ -1167,7 +1193,9 @@
                 boton.innerHTML =
                     "✓ Enlace enviado";
 
-
+                        document.getElementById(
+            "btnOtraCuenta"
+        ).style.display = "block";
                 // No habilitamos contraseña aquí.
                 // ÚNICAMENTE se habilita cuando
                 // el usuario presiona el botón
@@ -1189,7 +1217,61 @@
                     textoOriginal;
             }
         }
+                function usarOtraCuenta() {
 
+            const dni =
+                document.getElementById(
+                    "dniRecuperar"
+                );
+
+            const correo =
+                document.getElementById(
+                    "correoRecuperar"
+                );
+
+            const botonEnviar =
+                document.getElementById(
+                    "btnEnviarRecuperacion"
+                );
+
+            const botonOtraCuenta =
+                document.getElementById(
+                    "btnOtraCuenta"
+                );
+
+            const mensaje =
+                document.getElementById(
+                    "mensajeRecuperacion"
+                );
+
+            // Desbloquear campos
+            dni.readOnly = false;
+            correo.readOnly = false;
+
+            // Limpiar datos anteriores
+            dni.value = "";
+            correo.value = "";
+
+            // Restaurar botón principal
+            botonEnviar.disabled = false;
+
+            botonEnviar.innerHTML =
+                "📩 Enviar enlace de recuperación";
+
+            // Ocultar botón de otra cuenta
+            botonOtraCuenta.style.display =
+                "none";
+
+            // Limpiar mensaje anterior
+            mensaje.style.display =
+                "none";
+
+            mensaje.innerHTML =
+                "";
+
+            // Volver al DNI
+            dni.focus();
+        }
 
 
         // ==========================================
