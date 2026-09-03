@@ -10,8 +10,8 @@ using System.Text.RegularExpressions;
 using trabajo.Models;
 using trabajo.Models.Patterns.Observer;
 using trabajo.Service;
+using System.Text;
 using System.Security.Cryptography;
-using Microsoft.AspNetCore.DataProtection;
 namespace trabajo.Controllers
 {
     [Authorize]
@@ -20,10 +20,18 @@ namespace trabajo.Controllers
         private readonly IusuarioServices _UsuarioService;
         private readonly UsuarioContext _Context;
         private readonly ServicioEmbeddingVoz _ServicioEmbeddingVoz;
-        private readonly IDataProtector _protectorRecuperacion;
         private readonly EmailService _emailService = new EmailService();
         private static string codigoLogin = "";
-        
+        // ==========================================
+        // RECUPERACIÓN DE CONTRASEÑA
+        // ==========================================
+
+        private static readonly Dictionary<string, string>
+            codigosRecuperacion = new();
+
+        private static readonly Dictionary<string, DateTime>
+            expiracionesRecuperacion = new();
+
         // ==========================================
         // SEGURIDAD - INTENTOS DE VOZ
         // ==========================================
@@ -33,20 +41,18 @@ namespace trabajo.Controllers
         // Hora en la que vence el código de inicio de sesión
         private static DateTime codigoLoginExpira = DateTime.MinValue;
 
+        private readonly IConfiguration _configuration;
+
         public LoginController(
-    IusuarioServices usuarioService,
-    UsuarioContext context,
-    ServicioEmbeddingVoz servicioEmbeddingVoz,
-    IDataProtectionProvider dataProtectionProvider)
+            IusuarioServices usuarioService,
+            UsuarioContext context,
+            ServicioEmbeddingVoz servicioEmbeddingVoz,
+            IConfiguration configuration)
         {
             _UsuarioService = usuarioService;
             _Context = context;
             _ServicioEmbeddingVoz = servicioEmbeddingVoz;
-
-            _protectorRecuperacion =
-                dataProtectionProvider.CreateProtector(
-                    "CrediPlus.RecuperacionPassword.v1"
-                );
+            _configuration = configuration;
         }
 
         [AllowAnonymous]
@@ -1598,7 +1604,6 @@ namespace trabajo.Controllers
         // ==========================================
         // SOLICITAR RECUPERACIÓN
         // ==========================================
-
         [HttpPost]
         [AllowAnonymous]
         public async Task<IActionResult> SolicitarRecuperacion(
@@ -1643,7 +1648,7 @@ namespace trabajo.Controllers
                     correo.Trim().ToLowerInvariant();
 
                 // ==========================================
-                // BUSCAR DNI + CORREO
+                // BUSCAR USUARIO
                 // ==========================================
 
                 Usuario usuario =
@@ -1664,28 +1669,91 @@ namespace trabajo.Controllers
                 }
 
                 // ==========================================
-                // CREAR TOKEN AUTOCONTENIDO
+                // CLAVE ÚNICA DNI + CORREO
                 // ==========================================
 
-                long expiracion =
-                    DateTimeOffset.UtcNow
-                        .AddMinutes(10)
-                        .ToUnixTimeSeconds();
-
-                string datosToken =
-                    usuario.Dni +
-                    "|" +
-                    usuario.Correo +
-                    "|" +
-                    expiracion;
-
-                string tokenProtegido =
-                    _protectorRecuperacion.Protect(
-                        datosToken
-                    );
+                string claveRecuperacion =
+                    dni + "|" + correo;
 
                 // ==========================================
-                // LIMPIAR RECUPERACIÓN ANTERIOR
+                // VERIFICAR SI YA HAY CÓDIGO VIGENTE
+                // ==========================================
+
+                if (
+                    expiracionesRecuperacion
+                        .TryGetValue(
+                            claveRecuperacion,
+                            out DateTime expiracionActual
+                        )
+                    &&
+                    DateTime.UtcNow < expiracionActual
+                )
+                {
+                    int segundosRestantes =
+                        (int)Math.Ceiling(
+                            (
+                                expiracionActual -
+                                DateTime.UtcNow
+                            ).TotalSeconds
+                        );
+
+                    return Json(new
+                    {
+                        ok = false,
+                        esperando = true,
+                        segundosRestantes =
+                            segundosRestantes,
+
+                        mensaje =
+                            $"Ya enviamos un código. Espera {segundosRestantes} segundos para solicitar otro."
+                    });
+                }
+
+                // ==========================================
+                // GENERAR CÓDIGO RANDOM
+                // ==========================================
+
+                const string caracteres =
+                    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+                char[] codigoArray =
+                    new char[6];
+
+                for (int i = 0; i < 6; i++)
+                {
+                    int posicion =
+                        RandomNumberGenerator.GetInt32(
+                            caracteres.Length
+                        );
+
+                    codigoArray[i] =
+                        caracteres[posicion];
+                }
+
+                string codigo =
+                    new string(codigoArray);
+
+                // ==========================================
+                // EXPIRACIÓN: 1 MINUTO
+                // ==========================================
+
+                DateTime expiracion =
+                    DateTime.UtcNow.AddMinutes(1);
+
+                // ==========================================
+                // GUARDAR CÓDIGO TEMPORALMENTE
+                // ==========================================
+
+                codigosRecuperacion[
+                    claveRecuperacion
+                ] = codigo;
+
+                expiracionesRecuperacion[
+                    claveRecuperacion
+                ] = expiracion;
+
+                // ==========================================
+                // LIMPIAR VALIDACIÓN ANTERIOR
                 // ==========================================
 
                 HttpContext.Session.Remove(
@@ -1701,146 +1769,141 @@ namespace trabajo.Controllers
                 );
 
                 // ==========================================
-                // CREAR ENLACE
-                // LOCALHOST O NORTHFLANK AUTOMÁTICAMENTE
-                // ==========================================
-
-                string baseUrl =
-                    $"{Request.Scheme}://{Request.Host}";
-
-                string enlace =
-                    $"{baseUrl}/Login/ValidarRecuperacion" +
-                    $"?token={Uri.EscapeDataString(tokenProtegido)}";
-
-                // ==========================================
-                // DISEÑO DEL CORREO
+                // CORREO PROFESIONAL
                 // ==========================================
 
                 string cuerpoHtml = $@"
 <div style='
-    background:#f4f6fb;
+    margin:0;
     padding:40px 15px;
-    font-family:Arial,sans-serif;
+    background:#f1f5f9;
+    font-family:Arial,Helvetica,sans-serif;
 '>
 
     <div style='
         max-width:600px;
         margin:auto;
         background:white;
-        border-radius:20px;
+        border-radius:22px;
         overflow:hidden;
-        box-shadow:0 10px 30px rgba(0,0,0,.12);
+        box-shadow:0 15px 40px rgba(15,23,42,.12);
     '>
 
         <div style='
-            background:linear-gradient(135deg,#4361ee,#7209b7);
-            color:white;
-            padding:30px;
+            padding:32px;
             text-align:center;
+            color:white;
+            background:linear-gradient(
+                135deg,
+                #4361ee,
+                #7209b7
+            );
         '>
 
-            <div style='font-size:36px;'>
+            <div style='font-size:42px;'>
                 🔐
             </div>
 
-            <h1 style='
-                margin:10px 0 0;
-                font-size:28px;
+            <div style='
+                font-size:30px;
+                font-weight:700;
+                margin-top:8px;
             '>
                 CrediPlus
-            </h1>
+            </div>
 
-            <p style='
-                margin:5px 0 0;
+            <div style='
+                font-size:15px;
+                margin-top:6px;
                 opacity:.9;
             '>
-                Seguridad de tu cuenta
-            </p>
+                Recuperación segura de contraseña
+            </div>
 
         </div>
 
-        <div style='padding:35px;'>
+        <div style='
+            padding:38px 35px;
+        '>
 
             <h2 style='
-                color:#4c1d95;
+                color:#312e81;
                 margin-top:0;
             '>
-                Recuperación de contraseña
+                Código de verificación
             </h2>
 
             <p style='
                 color:#475569;
                 font-size:16px;
-                line-height:1.6;
+                line-height:1.7;
             '>
-                Hola {usuario.Nombre},
+                Hola <strong>{usuario.Nombre}</strong>,
             </p>
 
             <p style='
                 color:#475569;
                 font-size:16px;
-                line-height:1.6;
+                line-height:1.7;
             '>
-                Recibimos una solicitud para cambiar
-                la contraseña de tu cuenta CrediPlus.
-            </p>
-
-            <p style='
-                color:#475569;
-                font-size:16px;
-                line-height:1.6;
-            '>
-                Para confirmar tu identidad,
-                presiona el siguiente botón.
+                Usa el siguiente código para continuar
+                con la recuperación de tu contraseña.
             </p>
 
             <div style='
-                text-align:center;
                 margin:30px 0;
+                padding:26px 15px;
+                text-align:center;
+                border-radius:16px;
+                background:#eef2ff;
+                border:1px solid #c7d2fe;
             '>
 
-                <a href='{enlace}'
-                   style='
-                       display:inline-block;
-                       padding:16px 30px;
-                       background:linear-gradient(
-                           135deg,
-                           #4361ee,
-                           #7209b7
-                       );
-                       color:white;
-                       text-decoration:none;
-                       border-radius:12px;
-                       font-weight:bold;
-                       font-size:16px;
-                   '>
-                    🔐 Validar recuperación
-                </a>
+                <div style='
+                    color:#64748b;
+                    font-size:13px;
+                    font-weight:bold;
+                    margin-bottom:12px;
+                '>
+                    CÓDIGO DE SEGURIDAD
+                </div>
+
+                <div style='
+                    color:#4c1d95;
+                    font-size:38px;
+                    font-weight:800;
+                    letter-spacing:10px;
+                '>
+                    {codigo}
+                </div>
 
             </div>
 
             <div style='
                 background:#fff7ed;
                 border-left:4px solid #f59e0b;
-                padding:15px;
+                padding:15px 17px;
                 border-radius:8px;
                 color:#92400e;
                 font-size:14px;
-            '>
-                Este enlace será válido durante
-                10 minutos.
-            </div>
-
-            <p style='
-                margin-top:25px;
-                color:#64748b;
-                font-size:14px;
                 line-height:1.6;
             '>
-                Si tú no solicitaste este cambio,
-                ignora este mensaje.
-                Tu contraseña seguirá funcionando.
-            </p>
+                ⏱ Este código es válido durante
+                <strong>1 minuto</strong>.
+                Cuando expire tendrás que solicitar uno nuevo.
+            </div>
+
+            <div style='
+                margin-top:22px;
+                background:#f8fafc;
+                padding:16px;
+                border-radius:10px;
+                color:#64748b;
+                font-size:13px;
+                line-height:1.6;
+            '>
+                🔒 No compartas este código con ninguna persona.
+            </div>
 
         </div>
 
@@ -1849,29 +1912,34 @@ namespace trabajo.Controllers
             padding:20px;
             text-align:center;
             color:#94a3b8;
-            font-size:13px;
+            font-size:12px;
         '>
             © {DateTime.Now.Year} CrediPlus
             <br>
-            Protegemos la seguridad de tu cuenta.
+            Seguridad de tu cuenta
         </div>
 
     </div>
+</div>";
 
-</div>
-";
+                // ==========================================
+                // ENVIAR CORREO
+                // ==========================================
 
                 await _emailService.EnviarCorreoAsync(
                     usuario.Correo,
-                    "Recuperación de contraseña - CrediPlus",
+                    "Código de recuperación - CrediPlus",
                     cuerpoHtml
                 );
 
                 return Json(new
                 {
                     ok = true,
+
                     mensaje =
-                        "Te enviamos un enlace de validación a tu correo. Revisa tu bandeja de entrada."
+                        "Código enviado correctamente. Tienes 1 minuto para utilizarlo.",
+
+                    segundos = 60
                 });
             }
             catch (Exception ex)
@@ -1885,7 +1953,7 @@ namespace trabajo.Controllers
                 {
                     ok = false,
                     mensaje =
-                        "No se pudo enviar el correo de recuperación."
+                        "No se pudo enviar el código de recuperación."
                 });
             }
         }
@@ -1893,116 +1961,156 @@ namespace trabajo.Controllers
         // ==========================================
         // VALIDAR BOTÓN DEL CORREO
         // ==========================================
-
-        [HttpGet]
+        [HttpPost]
         [AllowAnonymous]
-        public IActionResult ValidarRecuperacion(
-            string token)
+        public IActionResult VerificarCodigoRecuperacion(
+            string dni,
+            string correo,
+            string codigo)
         {
             try
             {
                 // ==========================================
-                // TOKEN VACÍO
+                // VALIDACIONES
                 // ==========================================
 
-                if (string.IsNullOrWhiteSpace(token))
+                if (string.IsNullOrWhiteSpace(dni) ||
+                    !Regex.IsMatch(dni, @"^\d{8}$"))
                 {
-                    TempData["RecuperacionError"] =
-                        "El enlace de recuperación no es válido.";
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "El DNI no es válido."
+                    });
+                }
 
-                    return RedirectToAction(
-                        "OlvideContrasena"
-                    );
+                if (string.IsNullOrWhiteSpace(correo))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "El correo es obligatorio."
+                    });
+                }
+
+                correo =
+                    correo.Trim().ToLowerInvariant();
+
+                codigo =
+                    (codigo ?? "")
+                        .Trim()
+                        .ToUpperInvariant();
+
+                if (!Regex.IsMatch(
+                        codigo,
+                        @"^[A-Z0-9]{6}$"))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "El código debe tener exactamente 6 caracteres."
+                    });
                 }
 
                 // ==========================================
-                // DESPROTEGER TOKEN
-                // ==========================================
-
-                string datosToken =
-                    _protectorRecuperacion.Unprotect(
-                        token
-                    );
-
-                string[] partes =
-                    datosToken.Split('|');
-
-                if (partes.Length != 3)
-                {
-                    TempData["RecuperacionError"] =
-                        "El enlace de recuperación no es válido.";
-
-                    return RedirectToAction(
-                        "OlvideContrasena"
-                    );
-                }
-
-                string dni =
-                    partes[0];
-
-                string correo =
-                    partes[1];
-
-                // ==========================================
-                // LEER EXPIRACIÓN
-                // ==========================================
-
-                if (!long.TryParse(
-                        partes[2],
-                        out long expiracion))
-                {
-                    TempData["RecuperacionError"] =
-                        "El enlace de recuperación no es válido.";
-
-                    return RedirectToAction(
-                        "OlvideContrasena"
-                    );
-                }
-
-                long ahora =
-                    DateTimeOffset.UtcNow
-                        .ToUnixTimeSeconds();
-
-                // ==========================================
-                // ENLACE EXPIRADO
-                // ==========================================
-
-                if (ahora >= expiracion)
-                {
-                    TempData["RecuperacionError"] =
-                        "El enlace de recuperación ha expirado. Solicita uno nuevo.";
-
-                    return RedirectToAction(
-                        "OlvideContrasena"
-                    );
-                }
-
-                // ==========================================
-                // COMPROBAR QUE LA CUENTA SIGUE EXISTIENDO
+                // BUSCAR USUARIO
                 // ==========================================
 
                 Usuario usuario =
                     _Context.Usuario.FirstOrDefault(
                         x =>
                             x.Dni == dni &&
-                            x.Correo.ToLower() ==
-                            correo.ToLower()
+                            x.Correo.ToLower() == correo
                     );
 
                 if (usuario == null)
                 {
-                    TempData["RecuperacionError"] =
-                        "La cuenta asociada a este enlace ya no es válida.";
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se encontró una cuenta con esos datos."
+                    });
+                }
 
-                    return RedirectToAction(
-                        "OlvideContrasena"
-                    );
+                string claveRecuperacion =
+                    dni + "|" + correo;
+
+                // ==========================================
+                // VERIFICAR SI EXISTE CÓDIGO
+                // ==========================================
+
+                if (
+                    !codigosRecuperacion.TryGetValue(
+                        claveRecuperacion,
+                        out string codigoGuardado
+                    )
+                )
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = true,
+                        mensaje =
+                            "No existe un código activo. Solicita uno nuevo."
+                    });
                 }
 
                 // ==========================================
-                // VALIDACIÓN CORRECTA
-                // AHORA SE CREA LA SESIÓN EN EL DISPOSITIVO
-                // QUE ABRIÓ EL CORREO
+                // VERIFICAR EXPIRACIÓN
+                // ==========================================
+
+                if (
+                    !expiracionesRecuperacion.TryGetValue(
+                        claveRecuperacion,
+                        out DateTime expiracion
+                    )
+                    ||
+                    DateTime.UtcNow >= expiracion
+                )
+                {
+                    codigosRecuperacion.Remove(
+                        claveRecuperacion
+                    );
+
+                    expiracionesRecuperacion.Remove(
+                        claveRecuperacion
+                    );
+
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = true,
+
+                        mensaje =
+                            "El código ha expirado. Solicita un nuevo código."
+                    });
+                }
+
+                // ==========================================
+                // VERIFICAR CÓDIGO
+                // ==========================================
+
+                if (!string.Equals(
+                        codigo,
+                        codigoGuardado,
+                        StringComparison.Ordinal))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = false,
+
+                        mensaje =
+                            "El código de seguridad es incorrecto."
+                    });
+                }
+
+                // ==========================================
+                // CÓDIGO CORRECTO
                 // ==========================================
 
                 HttpContext.Session.SetString(
@@ -2020,25 +2128,48 @@ namespace trabajo.Controllers
                     usuario.Correo
                 );
 
-                // Mostrar modal profesional
+                // ==========================================
+                // ELIMINAR CÓDIGO YA UTILIZADO
+                // ==========================================
+
+                codigosRecuperacion.Remove(
+                    claveRecuperacion
+                );
+
+                expiracionesRecuperacion.Remove(
+                    claveRecuperacion
+                );
+
                 TempData["MostrarModalRecuperacion"] =
                     "true";
 
-                return RedirectToAction(
-                    "OlvideContrasena"
-                );
+                return Json(new
+                {
+                    ok = true,
+
+                    mensaje =
+                        "Identidad verificada correctamente.",
+
+                    redirectUrl =
+                        Url.Action(
+                            "OlvideContrasena",
+                            "Login"
+                        )
+                });
             }
-            catch
+            catch (Exception ex)
             {
-                // Si alguien modifica el token,
-                // Data Protection no permitirá leerlo.
-
-                TempData["RecuperacionError"] =
-                    "El enlace de recuperación no es válido o ya no puede utilizarse.";
-
-                return RedirectToAction(
-                    "OlvideContrasena"
+                Console.WriteLine(
+                    "ERROR VALIDANDO RECUPERACIÓN: " +
+                    ex
                 );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo verificar el código."
+                });
             }
         }
 
@@ -3886,6 +4017,87 @@ string titularCuenta
                     Math.Sqrt(normaRegistrada) *
                     Math.Sqrt(normaActual)
                 );
+        }
+        // ==========================================
+        // CÓDIGO SEGURO DE RECUPERACIÓN
+        // ==========================================
+
+        private string GenerarCodigoRecuperacion(
+            Usuario usuario,
+            long bloqueTiempo)
+        {
+            string secreto =
+                _configuration["RecoveryCodeSecret"];
+
+            if (string.IsNullOrWhiteSpace(secreto))
+            {
+                throw new InvalidOperationException(
+                    "RecoveryCodeSecret no está configurado."
+                );
+            }
+
+            string correoNormalizado =
+                usuario.Correo
+                    .Trim()
+                    .ToLowerInvariant();
+
+            // Al incluir la contraseña actual,
+            // el código deja de ser válido después
+            // de cambiar la contraseña.
+            string datos =
+                usuario.Dni +
+                "|" +
+                correoNormalizado +
+                "|" +
+                usuario.clave +
+                "|" +
+                bloqueTiempo;
+
+            using HMACSHA256 hmac =
+                new HMACSHA256(
+                    Encoding.UTF8.GetBytes(secreto)
+                );
+
+            byte[] hash =
+                hmac.ComputeHash(
+                    Encoding.UTF8.GetBytes(datos)
+                );
+
+            const string caracteres =
+                "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+            char[] codigo =
+                new char[6];
+
+            for (int i = 0; i < 6; i++)
+            {
+                codigo[i] =
+                    caracteres[
+                        hash[i] %
+                        caracteres.Length
+                    ];
+            }
+
+            return new string(codigo);
+        }
+
+
+        // ==========================================
+        // BLOQUE TEMPORAL DEL CÓDIGO
+        // ==========================================
+
+        private static long ObtenerBloqueRecuperacion()
+        {
+            // Bloques de 5 minutos.
+            // Se acepta el actual y el anterior.
+            // Así funciona aproximadamente
+            // durante 5 a 10 minutos.
+
+            long ahora =
+                DateTimeOffset.UtcNow
+                    .ToUnixTimeSeconds();
+
+            return ahora / 300;
         }
 
 

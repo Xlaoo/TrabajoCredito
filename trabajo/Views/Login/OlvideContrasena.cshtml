@@ -618,6 +618,81 @@
             .btn-otra-cuenta:hover {
                 background: #eef2ff;
             }
+
+        .zona-codigo {
+            margin-top: 22px;
+            padding: 22px;
+            background: rgba(255,255,255,.72);
+            border: 1px solid rgba(99,102,241,.20);
+            border-radius: 18px;
+            box-shadow: 0 10px 25px rgba(79,70,229,.08);
+        }
+
+        .codigo-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .codigo-icon {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #eef2ff;
+            color: #4f46e5;
+            font-size: 23px;
+        }
+
+        .codigo-titulo {
+            font-weight: 700;
+            color: #312e81;
+            font-size: 17px;
+        }
+
+        .codigo-subtitulo {
+            color: #64748b;
+            font-size: 13px;
+            margin-top: 3px;
+            line-height: 1.5;
+        }
+
+        .codigo-recuperacion-input {
+            width: 100%;
+            height: 68px;
+            border: 2px solid #c7d2fe;
+            border-radius: 15px;
+            background: white;
+            outline: none;
+            text-align: center;
+            text-transform: uppercase;
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 10px;
+            color: #312e81;
+            transition: .2s;
+        }
+
+            .codigo-recuperacion-input:focus {
+                border-color: #6366f1;
+                box-shadow: 0 0 0 4px rgba(99,102,241,.12);
+            }
+
+            .codigo-recuperacion-input::placeholder {
+                color: #cbd5e1;
+            }
+
+        .codigo-ayuda {
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
+            margin-top: 8px;
+            margin-bottom: 16px;
+        }
     </style>
 
 </head>
@@ -795,6 +870,84 @@
                         ↻ Usar otro DNI o correo
 
                     </button>
+                    <div id="zonaCodigoRecuperacion"
+                         class="zona-codigo"
+                         style="display:none;">
+
+                        <div class="codigo-header">
+
+                            <div class="codigo-icon">
+                                ✉
+                            </div>
+
+                            <div>
+                                <div class="codigo-titulo">
+                                    Verifica tu correo
+                                </div>
+
+                                <div class="codigo-subtitulo">
+                                    Ingresa el código de seguridad
+                                    de 6 caracteres que enviamos a tu correo.
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <label class="campo-label">
+                            Código de seguridad
+                        </label>
+
+                        <input id="codigoRecuperacion"
+                               class="codigo-recuperacion-input"
+                               type="text"
+                               maxlength="6"
+                               autocomplete="one-time-code"
+                               spellcheck="false"
+                               placeholder="A7K9Q2"
+                               oninput="
+                   this.value =
+                       this.value
+                           .toUpperCase()
+                           .replace(
+                               /[^A-Z0-9]/g,
+                               ''
+                           );
+               " />
+
+                        <div class="codigo-ayuda">
+
+                            El código contiene 6 letras mayúsculas
+                            y/o números.
+
+                            <div id="contadorCodigo"
+                                 style="
+                margin-top:8px;
+                font-weight:bold;
+                color:#4f46e5;
+             ">
+                                Código válido por 01:00
+                            </div>
+
+                        </div>
+
+                        <button id="btnVerificarCodigo"
+                                type="button"
+                                class="btn-enviar"
+                                onclick="verificarCodigoRecuperacion()">
+
+                            🔐 Verificar código
+
+                        </button>
+                        <button id="btnReenviarCodigo"
+                                type="button"
+                                class="btn-otra-cuenta"
+                                onclick="reenviarCodigoRecuperacion()"
+                                style="display:none;">
+
+                            🔄 Reenviar código
+
+                        </button>
+                    </div>
                 </div>
 
 
@@ -813,9 +966,9 @@
                         </div>
 
                         <div class="status-text">
-                            Revisa tu correo y presiona
-                            “Validar recuperación” para
-                            desbloquear el cambio de contraseña.
+                            Revisa tu correo e ingresa
+                            el código de seguridad de
+                            6 caracteres para continuar.
                         </div>
 
                     </div>
@@ -1012,7 +1165,8 @@
         // ==========================================
         // MOSTRAR MENSAJE
         // ==========================================
-
+                let intervaloCodigoRecuperacion = null;
+        let segundosCodigoRecuperacion = 0;
         function mostrarMensaje(
             texto,
             correcto
@@ -1051,7 +1205,100 @@
                 block: "center"
             });
         }
+                function iniciarContadorRecuperacion(segundos) {
 
+            if (intervaloCodigoRecuperacion) {
+                clearInterval(
+                    intervaloCodigoRecuperacion
+                );
+            }
+
+            segundosCodigoRecuperacion =
+                segundos;
+
+            const contador =
+                document.getElementById(
+                    "contadorCodigo"
+                );
+
+            const botonReenviar =
+                document.getElementById(
+                    "btnReenviarCodigo"
+                );
+
+            const botonVerificar =
+                document.getElementById(
+                    "btnVerificarCodigo"
+                );
+
+
+            botonReenviar.style.display =
+                "none";
+
+            botonVerificar.disabled =
+                false;
+
+
+            function actualizar() {
+
+                const minutos =
+                    Math.floor(
+                        segundosCodigoRecuperacion / 60
+                    );
+
+                const segundosRestantes =
+                    segundosCodigoRecuperacion % 60;
+
+                contador.innerHTML =
+                    "Código válido por " +
+                    String(minutos)
+                        .padStart(2, "0") +
+                    ":" +
+                    String(segundosRestantes)
+                        .padStart(2, "0");
+
+
+                if (
+                    segundosCodigoRecuperacion <= 0
+                ) {
+
+                    clearInterval(
+                        intervaloCodigoRecuperacion
+                    );
+
+                    intervaloCodigoRecuperacion =
+                        null;
+
+                    contador.innerHTML =
+                        "Código expirado";
+
+                    contador.style.color =
+                        "#dc2626";
+
+                    botonVerificar.disabled =
+                        true;
+
+                    botonReenviar.style.display =
+                        "block";
+
+                    return;
+                }
+
+                segundosCodigoRecuperacion--;
+            }
+
+
+            contador.style.color =
+                "#4f46e5";
+
+            actualizar();
+
+            intervaloCodigoRecuperacion =
+                setInterval(
+                    actualizar,
+                    1000
+                );
+        }
 
 
         // ==========================================
@@ -1190,12 +1437,34 @@
                 ).readOnly = true;
 
 
-                boton.innerHTML =
-                    "✓ Enlace enviado";
+                       boton.innerHTML =
+            "✓ Código enviado";
 
-                        document.getElementById(
+        document.getElementById(
             "btnOtraCuenta"
-        ).style.display = "block";
+        ).style.display =
+            "block";
+
+        document.getElementById(
+            "zonaCodigoRecuperacion"
+        ).style.display =
+            "block";
+
+        const inputCodigo =
+            document.getElementById(
+                "codigoRecuperacion"
+            );
+
+        inputCodigo.value = "";
+                iniciarContadorRecuperacion(
+            resultado.segundos || 60
+        );
+        setTimeout(
+            function () {
+                inputCodigo.focus();
+            },
+            200
+        );
                 // No habilitamos contraseña aquí.
                 // ÚNICAMENTE se habilita cuando
                 // el usuario presiona el botón
@@ -1215,6 +1484,327 @@
 
                 boton.innerHTML =
                     textoOriginal;
+            }
+        }
+                async function verificarCodigoRecuperacion() {
+
+            const dni =
+                document.getElementById(
+                    "dniRecuperar"
+                ).value.trim();
+
+            const correo =
+                document.getElementById(
+                    "correoRecuperar"
+                ).value.trim();
+
+            const codigo =
+                document.getElementById(
+                    "codigoRecuperacion"
+                ).value
+                    .trim()
+                    .toUpperCase();
+
+            const boton =
+                document.getElementById(
+                    "btnVerificarCodigo"
+                );
+
+
+            if (
+                !/^[A-Z0-9]{6}$/.test(codigo)
+            ) {
+
+                mostrarMensaje(
+                    "Ingresa el código completo de 6 caracteres.",
+                    false
+                );
+
+                return;
+            }
+
+
+            const textoOriginal =
+                boton.innerHTML;
+
+            boton.disabled = true;
+
+            boton.innerHTML =
+                '<span class="spinner"></span>' +
+                'Verificando...';
+
+
+            try {
+
+                const datos =
+                    new URLSearchParams();
+
+                datos.append(
+                    "dni",
+                    dni
+                );
+
+                datos.append(
+                    "correo",
+                    correo
+                );
+
+                datos.append(
+                    "codigo",
+                    codigo
+                );
+
+
+                const respuesta =
+                    await fetch(
+                        '@Url.Action(
+                                                        "VerificarCodigoRecuperacion",
+                                                        "Login"
+                                                )',
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/x-www-form-urlencoded"
+                            },
+
+                            body:
+                                datos.toString()
+                        }
+                    );
+
+
+                const resultado =
+                    await respuesta.json();
+
+
+                        if (!resultado.ok) {
+
+            mostrarMensaje(
+                resultado.mensaje,
+                false
+            );
+
+            boton.innerHTML =
+                textoOriginal;
+
+
+            if (resultado.expirado) {
+
+                boton.disabled =
+                    true;
+
+                const contador =
+                    document.getElementById(
+                        "contadorCodigo"
+                    );
+
+                contador.innerHTML =
+                    "Código expirado";
+
+                contador.style.color =
+                    "#dc2626";
+
+                document.getElementById(
+                    "btnReenviarCodigo"
+                ).style.display =
+                    "block";
+            }
+            else {
+
+                boton.disabled =
+                    false;
+            }
+
+            return;
+        }
+
+
+                mostrarMensaje(
+                    resultado.mensaje,
+                    true
+                );
+
+
+                boton.innerHTML =
+                    "✓ Identidad verificada";
+
+
+                setTimeout(
+                    function () {
+
+                        window.location.href =
+                            resultado.redirectUrl;
+
+                    },
+                    900
+                );
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                mostrarMensaje(
+                    "No se pudo verificar el código.",
+                    false
+                );
+
+                boton.disabled = false;
+
+                boton.innerHTML =
+                    textoOriginal;
+            }
+        }
+                async function reenviarCodigoRecuperacion() {
+
+            const dni =
+                document.getElementById(
+                    "dniRecuperar"
+                ).value.trim();
+
+            const correo =
+                document.getElementById(
+                    "correoRecuperar"
+                ).value.trim();
+
+            const boton =
+                document.getElementById(
+                    "btnReenviarCodigo"
+                );
+
+            const codigo =
+                document.getElementById(
+                    "codigoRecuperacion"
+                );
+
+
+            boton.disabled = true;
+
+            boton.innerHTML =
+                '<span class="spinner"></span>' +
+                'Enviando nuevo código...';
+
+
+            try {
+
+                const datos =
+                    new URLSearchParams();
+
+                datos.append(
+                    "dni",
+                    dni
+                );
+
+                datos.append(
+                    "correo",
+                    correo
+                );
+
+
+                const respuesta =
+                    await fetch(
+                        '@Url.Action(
+                                                        "SolicitarRecuperacion",
+                                                        "Login"
+                                                )',
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/x-www-form-urlencoded"
+                            },
+
+                            body:
+                                datos.toString()
+                        }
+                    );
+
+
+                const resultado =
+                    await respuesta.json();
+
+
+                if (!resultado.ok) {
+
+                    mostrarMensaje(
+                        resultado.mensaje,
+                        false
+                    );
+
+
+                    if (
+                        resultado.esperando &&
+                        resultado.segundosRestantes
+                    ) {
+
+                        iniciarContadorRecuperacion(
+                            resultado.segundosRestantes
+                        );
+                    }
+
+
+                    boton.disabled =
+                        false;
+
+                    boton.innerHTML =
+                        "🔄 Reenviar código";
+
+                    return;
+                }
+
+
+                codigo.value = "";
+
+                codigo.disabled = false;
+
+
+                mostrarMensaje(
+                    "Te enviamos un nuevo código de seguridad.",
+                    true
+                );
+
+
+                boton.style.display =
+                    "none";
+
+                boton.disabled =
+                    false;
+
+                boton.innerHTML =
+                    "🔄 Reenviar código";
+
+
+                document.getElementById(
+                    "btnVerificarCodigo"
+                ).disabled =
+                    false;
+
+
+                iniciarContadorRecuperacion(
+                    resultado.segundos || 60
+                );
+
+
+                codigo.focus();
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                mostrarMensaje(
+                    "No se pudo reenviar el código.",
+                    false
+                );
+
+                boton.disabled =
+                    false;
+
+                boton.innerHTML =
+                    "🔄 Reenviar código";
             }
         }
                 function usarOtraCuenta() {
@@ -1256,7 +1846,7 @@
             botonEnviar.disabled = false;
 
             botonEnviar.innerHTML =
-                "📩 Enviar enlace de recuperación";
+                "📩 Enviar código de recuperación";
 
             // Ocultar botón de otra cuenta
             botonOtraCuenta.style.display =
@@ -1268,7 +1858,24 @@
 
             mensaje.innerHTML =
                 "";
+                    const zonaCodigo =
+            document.getElementById(
+                "zonaCodigoRecuperacion"
+            );
 
+        const codigo =
+            document.getElementById(
+                "codigoRecuperacion"
+            );
+
+        if (zonaCodigo) {
+            zonaCodigo.style.display =
+                "none";
+        }
+
+        if (codigo) {
+            codigo.value = "";
+        }
             // Volver al DNI
             dni.focus();
         }
