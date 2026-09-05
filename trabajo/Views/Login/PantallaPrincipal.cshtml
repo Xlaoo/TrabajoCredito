@@ -15,406 +15,144 @@
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
-
             * {
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
-                font-family: 'Segoe UI',sans-serif;
+                font-family: 'Segoe UI', sans-serif;
+            }
+
+            html,
+            body {
+                width: 100%;
+                min-height: 100%;
             }
 
             body {
                 background: #faf8ff;
+                overflow-x: hidden;
             }
 
             .container {
-                display: flex;
+                width: 100%;
+                max-width: none;
                 min-height: 100vh;
+                display: flex;
             }
 
-            /* CONTENIDO */
-
             .content {
+                width: 100%;
                 flex: 1;
                 padding: 34px 42px;
             }
+
+            /* ==========================================
+                                   ENCABEZADO
+                                   ========================================== */
 
             .top {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                gap: 20px;
+            }
+
+                .top h2 {
+                    font-size: 26px;
+                    line-height: 1.25;
+                }
+
+                .top > div {
+                    display: flex;
+                    gap: 8px;
+                }
+
+            .btn-login,
+            .btn-register {
+                display: inline-block;
+                padding: 12px 30px;
+                border: none;
+                border-radius: 14px;
+                color: white;
+                text-decoration: none;
+                font-size: 16px;
+                font-weight: 600;
+                text-align: center;
+                transition: .3s;
+                white-space: nowrap;
             }
 
             .btn-login {
                 background: #6d28d9;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 10px;
             }
 
             .btn-register {
                 background: #22c55e;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 10px;
             }
 
+                .btn-login:hover,
+                .btn-register:hover {
+                    transform: translateY(-3px);
+                    box-shadow: 0 12px 25px rgba(0,0,0,.20);
+                    color: white;
+                }
+
+            /* ==========================================
+                                   BIENVENIDA
+                                   ========================================== */
+
             .welcome {
-                background: white;
-                border-radius: 20px;
-                padding: 30px;
-                text-align: center;
                 margin-top: 20px;
+                padding: 30px;
+                border-radius: 20px;
+                background: white;
+                text-align: center;
                 box-shadow: 0 5px 15px rgba(0,0,0,.1);
             }
 
                 .welcome h1 {
                     font-size: 50px;
+                    line-height: 1.2;
                 }
 
                 .welcome span {
                     color: #6d28d9;
                 }
 
-            .banner {
-                margin-top: 25px;
-                background: linear-gradient(90deg,#2b0050,#5b21b6,#3b82f6);
-                color: white;
-                border-radius: 20px;
-                padding: 30px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-
-            .banner-left {
-                display: flex;
-                gap: 25px;
-            }
-
-            .money-box {
-                width: 100px;
-                height: 100px;
-                border-radius: 20px;
-                background: rgba(255,255,255,.15);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 50px;
-            }
-
-            .banner h2 {
-                font-size: 40px;
-            }
-
-            .banner ul {
-                margin-top: 15px;
-                margin-left: 20px;
-            }
-
-            .amount {
-                text-align: center;
-            }
-
-                .amount h1 {
-                    font-size: 60px;
+                .welcome h2 {
+                    margin-top: 8px;
+                    font-size: 26px;
                 }
 
-            .btn-loan {
-                margin-top: 20px;
-                border: none;
-                padding: 15px 25px;
-                background: #22c55e;
-                color: white;
-                border-radius: 12px;
-                font-size: 18px;
-            }
-
-            .grid {
-                margin-top: 25px;
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 20px;
-            }
-
-            .card {
-                background: white;
-                padding: 25px;
-                border-radius: 20px;
-                box-shadow: 0 5px 15px rgba(0,0,0,.08);
-            }
-
-                .card h2 {
-                    margin-bottom: 15px;
-                }
-
-            .why {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 15px;
-            }
-
-            .feature {
-                display: flex;
-                gap: 10px;
-            }
-
-                .feature i {
-                    color: #6d28d9;
-                }
-
-            .steps {
-                display: flex;
-                justify-content: space-around;
-                text-align: center;
-            }
-
-            .step-icon {
-                width: 60px;
-                height: 60px;
-                border-radius: 15px;
-                background: #efe4ff;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #6d28d9;
-                font-size: 25px;
-                margin: auto;
-            }
-
-            /* CLIENTES */
-
-            .clients {
-                margin-top: 25px;
-                background: white;
-                padding: 25px;
-                border-radius: 20px;
-            }
-
-            .client-grid {
-                display: grid;
-                grid-template-columns: repeat(3,1fr);
-                gap: 15px;
-                margin-top: 15px;
-            }
-
-            .client {
-                background: #f8f5ff;
-                padding: 15px;
-                border-radius: 15px;
-                display: flex;
-                gap: 15px;
-            }
-
-            .client-icon {
-                width: 60px;
-                height: 60px;
-                border-radius: 50%;
-                background: #6d28d9;
-                color: white;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 28px;
-            }
-
-            /* INFORMACION */
-
-            .learn {
-                margin-top: 25px;
-                background: white;
-                border-radius: 20px;
-                padding: 25px;
-            }
-
-            .learn-grid {
-                display: grid;
-                grid-template-columns: repeat(3,1fr);
-                gap: 20px;
-                margin-top: 20px;
-            }
-
-            .learn-card {
-                background: #f8f5ff;
-                padding: 20px;
-                border-radius: 15px;
-            }
-
-                .learn-card i {
-                    font-size: 35px;
-                    color: #6d28d9;
-                    margin-bottom: 15px;
-                }
-
-            .footer-features {
-                margin-top: 25px;
-                background: white;
-                padding: 20px;
-                border-radius: 20px;
-                display: grid;
-                grid-template-columns: repeat(5,1fr);
-                gap: 20px;
-            }
-
-            .footer-item {
-                display: flex;
-                gap: 10px;
-            }
-
-                .footer-item i {
-                    color: #6d28d9;
-                    font-size: 24px;
-                }
-
-            .steps {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                gap: 20px;
-            }
-
-            .step-arrow {
-                color: #b7b7b7;
-                font-size: 28px;
-            }
-
-            .banner-loan {
-                margin-top: 30px;
-                background: linear-gradient(90deg,#2f005f,#5b1cb8,#2f80ed);
-                border-radius: 25px;
-                padding: 25px 45px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                color: white;
-                min-height: 230px;
-            }
-
-            .banner-left {
-                display: flex;
-                align-items: center;
-                gap: 18px;
-                flex: 1;
-            }
-
-            .money-box {
-                width: 75px;
-                height: 75px;
-                background: rgba(255,255,255,.12);
-                border-radius: 18px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 38px;
-            }
-
-            .banner-left h2 {
-                margin: 0;
-                font-size: 30px;
-                font-weight: 700;
-            }
-
-            .banner-left p {
-                margin-top: 8px;
-                color: #ececec;
-            }
-
-            .banner-left ul {
-                margin-top: 15px;
-                list-style: none;
-                padding: 0;
-            }
-
-                .banner-left ul li {
-                    margin-bottom: 8px;
-                    font-size: 15px;
-                }
-
-                    .banner-left ul li::before {
-                        content: "✓";
-                        margin-right: 10px;
-                    }
-
-            .banner-right {
-                text-align: left;
-                min-width: 220px;
-            }
-
-                .banner-right small {
-                    color: #ececec;
-                }
-
-                .banner-right h1 {
-                    margin: 5px 0 15px 0;
-                    font-size: 48px;
-                    font-weight: 800;
-                }
-
-                .banner-right p {
-                    margin: 6px 0;
-                }
-
-            .btn-loan {
-                display: inline-block;
-                margin-top: 20px;
-                background: #32d26a;
-                color: white;
-                padding: 14px 35px;
-                border-radius: 10px;
-                text-decoration: none;
-                font-weight: 700;
-            }
-
-                .btn-loan:hover {
-                    background: #22c55e;
-                    color: white;
-                }
-
-            .top div {
-                display: flex;
-                gap: 8px;
-            }
-
-            .btn-login,
-            .btn-register {
-                display: inline-block;
-                padding: 12px 30px;
-                border-radius: 14px;
-                text-decoration: none;
-                font-size: 16px;
-                font-weight: 600;
-                transition: .3s;
-            }
-
-                .btn-login:hover,
-                .btn-register:hover {
-                    transform: translateY(-4px) scale(1.05);
-                    box-shadow: 0 12px 25px rgba(0,0,0,.20);
-                }
+            /* ==========================================
+                                   BANNER PRINCIPAL
+                                   ========================================== */
 
             .loan-banner {
                 margin-top: 35px;
-                background: linear-gradient(90deg,#2b0050,#5b21b6,#3b82f6);
-                border-radius: 28px;
                 padding: 40px;
+                border-radius: 28px;
+                background: linear-gradient(90deg,#2b0050,#5b21b6,#3b82f6);
                 color: white;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                gap: 35px;
                 box-shadow: 0 15px 40px rgba(76,29,149,.25);
             }
 
             .loan-left {
+                min-width: 0;
                 display: flex;
                 align-items: center;
                 gap: 25px;
+                flex: 1;
             }
 
             .loan-image {
                 width: 120px;
                 height: 120px;
+                min-width: 120px;
                 border-radius: 24px;
                 background: rgba(255,255,255,.12);
                 display: flex;
@@ -423,18 +161,25 @@
                 font-size: 60px;
             }
 
-            .loan-info h2 {
-                font-size: 34px;
-                font-weight: 800;
-                margin-bottom: 10px;
-                color: white;
+            .loan-info {
+                min-width: 0;
+                flex: 1;
             }
 
-            .loan-info p {
-                color: #ddd6fe;
-                font-size: 18px;
-                margin-bottom: 20px;
-            }
+                .loan-info h2 {
+                    margin-bottom: 10px;
+                    color: white;
+                    font-size: 34px;
+                    font-weight: 800;
+                    line-height: 1.2;
+                }
+
+                .loan-info > p {
+                    margin-bottom: 20px;
+                    color: #ddd6fe;
+                    font-size: 18px;
+                    line-height: 1.45;
+                }
 
             .loan-feature {
                 display: flex;
@@ -446,19 +191,20 @@
                 .loan-feature i {
                     width: 55px;
                     height: 55px;
+                    min-width: 55px;
                     border-radius: 16px;
                     background: rgba(255,255,255,.12);
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 22px;
                     color: white;
+                    font-size: 22px;
                 }
 
                 .loan-feature strong {
                     display: block;
-                    font-size: 18px;
                     color: white;
+                    font-size: 18px;
                 }
 
                 .loan-feature span {
@@ -467,7 +213,9 @@
                 }
 
             .loan-right {
-                min-width: 300px;
+                width: 100%;
+                max-width: 310px;
+                min-width: 260px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -479,29 +227,32 @@
                 }
 
                 .loan-right h1 {
-                    font-size: 60px;
                     margin: 5px 0 15px;
-                    font-weight: 800;
                     color: white;
+                    font-size: 60px;
+                    font-weight: 800;
+                    line-height: 1.1;
                 }
 
             .loan-line {
                 width: 100%;
                 height: 2px;
-                background: rgba(255,255,255,.2);
                 margin: 25px 0 35px;
+                background: rgba(255,255,255,.2);
             }
 
             .loan-btn {
+                display: block;
+                width: 100%;
+                padding: 18px 30px;
                 border: none;
                 border-radius: 14px;
-                padding: 18px 30px;
                 background: #22c55e;
                 color: white !important;
                 text-decoration: none;
+                text-align: center;
                 font-size: 22px;
                 font-weight: bold;
-                text-align: center;
                 transition: .3s;
             }
 
@@ -509,22 +260,146 @@
                     background: #16a34a;
                 }
 
+            /* ==========================================
+                                   TARJETAS
+                                   ========================================== */
+
+            .grid {
+                margin-top: 25px;
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 20px;
+            }
+
+            .card {
+                min-width: 0;
+                padding: 25px;
+                border-radius: 20px;
+                background: white;
+                box-shadow: 0 5px 15px rgba(0,0,0,.08);
+            }
+
+                .card h2 {
+                    margin-bottom: 15px;
+                    font-size: 26px;
+                }
+
+            .why {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 15px;
+            }
+
+            .feature {
+                display: flex;
+                gap: 10px;
+                min-width: 0;
+            }
+
+                .feature i {
+                    color: #6d28d9;
+                    margin-top: 3px;
+                }
+
+                .feature p {
+                    line-height: 1.35;
+                }
+
+            /* ==========================================
+                                   PASOS
+                                   ========================================== */
+
+            .steps {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 20px;
+                text-align: center;
+            }
+
+                .steps > div {
+                    min-width: 0;
+                }
+
+            .step-icon {
+                width: 60px;
+                height: 60px;
+                margin: auto;
+                border-radius: 15px;
+                background: #efe4ff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #6d28d9;
+                font-size: 25px;
+            }
+
+            .steps p {
+                margin-top: 8px;
+            }
+
+            .step-arrow {
+                color: #b7b7b7;
+                font-size: 28px;
+            }
+
+            /* ==========================================
+                                   CLIENTES
+                                   ========================================== */
+
+            .clients {
+                margin-top: 25px;
+                padding: 25px;
+                border-radius: 20px;
+                background: white;
+            }
+
+                .clients h2 {
+                    font-size: 26px;
+                }
+
             .carousel-container {
+                margin-top: 15px;
                 display: flex;
                 align-items: center;
                 gap: 15px;
             }
 
             .client-grid {
+                min-width: 0;
                 flex: 1;
                 display: grid;
-                grid-template-columns: repeat(3,1fr);
+                grid-template-columns: repeat(3, minmax(0, 1fr));
                 gap: 15px;
+            }
+
+            .client {
+                min-width: 0;
+                padding: 15px;
+                border-radius: 15px;
+                background: #f8f5ff;
+                display: flex;
+                gap: 15px;
+                word-break: break-word;
+            }
+
+            .client-icon {
+                width: 60px;
+                height: 60px;
+                min-width: 60px;
+                border-radius: 50%;
+                background: #6d28d9;
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 28px;
             }
 
             .carousel-btn {
                 width: 50px;
                 height: 50px;
+                min-width: 50px;
                 border: none;
                 border-radius: 50%;
                 background: #6d28d9;
@@ -536,7 +411,7 @@
 
                 .carousel-btn:hover {
                     background: #5b21b6;
-                    transform: scale(1.1);
+                    transform: scale(1.08);
                 }
 
                 .carousel-btn:disabled {
@@ -545,6 +420,509 @@
                     transform: none;
                     box-shadow: none;
                 }
+
+            /* ==========================================
+                                   INFORMACIÓN
+                                   ========================================== */
+
+            .learn {
+                margin-top: 25px;
+                padding: 25px;
+                border-radius: 20px;
+                background: white;
+            }
+
+                .learn h2 {
+                    font-size: 26px;
+                }
+
+            .learn-grid {
+                margin-top: 20px;
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 20px;
+            }
+
+            .learn-card {
+                min-width: 0;
+                padding: 20px;
+                border-radius: 15px;
+                background: #f8f5ff;
+            }
+
+                .learn-card i {
+                    margin-bottom: 15px;
+                    color: #6d28d9;
+                    font-size: 35px;
+                }
+
+                .learn-card h3 {
+                    line-height: 1.25;
+                }
+
+            .footer-features {
+                margin-top: 25px;
+                padding: 20px;
+                border-radius: 20px;
+                background: white;
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                gap: 20px;
+            }
+
+            .footer-item {
+                min-width: 0;
+                display: flex;
+                gap: 10px;
+            }
+
+                .footer-item i {
+                    color: #6d28d9;
+                    font-size: 24px;
+                    margin-top: 3px;
+                }
+
+                .footer-item p,
+                .footer-item h4 {
+                    line-height: 1.35;
+                }
+
+            /* ==========================================
+                                   LAPTOP / TABLET GRANDE
+                                   ========================================== */
+
+            @@media (max-width: 1100px) {
+                .content {
+                    padding: 28px 24px;
+                }
+
+                .top h2 {
+                    font-size: 23px;
+                }
+
+                .welcome h1 {
+                    font-size: 42px;
+                }
+
+                .loan-banner {
+                    padding: 30px;
+                    gap: 28px;
+                }
+
+                .loan-image {
+                    width: 95px;
+                    height: 95px;
+                    min-width: 95px;
+                    font-size: 48px;
+                }
+
+                .loan-info h2 {
+                    font-size: 29px;
+                }
+
+                .loan-info > p {
+                    font-size: 16px;
+                }
+
+                .loan-right {
+                    min-width: 225px;
+                    max-width: 250px;
+                }
+
+                    .loan-right h1 {
+                        font-size: 48px;
+                    }
+
+                .grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .client-grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+
+                .learn-grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+
+                .footer-features {
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }
+            }
+
+            /* ==========================================
+                                   TABLET
+                                   ========================================== */
+
+            @@media (max-width: 768px) {
+                .content {
+                    padding: 20px 16px;
+                }
+
+                .top {
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 15px;
+                }
+
+                    .top h2 {
+                        text-align: center;
+                        font-size: 21px;
+                    }
+
+                    .top > div {
+                        width: 100%;
+                    }
+
+                .btn-login,
+                .btn-register {
+                    flex: 1;
+                    padding: 12px 10px;
+                }
+
+                .welcome {
+                    padding: 25px 18px;
+                    border-radius: 17px;
+                }
+
+                    .welcome h1 {
+                        font-size: 34px;
+                    }
+
+                    .welcome h2 {
+                        font-size: 20px;
+                    }
+
+                .loan-banner {
+                    margin-top: 22px;
+                    padding: 28px 22px;
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 28px;
+                    border-radius: 22px;
+                }
+
+                .loan-left {
+                    width: 100%;
+                    align-items: flex-start;
+                }
+
+                .loan-image {
+                    width: 85px;
+                    height: 85px;
+                    min-width: 85px;
+                    font-size: 42px;
+                }
+
+                .loan-info h2 {
+                    font-size: 27px;
+                }
+
+                .loan-info > p {
+                    font-size: 15px;
+                }
+
+                .loan-feature i {
+                    width: 48px;
+                    height: 48px;
+                    min-width: 48px;
+                    font-size: 19px;
+                }
+
+                .loan-feature strong {
+                    font-size: 16px;
+                }
+
+                .loan-feature span {
+                    font-size: 14px;
+                }
+
+                .loan-right {
+                    width: 100%;
+                    max-width: none;
+                    min-width: 0;
+                    text-align: center;
+                }
+
+                    .loan-right h1 {
+                        font-size: 46px;
+                    }
+
+                .loan-line {
+                    margin: 18px 0 22px;
+                }
+
+                .loan-btn {
+                    padding: 16px 20px;
+                    font-size: 19px;
+                }
+
+                .why {
+                    grid-template-columns: 1fr;
+                }
+
+                .steps {
+                    flex-wrap: wrap;
+                    gap: 16px 22px;
+                }
+
+                .step-arrow {
+                    display: none;
+                }
+
+                .client-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .learn-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .footer-features {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
+
+            /* ==========================================
+                                   CELULAR
+                                   ========================================== */
+
+            @@media (max-width: 600px) {
+                .container {
+                    min-height: auto;
+                }
+
+                .content {
+                    padding: 15px 12px;
+                }
+
+                .top {
+                    gap: 12px;
+                }
+
+                    .top h2 {
+                        font-size: 18px;
+                        line-height: 1.3;
+                    }
+
+                    .top > div {
+                        flex-direction: column;
+                        gap: 8px;
+                    }
+
+                .btn-login,
+                .btn-register {
+                    width: 100%;
+                    padding: 12px;
+                    border-radius: 12px;
+                    font-size: 15px;
+                }
+
+                .welcome {
+                    margin-top: 16px;
+                    padding: 22px 14px;
+                    border-radius: 15px;
+                }
+
+                    .welcome h1 {
+                        font-size: 28px;
+                    }
+
+                    .welcome h2 {
+                        font-size: 17px;
+                        line-height: 1.3;
+                    }
+
+                .loan-banner {
+                    padding: 24px 18px;
+                    gap: 24px;
+                    border-radius: 18px;
+                }
+
+                .loan-left {
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                    gap: 18px;
+                }
+
+                .loan-image {
+                    width: 80px;
+                    height: 80px;
+                    min-width: 80px;
+                    font-size: 40px;
+                }
+
+                .loan-info {
+                    width: 100%;
+                }
+
+                    .loan-info h2 {
+                        font-size: 25px;
+                    }
+
+                    .loan-info > p {
+                        font-size: 14px;
+                    }
+
+                .loan-feature {
+                    width: 100%;
+                    text-align: left;
+                }
+
+                    .loan-feature i {
+                        width: 45px;
+                        height: 45px;
+                        min-width: 45px;
+                        font-size: 18px;
+                    }
+
+                    .loan-feature strong {
+                        font-size: 15px;
+                    }
+
+                    .loan-feature span {
+                        font-size: 13px;
+                    }
+
+                .loan-right small {
+                    font-size: 14px;
+                }
+
+                .loan-right h1 {
+                    margin: 8px 0 10px;
+                    font-size: 42px;
+                }
+
+                .loan-btn {
+                    padding: 15px;
+                    border-radius: 12px;
+                    font-size: 18px;
+                }
+
+                .grid {
+                    margin-top: 18px;
+                    gap: 16px;
+                }
+
+                .card,
+                .clients,
+                .learn {
+                    padding: 18px;
+                    border-radius: 16px;
+                }
+
+                    .card h2,
+                    .clients h2,
+                    .learn h2 {
+                        font-size: 21px;
+                    }
+
+                .steps {
+                    flex-direction: column;
+                    gap: 18px;
+                }
+
+                .step-icon {
+                    width: 55px;
+                    height: 55px;
+                    font-size: 22px;
+                }
+
+                .carousel-container {
+                    gap: 8px;
+                }
+
+                .carousel-btn {
+                    width: 42px;
+                    height: 42px;
+                    min-width: 42px;
+                    font-size: 17px;
+                }
+
+                .client {
+                    padding: 14px;
+                    align-items: center;
+                }
+
+                .client-icon {
+                    width: 50px;
+                    height: 50px;
+                    min-width: 50px;
+                    font-size: 23px;
+                }
+
+                .learn-card {
+                    padding: 17px;
+                }
+
+                    .learn-card i {
+                        font-size: 30px;
+                    }
+
+                .footer-features {
+                    grid-template-columns: 1fr;
+                    gap: 15px;
+                    padding: 18px;
+                    border-radius: 16px;
+                }
+
+                .footer-item {
+                    align-items: flex-start;
+                }
+            }
+
+            /* ==========================================
+                                   CELULARES PEQUEÑOS
+                                   ========================================== */
+
+            @@media (max-width: 400px) {
+                .content {
+                    padding: 12px 10px;
+                }
+
+                .top h2 {
+                    font-size: 17px;
+                }
+
+                .welcome h1 {
+                    font-size: 25px;
+                }
+
+                .welcome h2 {
+                    font-size: 16px;
+                }
+
+                .loan-banner {
+                    padding: 20px 15px;
+                }
+
+                .loan-info h2 {
+                    font-size: 22px;
+                }
+
+                .loan-right h1 {
+                    font-size: 36px;
+                }
+
+                .loan-feature i {
+                    width: 42px;
+                    height: 42px;
+                    min-width: 42px;
+                }
+
+                .card,
+                .clients,
+                .learn {
+                    padding: 15px;
+                }
+
+                .carousel-btn {
+                    width: 38px;
+                    height: 38px;
+                    min-width: 38px;
+                }
+            }
     </style>
 </head>
 
@@ -815,18 +1193,18 @@
 
             const clientes = [
 
-            @foreach (var c in Model)
-            {
-                        <text>
+                                    @foreach (var c in Model)
+                {
+                    <text>
                             {
                                 nombre: "@c.NombreCompleto",
-                                comentario: "@c.Comentario",
-                                estrellas: @c.Calificacion
-                            },
-                        </text>
-            }
+                            comentario: "@c.Comentario",
+                            estrellas: @c.Calificacion
+                                                                    },
+                    </text>
+                                    }
 
-            ];
+                                    ];
 
             let inicio = 0;
             const visibles = 3;
@@ -844,16 +1222,16 @@
                     }
 
                     html += `
-                    <div class="client">
-                        <div class="client-icon">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div>
-                            <b>${clientes[i].nombre}</b>
-                            <p>${clientes[i].comentario}</p>
-                            ${estrellas}
-                        </div>
-                    </div>`;
+                                            <div class="client">
+                                                <div class="client-icon">
+                                                    <i class="fas fa-user"></i>
+                                                </div>
+                                                <div>
+                                                    <b>${clientes[i].nombre}</b>
+                                                    <p>${clientes[i].comentario}</p>
+                                                    ${estrellas}
+                                                </div>
+                                            </div>`;
                 }
 
                 document.getElementById("clientGrid").innerHTML = html;
