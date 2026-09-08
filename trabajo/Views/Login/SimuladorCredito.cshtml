@@ -78,20 +78,7 @@
             font-weight: bold;
         }
 
-        .btn-back {
-            background: #6b7280;
-            color: white;
-            border: none;
-            padding: 17px 34px;
-            border-radius: 14px;
-            font-size: 18px;
-            font-weight: bold;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-            .btn-simular:hover,
-            .btn-back:hover {
+         .btn-simular:hover {
                 transform: translateY(-3px);
                 box-shadow: 0 10px 22px rgba(0,0,0,.20);
             }
@@ -209,10 +196,6 @@
         <button class="btn-simular" onclick="simularCredito()">
             <i class="fas fa-calculator"></i> Simular crédito
         </button>
-
-        <a class="btn-back" href="@Url.Action("SolicitarCredito", "Login")">
-            Regresar
-        </a>
     </div>
 
     <div id="resultado" class="resultado">
