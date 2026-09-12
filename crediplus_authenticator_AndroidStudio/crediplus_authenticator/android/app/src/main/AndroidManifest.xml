@@ -1,11 +1,43 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Cámara para escanear QR -->
+    <uses-permission
+        android:name="android.permission.CAMERA" />
+
+    <!-- Internet para comunicarse con ASP.NET / Firebase -->
+    <uses-permission
+        android:name="android.permission.INTERNET" />
+
+    <!-- Notificaciones Android 13+ -->
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Mostrar CrediPlus encima de otras aplicaciones -->
+    <uses-permission
+        android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- Mantener overlay funcionando -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Biometría -->
+    <uses-permission
+        android:name="android.permission.USE_BIOMETRIC" />
+
 
     <application
-        android:label="crediplus_authenticator"
+        android:label="CrediPlus Authenticator"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+
+
+        <!-- ========================================== -->
+        <!-- ACTIVIDAD PRINCIPAL -->
+        <!-- ========================================== -->
 
         <activity
             android:name=".MainActivity"
@@ -19,27 +51,103 @@
 
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
-                android:resource="@style/NormalTheme"
-                />
+                android:resource="@style/NormalTheme" />
 
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action
+                    android:name="android.intent.action.MAIN" />
+
+                <category
+                    android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
         </activity>
 
+
+        <!-- ========================================== -->
+        <!-- FIREBASE -->
+        <!-- ========================================== -->
+
+        <service
+            android:name=".CrediPlusFirebaseMessagingService"
+            android:exported="false">
+
+            <intent-filter>
+                <action
+                    android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+
+        </service>
+
+
+        <!-- ========================================== -->
+        <!-- OVERLAY -->
+        <!-- ========================================== -->
+
+        <service
+            android:name="flutter.overlay.window.flutter_overlay_window.OverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="CrediPlus authentication approval overlay" />
+
+        </service>
+
+
+        <!-- ========================================== -->
+        <!-- GUARDIA -->
+        <!-- ========================================== -->
+
+        <activity
+            android:name=".CrediPlusGuardActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+
+        <!-- ========================================== -->
+        <!-- BIOMETRÍA -->
+        <!-- ========================================== -->
+
+        <activity
+            android:name=".CrediPlusBiometricActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+
+        <!-- ========================================== -->
+        <!-- RECEIVERS -->
+        <!-- ========================================== -->
+
+        <receiver
+            android:name=".CrediPlusNotificationReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".CrediPlusResultReceiver"
+            android:exported="false" />
+
+
+        <!-- Flutter -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
 
     </application>
 
+
     <queries>
+
         <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <action
+                android:name="android.intent.action.PROCESS_TEXT" />
+
+            <data
+                android:mimeType="text/plain" />
         </intent>
+
     </queries>
 
 </manifest>

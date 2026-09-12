@@ -6,11 +6,22 @@ using trabajo.Hubs;
 using trabajo.Models;
 using trabajo.Service;
 using Microsoft.ML.OnnxRuntime;
+using FirebaseAdmin;
+using Microsoft.AspNetCore.StaticFiles;
+using Google.Apis.Auth.OAuth2;
 QuestPDF.Settings.License = LicenseType.Community;
 
 
 var builder = WebApplication.CreateBuilder(args);
-
+if (FirebaseApp.DefaultInstance == null)
+{
+    FirebaseApp.Create(new AppOptions
+    {
+        Credential = GoogleCredential.FromFile(
+            @"D:\CrediPlusSecrets\firebase-adminsdk.json"
+        )
+    });
+}
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddSignalR();
@@ -97,7 +108,15 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+var proveedorTiposArchivo = new FileExtensionContentTypeProvider();
+
+proveedorTiposArchivo.Mappings[".apk"] =
+    "application/vnd.android.package-archive";
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = proveedorTiposArchivo
+});
 
 app.UseRouting();
 app.UseSession();

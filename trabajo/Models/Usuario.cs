@@ -32,7 +32,9 @@ namespace trabajo.Models
         // ==========================================
         // SEGURIDAD POR VOZ
         // ==========================================
+        public string? TotpSecret { get; set; }
 
+        public bool TotpHabilitado { get; set; }
         public string? FraseVoz { get; set; }
         public string? AudioRegistro { get; set; }
         public byte[]? EmbeddingVoz { get; set; }

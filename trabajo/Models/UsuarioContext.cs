@@ -19,7 +19,8 @@ namespace trabajo.Models
         public DbSet<PerfilFinanciero> PERFIL_FINANCIERO { get; set; }
         public DbSet<Evaluacion_Riesgo> Evaluacion_Riesgo { get; set; }
         public DbSet<ComentarioCliente> ComentarioClientes { get; set; }
-
+        public DbSet<AutenticadorDispositivo> AUTENTICADOR_DISPOSITIVO { get; set; }
+        public DbSet<AutenticadorSolicitud> AUTENTICADOR_SOLICITUD { get; set; }
         public DbSet<HistorialCredito> HISTORIAL_CREDITO { get; set; }
         public DbSet<ResumenCredito> RESUMEN_CREDITICIO { get; set; }
         public DbSet<ReporteRiesgo> ReporteRiesgo { get; set; }
@@ -61,6 +62,8 @@ namespace trabajo.Models
             modelBuilder.Entity<PlantillaNotificacion>().ToTable("plantilla_notificacion");
             modelBuilder.Entity<MensajeAdminAnalista>().ToTable("mensaje_admin_analista");
             modelBuilder.Entity<SolicitudSoporte>().ToTable("solicitud_soporte");
+            modelBuilder.Entity<AutenticadorDispositivo>().ToTable("autenticador_dispositivo");
+            modelBuilder.Entity<AutenticadorSolicitud>().ToTable("autenticador_solicitud");
         }
     }
 

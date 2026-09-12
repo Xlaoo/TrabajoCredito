@@ -2,7 +2,7 @@ name: crediplus_authenticator
 description: "CrediPlus Authenticator in Flutter"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.2+3
 
 environment:
   sdk: ^3.13.1
@@ -21,6 +21,14 @@ dependencies:
 
   # Almacenamiento seguro de secretos TOTP
   flutter_secure_storage: ^9.2.4
+
+  flutter_overlay_window: ^0.5.0
+
+  firebase_core: ^4.1.0
+  firebase_messaging: ^16.0.0
+  local_auth: ^2.3.0
+  http: ^1.5.0
+  android_intent_plus: ^6.1.0
 
 dev_dependencies:
   flutter_test:

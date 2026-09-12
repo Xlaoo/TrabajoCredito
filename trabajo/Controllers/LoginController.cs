@@ -12,6 +12,7 @@ using trabajo.Models.Patterns.Observer;
 using trabajo.Service;
 using System.Text;
 using System.Security.Cryptography;
+using FirebaseAdmin.Messaging;
 namespace trabajo.Controllers
 {
     [Authorize]
@@ -4099,7 +4100,1771 @@ string titularCuenta
 
             return ahora / 300;
         }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> VincularDispositivoAuthenticator(
+    string fcmToken,
+    string? nombreDispositivo)
+        {
+            try
+            {
+                string? dni =
+                    HttpContext.Session.GetString(
+                        "DniLoginPendiente"
+                    );
 
+                if (string.IsNullOrWhiteSpace(dni))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "La sesión ha expirado. Inicia sesión nuevamente."
+                    });
+                }
+
+                bool identidadVerificada =
+                    HttpContext.Session.GetString(
+                        "AuthenticatorIdentidadVerificada"
+                    ) == "true";
+
+                if (!identidadVerificada)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "Primero debes verificar tu identidad por correo."
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(fcmToken))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se recibió el token del dispositivo."
+                    });
+                }
+
+                Usuario? usuario =
+                    await _Context.Usuario
+                        .FirstOrDefaultAsync(
+                            x => x.Dni == dni
+                        );
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se encontró el usuario."
+                    });
+                }
+
+                AutenticadorDispositivo? dispositivo =
+                    await _Context
+                        .AUTENTICADOR_DISPOSITIVO
+                        .FirstOrDefaultAsync(
+                            x => x.UsuarioId == usuario.Id
+                        );
+
+                if (dispositivo == null)
+                {
+                    dispositivo =
+                        new AutenticadorDispositivo
+                        {
+                            UsuarioId = usuario.Id,
+                            FcmToken = fcmToken.Trim(),
+                            NombreDispositivo =
+                                string.IsNullOrWhiteSpace(nombreDispositivo)
+                                    ? "Android"
+                                    : nombreDispositivo.Trim(),
+                            FechaVinculacion = DateTime.Now,
+                            Activo = true
+                        };
+
+                    _Context
+                        .AUTENTICADOR_DISPOSITIVO
+                        .Add(dispositivo);
+                }
+                else
+                {
+                    dispositivo.FcmToken =
+                        fcmToken.Trim();
+
+                    dispositivo.NombreDispositivo =
+                        string.IsNullOrWhiteSpace(nombreDispositivo)
+                            ? "Android"
+                            : nombreDispositivo.Trim();
+
+                    dispositivo.FechaVinculacion =
+                        DateTime.Now;
+
+                    dispositivo.Activo = true;
+                }
+
+                await _Context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje =
+                        "Dispositivo vinculado correctamente."
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR VINCULANDO AUTHENTICATOR: " + ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo vincular el dispositivo."
+                });
+            }
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> CrearSolicitudAuthenticator()
+        {
+            try
+            {
+                // ==========================================
+                // OBTENER USUARIO QUE YA VALIDÓ DNI + CLAVE
+                // ==========================================
+
+                string? dniLoginPendiente =
+                    HttpContext.Session.GetString(
+                        "DniLoginPendiente"
+                    );
+
+                if (string.IsNullOrWhiteSpace(dniLoginPendiente))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "La sesión de inicio ha expirado. Inicia sesión nuevamente."
+                    });
+                }
+
+                // ==========================================
+                // BUSCAR USUARIO
+                // ==========================================
+
+                Usuario? usuario =
+                    await _Context.Usuario
+                        .FirstOrDefaultAsync(
+                            x => x.Dni == dniLoginPendiente
+                        );
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró el usuario."
+                    });
+                }
+
+                // ==========================================
+                // BUSCAR DISPOSITIVO VINCULADO
+                // ==========================================
+
+                AutenticadorDispositivo? dispositivo =
+                    await _Context.AUTENTICADOR_DISPOSITIVO
+                        .FirstOrDefaultAsync(
+                            x =>
+                                x.UsuarioId == usuario.Id &&
+                                x.Activo
+                        );
+
+                // ==========================================
+                // TODAVÍA NO TIENE AUTHENTICATOR CONFIGURADO
+                // ==========================================
+
+                if (dispositivo == null)
+                {
+                    return Json(new
+                    {
+                        ok = true,
+                        configurado = false,
+
+                        correoOculto =
+                            OcultarCorreo(usuario.Correo),
+
+                        mensaje =
+                            "Debes configurar CrediPlus Authenticator."
+                    });
+                }
+
+                // ==========================================
+                // GENERAR NÚMERO DE COINCIDENCIA
+                // 10 - 99
+                // ==========================================
+
+                int numero =
+                    RandomNumberGenerator.GetInt32(
+                        10,
+                        100
+                    );
+
+                // ==========================================
+                // CREAR SOLICITUD
+                // ==========================================
+
+                AutenticadorSolicitud solicitud =
+                    new AutenticadorSolicitud
+                    {
+                        UsuarioId = usuario.Id,
+
+                        NumeroVerificacion =
+                            numero.ToString(),
+
+                        Estado = "Pendiente",
+
+                        FechaCreacion = DateTime.Now,
+
+                        FechaExpiracion =
+    DateTime.Now.AddSeconds(30)
+                    };
+
+                _Context.AUTENTICADOR_SOLICITUD.Add(
+                    solicitud
+                );
+
+                await _Context.SaveChangesAsync();
+
+
+                // ==========================================
+                // OBTENER URL DEL SERVIDOR
+                // ==========================================
+
+                string protocolo =
+                    Request.Headers["X-Forwarded-Proto"]
+                        .FirstOrDefault()
+                    ?? Request.Scheme;
+
+                string host =
+                    Request.Headers["X-Forwarded-Host"]
+                        .FirstOrDefault()
+                    ?? Request.Host.Value;
+
+                string baseUrl =
+                    $"{protocolo}://{host}";
+
+                /*
+                 * DESARROLLO LOCAL
+                 * El celular NO puede usar localhost de la PC.
+                 */
+                if (
+                    host.StartsWith(
+                        "localhost",
+                        StringComparison.OrdinalIgnoreCase
+                    ) ||
+                    host.StartsWith("127.0.0.1")
+                )
+                {
+                    baseUrl =
+                        "http://192.168.18.127:5280";
+                }
+
+                Console.WriteLine(
+                    "BASE URL ENVIADA AL AUTHENTICATOR: "
+                    + baseUrl
+                );
+
+
+                // ==========================================
+                // ENVIAR NOTIFICACIÓN FIREBASE
+                // ==========================================
+
+                var mensajeFirebase =
+                    new FirebaseAdmin.Messaging.Message
+                    {
+                        Token = dispositivo.FcmToken,
+
+                        Data =
+                            new Dictionary<string, string>
+                            {
+                {
+                    "tipo",
+                    "solicitud_login"
+                },
+
+                {
+                    "solicitudId",
+                    solicitud.Id.ToString()
+                },
+
+                {
+                    "numero",
+                    numero.ToString()
+                },
+
+                {
+                    "baseUrl",
+                    baseUrl
+                }
+                            },
+
+                        Android =
+                            new AndroidConfig
+                            {
+                                Priority =
+                                    Priority.High
+                            }
+                    };
+
+
+                string resultadoFirebase =
+                    await FirebaseMessaging
+                        .DefaultInstance
+                        .SendAsync(
+                            mensajeFirebase
+                        );
+
+
+                Console.WriteLine(
+                    "FCM ENVIADO: " +
+                    resultadoFirebase
+                );
+
+                // ==========================================
+                // RESPUESTA PARA LA WEB
+                // ==========================================
+
+                return Json(new
+                {
+                    ok = true,
+                    configurado = true,
+
+                    solicitudId = solicitud.Id,
+
+                    numero = numero,
+
+                    mensaje =
+                        "Solicitud creada correctamente."
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR AUTHENTICATOR: " + ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+
+                    mensaje =
+                        "No se pudo crear la solicitud de autenticación."
+                });
+            }
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> EnviarCodigoVinculacionAuthenticator()
+        {
+            try
+            {
+                string? dni =
+                    HttpContext.Session.GetString("DniLoginPendiente");
+
+                if (string.IsNullOrWhiteSpace(dni))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La sesión ha expirado. Inicia sesión nuevamente."
+                    });
+                }
+
+                Usuario? usuario =
+                    await _Context.Usuario
+                        .FirstOrDefaultAsync(x => x.Dni == dni);
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró el usuario."
+                    });
+                }
+
+                // Código seguro de 6 caracteres
+                const string caracteres =
+                    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+                char[] codigoArray = new char[6];
+
+                for (int i = 0; i < codigoArray.Length; i++)
+                {
+                    int posicion =
+                        RandomNumberGenerator.GetInt32(
+                            caracteres.Length
+                        );
+
+                    codigoArray[i] =
+                        caracteres[posicion];
+                }
+
+                string codigo =
+                    new string(codigoArray);
+
+                // Expira en 1 minuto
+                long expiracion =
+                    DateTimeOffset.UtcNow
+                        .AddMinutes(1)
+                        .ToUnixTimeSeconds();
+
+                // Guardar temporalmente en la sesión
+                HttpContext.Session.SetString(
+                    "CodigoAuthenticator",
+                    codigo
+                );
+
+                HttpContext.Session.SetString(
+                    "CodigoAuthenticatorExpira",
+                    expiracion.ToString()
+                );
+
+                HttpContext.Session.SetString(
+                    "AuthenticatorIdentidadVerificada",
+                    "false"
+                );
+
+                // Enviar usando tu servicio actual
+                await _emailService.EnviarCodigoAsync(
+                    usuario.Correo,
+                    codigo
+                );
+
+                return Json(new
+                {
+                    ok = true,
+                    correoOculto = OcultarCorreo(usuario.Correo),
+                    segundos = 60,
+                    mensaje = "Código enviado correctamente."
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR AUTHENTICATOR CORREO: " + ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "No se pudo enviar el código de seguridad."
+                });
+            }
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult VerificarCodigoVinculacionAuthenticator(
+    string codigo
+)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(codigo))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Ingresa el código de seguridad."
+                    });
+                }
+
+                string? codigoGuardado =
+                    HttpContext.Session.GetString(
+                        "CodigoAuthenticator"
+                    );
+
+                string? expiracionTexto =
+                    HttpContext.Session.GetString(
+                        "CodigoAuthenticatorExpira"
+                    );
+
+                if (
+                    string.IsNullOrWhiteSpace(codigoGuardado) ||
+                    string.IsNullOrWhiteSpace(expiracionTexto)
+                )
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = true,
+                        mensaje = "No existe un código activo."
+                    });
+                }
+
+                if (!long.TryParse(
+                        expiracionTexto,
+                        out long expiracion))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = true,
+                        mensaje = "El código ya no es válido."
+                    });
+                }
+
+                long ahora =
+                    DateTimeOffset.UtcNow
+                        .ToUnixTimeSeconds();
+
+                if (ahora >= expiracion)
+                {
+                    HttpContext.Session.Remove(
+                        "CodigoAuthenticator"
+                    );
+
+                    HttpContext.Session.Remove(
+                        "CodigoAuthenticatorExpira"
+                    );
+
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = true,
+                        mensaje = "El código ha expirado."
+                    });
+                }
+
+                codigo =
+                    codigo.Trim().ToUpper();
+
+                if (!string.Equals(
+                        codigo,
+                        codigoGuardado,
+                        StringComparison.Ordinal))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = false,
+                        mensaje = "El código ingresado es incorrecto."
+                    });
+                }
+
+                // IMPORTANTE:
+                // Desde aquí sabemos que realmente controla
+                // el correo registrado.
+                HttpContext.Session.SetString(
+                    "AuthenticatorIdentidadVerificada",
+                    "true"
+                );
+
+                // El código ya fue usado: destruirlo
+                HttpContext.Session.Remove(
+                    "CodigoAuthenticator"
+                );
+
+                HttpContext.Session.Remove(
+                    "CodigoAuthenticatorExpira"
+                );
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = "Identidad confirmada correctamente."
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR VERIFICANDO AUTHENTICATOR: " + ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "No se pudo verificar el código."
+                });
+            }
+        }
+        private string OcultarCorreo(string correo)
+        {
+            if (string.IsNullOrWhiteSpace(correo))
+            {
+                return "";
+            }
+
+            string[] partes = correo.Split('@');
+
+            if (partes.Length != 2)
+            {
+                return correo;
+            }
+
+            string usuario = partes[0];
+            string dominio = partes[1];
+
+            string visible;
+
+            if (usuario.Length <= 3)
+            {
+                visible = usuario.Substring(0, 1);
+            }
+            else
+            {
+                visible = usuario.Substring(0, 3);
+            }
+
+            return visible + "*****@" + dominio;
+        }
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult DescargarAuthenticator()
+        {
+            var rutaApk = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "descargas",
+                "CrediPlusAuthenticator.apk"
+            );
+
+            if (!System.IO.File.Exists(rutaApk))
+            {
+                return NotFound();
+            }
+
+            return PhysicalFile(
+                rutaApk,
+                "application/vnd.android.package-archive",
+                "CrediPlusAuthenticator.apk"
+            );
+        }
+        // =====================================================
+        // PREPARAR CONFIGURACIÓN TOTP
+        // =====================================================
+
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> PrepararConfiguracionTotp()
+        {
+            try
+            {
+                string? dni =
+                    HttpContext.Session.GetString(
+                        "DniLoginPendiente"
+                    );
+
+                if (string.IsNullOrWhiteSpace(dni))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "La sesión ha expirado. Inicia sesión nuevamente."
+                    });
+                }
+
+
+                bool identidadVerificada =
+                    HttpContext.Session.GetString(
+                        "AuthenticatorIdentidadVerificada"
+                    ) == "true";
+
+
+                if (!identidadVerificada)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "Primero debes verificar tu identidad por correo."
+                    });
+                }
+
+
+                Usuario? usuario =
+                    await _Context.Usuario
+                        .FirstOrDefaultAsync(
+                            x => x.Dni == dni
+                        );
+
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se encontró el usuario."
+                    });
+                }
+
+
+                string? claveTotp =
+     HttpContext.Session.GetString(
+         "TotpSecretPendiente"
+     );
+
+
+                // Si todavía no existe una clave pendiente,
+                // generamos una sola vez.
+                if (string.IsNullOrWhiteSpace(claveTotp))
+                {
+                    byte[] bytesSecretos =
+                        RandomNumberGenerator.GetBytes(20);
+
+                    claveTotp =
+                        ConvertirBase32(
+                            bytesSecretos
+                        );
+
+                    HttpContext.Session.SetString(
+                        "TotpSecretPendiente",
+                        claveTotp
+                    );
+                }
+
+
+                return Json(new
+                {
+                    ok = true,
+                    correo = usuario.Correo,
+                    clave = FormatearClaveTotp(claveTotp)
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR PREPARANDO TOTP: " + ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo preparar la configuración del autenticador."
+                });
+            }
+        }
+        // =====================================================
+        // CONFIRMAR CONFIGURACIÓN TOTP
+        // =====================================================
+
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> ConfirmarConfiguracionTotp(
+            string codigo)
+        {
+            try
+            {
+                string? dni =
+                    HttpContext.Session.GetString(
+                        "DniLoginPendiente"
+                    );
+
+                if (string.IsNullOrWhiteSpace(dni))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "La sesión ha expirado. Inicia sesión nuevamente."
+                    });
+                }
+
+
+                bool identidadVerificada =
+                    HttpContext.Session.GetString(
+                        "AuthenticatorIdentidadVerificada"
+                    ) == "true";
+
+
+                if (!identidadVerificada)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "Primero debes verificar tu identidad por correo."
+                    });
+                }
+
+
+                if (
+                    string.IsNullOrWhiteSpace(codigo) ||
+                    !Regex.IsMatch(codigo, @"^\d{6}$")
+                )
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "El código debe tener exactamente 6 números."
+                    });
+                }
+
+
+                string? claveTotp =
+                    HttpContext.Session.GetString(
+                        "TotpSecretPendiente"
+                    );
+
+
+                if (string.IsNullOrWhiteSpace(claveTotp))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "La configuración TOTP ha expirado. Genera una nueva."
+                    });
+                }
+
+
+                bool codigoValido =
+                    ValidarCodigoTotp(
+                        claveTotp,
+                        codigo
+                    );
+
+
+                if (!codigoValido)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "El código no es válido. Revisa el código generado por CrediPlus Authenticator."
+                    });
+                }
+
+
+                Usuario? usuario =
+                    await _Context.Usuario
+                        .FirstOrDefaultAsync(
+                            x => x.Dni == dni
+                        );
+
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se encontró el usuario."
+                    });
+                }
+
+
+                // ==========================================
+                // GUARDAR DEFINITIVAMENTE EN MYSQL
+                // ==========================================
+
+                usuario.TotpSecret =
+                    claveTotp;
+
+                usuario.TotpHabilitado =
+                    true;
+
+
+                _Context.Usuario.Update(
+                    usuario
+                );
+
+                await _Context.SaveChangesAsync();
+
+
+                // Destruir clave temporal
+                HttpContext.Session.Remove(
+                    "TotpSecretPendiente"
+                );
+
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje =
+                        "CrediPlus Authenticator fue vinculado correctamente."
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR CONFIRMANDO TOTP: " + ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo confirmar la configuración TOTP."
+                });
+            }
+        }
+        // =====================================================
+        // GENERAR / VALIDAR TOTP
+        // =====================================================
+
+        private static bool ValidarCodigoTotp(
+            string secretoBase32,
+            string codigoIngresado)
+        {
+            byte[] secreto =
+                DecodificarBase32(
+                    secretoBase32
+                );
+
+
+            long tiempoActual =
+                DateTimeOffset.UtcNow
+                    .ToUnixTimeSeconds()
+                / 30;
+
+
+            // Aceptar:
+            // período anterior,
+            // período actual,
+            // período siguiente.
+            // Esto tolera pequeñas diferencias de reloj.
+
+            for (long diferencia = -1;
+                 diferencia <= 1;
+                 diferencia++)
+            {
+                string codigoEsperado =
+                    GenerarCodigoTotp(
+                        secreto,
+                        tiempoActual + diferencia
+                    );
+
+
+                if (
+                    string.Equals(
+                        codigoEsperado,
+                        codigoIngresado,
+                        StringComparison.Ordinal
+                    )
+                )
+                {
+                    return true;
+                }
+            }
+
+
+            return false;
+        }
+
+
+        private static string GenerarCodigoTotp(
+            byte[] secreto,
+            long contador)
+        {
+            byte[] contadorBytes =
+                BitConverter.GetBytes(
+                    contador
+                );
+
+
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(
+                    contadorBytes
+                );
+            }
+
+
+            using HMACSHA1 hmac =
+                new HMACSHA1(
+                    secreto
+                );
+
+
+            byte[] hash =
+                hmac.ComputeHash(
+                    contadorBytes
+                );
+
+
+            int offset =
+                hash[
+                    hash.Length - 1
+                ] & 0x0F;
+
+
+            int binario =
+                (
+                    (hash[offset] & 0x7F) << 24
+                )
+                |
+                (
+                    (hash[offset + 1] & 0xFF) << 16
+                )
+                |
+                (
+                    (hash[offset + 2] & 0xFF) << 8
+                )
+                |
+                (
+                    hash[offset + 3] & 0xFF
+                );
+
+
+            int codigo =
+                binario % 1_000_000;
+
+
+            return codigo.ToString(
+                "D6"
+            );
+        }
+        private static string ConvertirBase32(
+    byte[] datos)
+        {
+            const string alfabeto =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+
+            StringBuilder resultado =
+                new StringBuilder();
+
+
+            int buffer = 0;
+            int bitsEnBuffer = 0;
+
+
+            foreach (byte dato in datos)
+            {
+                buffer =
+                    (buffer << 8) | dato;
+
+                bitsEnBuffer += 8;
+
+
+                while (bitsEnBuffer >= 5)
+                {
+                    bitsEnBuffer -= 5;
+
+                    int indice =
+                        (buffer >> bitsEnBuffer)
+                        & 31;
+
+                    resultado.Append(
+                        alfabeto[indice]
+                    );
+                }
+            }
+
+
+            if (bitsEnBuffer > 0)
+            {
+                int indice =
+                    (buffer << (5 - bitsEnBuffer))
+                    & 31;
+
+                resultado.Append(
+                    alfabeto[indice]
+                );
+            }
+
+
+            return resultado.ToString();
+        }
+
+
+        private static byte[] DecodificarBase32(
+            string texto)
+        {
+            const string alfabeto =
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+
+            texto =
+                texto
+                    .Replace(" ", "")
+                    .Trim()
+                    .ToUpperInvariant();
+
+
+            List<byte> bytes =
+                new List<byte>();
+
+
+            int buffer = 0;
+            int bitsEnBuffer = 0;
+
+
+            foreach (char caracter in texto)
+            {
+                int valor =
+                    alfabeto.IndexOf(
+                        caracter
+                    );
+
+
+                if (valor < 0)
+                {
+                    continue;
+                }
+
+
+                buffer =
+                    (buffer << 5) | valor;
+
+                bitsEnBuffer += 5;
+
+
+                if (bitsEnBuffer >= 8)
+                {
+                    bitsEnBuffer -= 8;
+
+                    bytes.Add(
+                        (byte)(
+                            (buffer >> bitsEnBuffer)
+                            & 255
+                        )
+                    );
+                }
+            }
+
+
+            return bytes.ToArray();
+        }
+
+
+        private static string FormatearClaveTotp(
+            string clave)
+        {
+            StringBuilder resultado =
+                new StringBuilder();
+
+
+            for (int i = 0;
+                 i < clave.Length;
+                 i++)
+            {
+                if (
+                    i > 0 &&
+                    i % 4 == 0
+                )
+                {
+                    resultado.Append(" ");
+                }
+
+
+                resultado.Append(
+                    clave[i]
+                );
+            }
+
+
+            return resultado.ToString();
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> RegistrarDispositivoAuthenticator(
+    string correo,
+    string codigoTotp,
+    string fcmToken,
+    string? nombreDispositivo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(correo) ||
+                    string.IsNullOrWhiteSpace(codigoTotp) ||
+                    string.IsNullOrWhiteSpace(fcmToken))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Faltan datos para registrar el dispositivo."
+                    });
+                }
+
+                Usuario? usuario =
+                    await _Context.Usuario
+                        .FirstOrDefaultAsync(
+                            x => x.Correo == correo
+                        );
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró la cuenta."
+                    });
+                }
+
+                if (!usuario.TotpHabilitado ||
+                    string.IsNullOrWhiteSpace(usuario.TotpSecret))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El Authenticator todavía no está configurado."
+                    });
+                }
+
+                bool codigoValido =
+                    ValidarCodigoTotp(
+                        usuario.TotpSecret,
+                        codigoTotp
+                    );
+
+                if (!codigoValido)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El código TOTP no es válido."
+                    });
+                }
+
+                AutenticadorDispositivo? dispositivo =
+                    await _Context.AUTENTICADOR_DISPOSITIVO
+                        .FirstOrDefaultAsync(
+                            x => x.UsuarioId == usuario.Id
+                        );
+
+                if (dispositivo == null)
+                {
+                    dispositivo =
+                        new AutenticadorDispositivo
+                        {
+                            UsuarioId = usuario.Id,
+                            FcmToken = fcmToken.Trim(),
+                            NombreDispositivo =
+                                string.IsNullOrWhiteSpace(nombreDispositivo)
+                                    ? "Android"
+                                    : nombreDispositivo.Trim(),
+                            FechaVinculacion = DateTime.Now,
+                            Activo = true
+                        };
+
+                    _Context.AUTENTICADOR_DISPOSITIVO.Add(
+                        dispositivo
+                    );
+                }
+                else
+                {
+                    dispositivo.FcmToken =
+                        fcmToken.Trim();
+
+                    dispositivo.NombreDispositivo =
+                        string.IsNullOrWhiteSpace(nombreDispositivo)
+                            ? "Android"
+                            : nombreDispositivo.Trim();
+
+                    dispositivo.FechaVinculacion =
+                        DateTime.Now;
+
+                    dispositivo.Activo = true;
+                }
+
+                await _Context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = "Dispositivo vinculado correctamente."
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR REGISTRANDO DISPOSITIVO: " +
+                    ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo registrar el dispositivo."
+                });
+            }
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResponderSolicitudAuthenticator(
+    int solicitudId,
+    string numero)
+        {
+            try
+            {
+                AutenticadorSolicitud? solicitud =
+                    await _Context.AUTENTICADOR_SOLICITUD
+                        .FirstOrDefaultAsync(
+                            x => x.Id == solicitudId
+                        );
+
+                if (solicitud == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "La solicitud no existe."
+                    });
+                }
+
+                if (solicitud.Estado != "Pendiente")
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "Esta solicitud ya fue procesada."
+                    });
+                }
+
+                if (DateTime.Now >
+                    solicitud.FechaExpiracion)
+                {
+                    solicitud.Estado =
+                        "Expirado";
+
+                    await _Context.SaveChangesAsync();
+
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "La solicitud expiró."
+                    });
+                }
+                if (
+                    solicitud.NumeroVerificacion !=
+                    numero.Trim()
+                )
+                {
+                    solicitud.Estado =
+                        "Incorrecto";
+
+                    await _Context.SaveChangesAsync();
+
+                    return Json(new
+                    {
+                        ok = false,
+                        estado = "Incorrecto",
+                        mensaje =
+                            "El número ingresado es incorrecto."
+                    });
+                }
+
+                solicitud.Estado =
+                    "Aprobado";
+
+                await _Context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje =
+                        "Inicio de sesión aprobado."
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR RESPUESTA AUTHENTICATOR: " +
+                    ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo aprobar la solicitud."
+                });
+            }
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult>
+     CancelarSolicitudAuthenticator(
+         int solicitudId)
+        {
+            try
+            {
+                var solicitud =
+                    await _Context
+                        .AUTENTICADOR_SOLICITUD
+                        .FirstOrDefaultAsync(
+                            x => x.Id == solicitudId
+                        );
+
+                if (solicitud == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se encontró la solicitud."
+                    });
+                }
+
+                // ==========================================
+                // CAMBIAR ESTADO
+                // ==========================================
+
+                if (
+                    solicitud.Estado ==
+                    "Pendiente"
+                )
+                {
+                    if (
+                        DateTime.Now >
+                        solicitud.FechaExpiracion
+                    )
+                    {
+                        solicitud.Estado =
+                            "Expirado";
+                    }
+                    else
+                    {
+                        solicitud.Estado =
+                            "Rechazado";
+                    }
+
+                    await _Context
+                        .SaveChangesAsync();
+
+                    // ==========================================
+                    // BUSCAR CELULAR VINCULADO
+                    // ==========================================
+
+                    var dispositivo =
+                        await _Context
+                            .AUTENTICADOR_DISPOSITIVO
+                            .FirstOrDefaultAsync(
+                                x =>
+                                    x.UsuarioId ==
+                                        solicitud.UsuarioId &&
+                                    x.Activo
+                            );
+
+                    // ==========================================
+                    // AVISAR AL CELULAR
+                    // ==========================================
+
+                    if (
+                        dispositivo != null &&
+                        !string.IsNullOrWhiteSpace(
+                            dispositivo.FcmToken
+                        )
+                    )
+                    {
+                        try
+                        {
+                            var mensajeFirebase =
+                                new FirebaseAdmin.Messaging.Message
+                                {
+                                    Token =
+                                        dispositivo.FcmToken,
+
+                                    Data =
+                                        new Dictionary<
+                                            string,
+                                            string
+                                        >
+                                        {
+                                    {
+                                        "tipo",
+                                        "cancelar_solicitud"
+                                    },
+                                    {
+                                        "solicitudId",
+                                        solicitud.Id
+                                            .ToString()
+                                    }
+                                        },
+
+                                    Android =
+                                        new AndroidConfig
+                                        {
+                                            Priority =
+                                                Priority.High
+                                        }
+                                };
+
+                            await FirebaseMessaging
+                                .DefaultInstance
+                                .SendAsync(
+                                    mensajeFirebase
+                                );
+
+                            Console.WriteLine(
+                                "FCM CANCELACIÓN ENVIADO: " +
+                                solicitud.Id
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            /*
+                             * La solicitud ya quedó
+                             * cancelada en la base de datos.
+                             * Si Firebase falla, no debemos
+                             * deshacer esa cancelación.
+                             */
+                            Console.WriteLine(
+                                "ERROR FCM CANCELACIÓN: " +
+                                ex
+                            );
+                        }
+                    }
+                }
+
+                return Json(new
+                {
+                    ok = true,
+                    estado =
+                        solicitud.Estado
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR CANCELANDO AUTHENTICATOR: " +
+                    ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo cancelar la solicitud."
+                });
+            }
+        }
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult>
+    ConsultarEstadoSolicitudAuthenticator(
+        int solicitudId)
+        {
+            try
+            {
+                string? dni =
+                    HttpContext.Session.GetString(
+                        "DniLoginPendiente"
+                    );
+
+                if (string.IsNullOrWhiteSpace(dni))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "La sesión de inicio ha expirado."
+                    });
+                }
+
+
+                Usuario? usuario =
+                    await _Context.Usuario
+                        .FirstOrDefaultAsync(
+                            x => x.Dni == dni
+                        );
+
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se encontró el usuario."
+                    });
+                }
+
+
+                AutenticadorSolicitud? solicitud =
+                    await _Context
+                        .AUTENTICADOR_SOLICITUD
+                        .FirstOrDefaultAsync(
+                            x =>
+                                x.Id == solicitudId &&
+                                x.UsuarioId == usuario.Id
+                        );
+
+
+                if (solicitud == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se encontró la solicitud."
+                    });
+                }
+
+
+                if (
+                    solicitud.Estado == "Pendiente" &&
+                    DateTime.Now >
+                    solicitud.FechaExpiracion
+                )
+                {
+                    solicitud.Estado =
+                        "Expirado";
+
+                    await _Context
+                        .SaveChangesAsync();
+                }
+
+
+                if (solicitud.Estado != "Aprobado")
+                {
+                    return Json(new
+                    {
+                        ok = true,
+                        aprobado = false,
+                        estado =
+                            solicitud.Estado
+                    });
+                }
+
+
+                // ==========================================
+                // CREAR SESIÓN DEL USUARIO
+                // ==========================================
+
+                List<Claim> claims =
+                    new List<Claim>()
+                    {
+                new Claim(
+                    ClaimTypes.Name,
+                    usuario.Nombre
+                ),
+
+                new Claim(
+                    "Apellido",
+                    usuario.Apellido
+                ),
+
+                new Claim(
+                    "Dni",
+                    usuario.Dni
+                ),
+
+                new Claim(
+                    "Celular",
+                    usuario.Celular
+                ),
+
+                new Claim(
+                    "Correo",
+                    usuario.Correo
+                ),
+
+                new Claim(
+                    ClaimTypes.Role,
+                    usuario.Rol
+                )
+                    };
+
+
+                ClaimsIdentity claimsIdentity =
+                    new ClaimsIdentity(
+                        claims,
+                        CookieAuthenticationDefaults
+                            .AuthenticationScheme
+                    );
+
+
+                await HttpContext.SignInAsync(
+                    CookieAuthenticationDefaults
+                        .AuthenticationScheme,
+
+                    new ClaimsPrincipal(
+                        claimsIdentity
+                    ),
+
+                    new AuthenticationProperties
+                    {
+                        AllowRefresh = true
+                    }
+                );
+
+
+                usuario.EstadoActivo =
+                    true;
+
+                usuario.UltimaConexion =
+                    DateTime.Now;
+
+                await _Context
+                    .SaveChangesAsync();
+
+
+                string url;
+
+                if (usuario.Rol == "Analista")
+                {
+                    url =
+                        Url.Action(
+                            "ProgramaAnalista",
+                            "Analista"
+                        )!;
+                }
+                else if (
+                    usuario.Rol ==
+                    "Administrador"
+                )
+                {
+                    url =
+                        Url.Action(
+                            "ProgramaAdministrador",
+                            "Administrador"
+                        )!;
+                }
+                else
+                {
+                    url =
+                        Url.Action(
+                            "DashboardCliente",
+                            "Login"
+                        )!;
+                }
+
+
+                HttpContext.Session.Remove(
+                    "DniLoginPendiente"
+                );
+
+
+                return Json(new
+                {
+                    ok = true,
+                    aprobado = true,
+                    estado = "Aprobado",
+                    redirectUrl = url
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "ERROR CONSULTANDO AUTHENTICATOR: " +
+                    ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo consultar la solicitud."
+                });
+            }
+        }
 
     }
 

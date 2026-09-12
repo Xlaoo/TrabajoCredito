@@ -5,3 +5,6 @@ appsettings.Development.json
 trabajo/ffmpeg.exe
 trabajo/ffprobe.exe
 trabajo/ModelosVoz/ecapa-speaker-v1.onnx
+# Firebase Admin - CLAVE PRIVADA
+firebase-adminsdk.json
+**/firebase-adminsdk.json

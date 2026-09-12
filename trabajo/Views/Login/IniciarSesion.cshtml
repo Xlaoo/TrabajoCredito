@@ -12,6 +12,7 @@
     <!-- ICONOS BOOTSTRAP -->
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
             * {
                 box-sizing: border-box;
@@ -561,6 +562,244 @@
                         font-size: 18px;
                     }
             }
+        /* ==========================================
+           FILTRO CREDIPLUS AUTHENTICATOR
+           ========================================== */
+
+        .modal-auth-filtro {
+            border: none;
+            border-radius: 26px;
+            overflow: hidden;
+            box-shadow: 0 25px 70px rgba(15, 23, 42, .30);
+        }
+
+            .modal-auth-filtro .modal-header {
+                padding: 28px 30px 16px;
+            }
+
+            .modal-auth-filtro .modal-body {
+                padding: 15px 30px 25px;
+            }
+
+        .auth-shield {
+            width: 54px;
+            height: 54px;
+            min-width: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #dbeafe, #ede9fe);
+            color: #4f46e5;
+            font-size: 25px;
+        }
+
+        .auth-titulo {
+            margin: 0;
+            color: #172554;
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .auth-subtitulo {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .auth-pasos {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            margin: 5px 0 28px;
+        }
+
+        .auth-paso {
+            min-width: 85px;
+            text-align: center;
+            color: #94a3b8;
+        }
+
+            .auth-paso span {
+                width: 34px;
+                height: 34px;
+                margin: auto;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                background: #e2e8f0;
+                font-weight: 800;
+            }
+
+            .auth-paso small {
+                display: block;
+                margin-top: 6px;
+                font-weight: 700;
+            }
+
+            .auth-paso.activo {
+                color: #2563eb;
+            }
+
+                .auth-paso.activo span {
+                    background: #2563eb;
+                    color: white;
+                    box-shadow: 0 5px 15px rgba(37, 99, 235, .25);
+                }
+
+        .auth-linea {
+            width: 100px;
+            height: 3px;
+            margin-top: 16px;
+            background: #e2e8f0;
+        }
+
+        .auth-info-box {
+            display: flex;
+            gap: 13px;
+            padding: 16px;
+            border: 1px solid #dbeafe;
+            border-radius: 16px;
+            background: #f8fbff;
+            color: #1e3a8a;
+        }
+
+            .auth-info-box > i {
+                margin-top: 2px;
+                color: #2563eb;
+                font-size: 21px;
+            }
+
+            .auth-info-box p {
+                margin: 5px 0 0;
+                color: #64748b;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+
+        .auth-texto {
+            margin-top: 20px;
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .auth-correo-box {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            margin-top: 12px;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+        }
+
+        .auth-correo-icon {
+            width: 43px;
+            height: 43px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 19px;
+        }
+
+        .auth-correo-box > div:nth-child(2) {
+            flex: 1;
+        }
+
+        .auth-correo-box small {
+            display: block;
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .auth-correo-box strong {
+            display: block;
+            margin-top: 2px;
+            color: #172554;
+            font-size: 14px;
+        }
+
+        .auth-check {
+            color: #22c55e;
+            font-size: 20px;
+        }
+
+        .auth-seguridad-nota {
+            display: flex;
+            gap: 9px;
+            margin-top: 15px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+            .auth-seguridad-nota i {
+                color: #2563eb;
+            }
+
+        .auth-codigo-icon {
+            width: 68px;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 30px;
+        }
+
+        .codigo-authenticator {
+            height: 64px;
+            border: 2px solid #dbe4f0 !important;
+            border-radius: 14px !important;
+            background: #f8fafc !important;
+            text-align: center;
+            font-size: 27px !important;
+            font-weight: 800;
+            letter-spacing: 9px;
+            color: #1e3a8a;
+        }
+
+            .codigo-authenticator:focus {
+                border-color: #2563eb !important;
+                background: white !important;
+                box-shadow: 0 0 0 4px rgba(37, 99, 235, .10) !important;
+            }
+
+        .auth-contador {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 7px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+            .auth-contador i,
+            .auth-contador strong {
+                color: #2563eb;
+            }
+
+        .auth-footer {
+            padding: 5px 30px 25px;
+        }
+
+        .auth-btn-principal {
+            border: none;
+            border-radius: 11px;
+            padding: 10px 18px;
+            background: linear-gradient(135deg, #2563eb, #4f46e5);
+            font-weight: 700;
+        }
 
             /* ==========================================
                                    TABLET
@@ -784,6 +1023,1667 @@
                     margin: 7px auto;
                 }
             }
+        /* ==========================================
+           DESCARGA CREDIPLUS AUTHENTICATOR
+           ========================================== */
+
+        .modal-auth-descarga {
+            border: none;
+            border-radius: 28px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 30px 80px rgba(15, 23, 42, .30);
+        }
+
+        .auth-descarga-header {
+            padding: 26px 28px 20px;
+            border: none;
+            background: linear-gradient( 135deg, #eff6ff, #eef2ff, #f5f3ff );
+        }
+
+        .auth-app-presentacion {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .auth-app-logo {
+            width: 64px;
+            height: 64px;
+            min-width: 64px;
+            padding: 5px;
+            border-radius: 18px;
+            object-fit: cover;
+            background: #ffffff;
+            box-shadow: 0 8px 22px rgba(37, 99, 235, .18);
+        }
+
+        .auth-descarga-titulo {
+            margin: 0;
+            color: #172554;
+            font-size: 23px;
+            font-weight: 800;
+        }
+
+        .auth-descarga-subtitulo {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .auth-descarga-body {
+            padding: 24px 28px 28px;
+        }
+
+        .auth-descarga-intro {
+            margin-bottom: 20px;
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .auth-qr-card {
+            width: 240px;
+            margin: 0 auto;
+            padding: 18px;
+            border: 1px solid #dbeafe;
+            border-radius: 22px;
+            background: #ffffff;
+            box-shadow: 0 12px 35px rgba(37, 99, 235, .10);
+            text-align: center;
+        }
+
+        .auth-qr-contenedor {
+            position: relative;
+            width: 190px;
+            height: 190px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #qrDescargaAuthenticator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            #qrDescargaAuthenticator img,
+            #qrDescargaAuthenticator canvas {
+                max-width: 190px;
+                max-height: 190px;
+            }
+
+        .auth-qr-logo-centro {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 42px;
+            height: 42px;
+            padding: 4px;
+            transform: translate(-50%, -50%);
+            border: 4px solid #ffffff;
+            border-radius: 12px;
+            object-fit: cover;
+            background: #ffffff;
+            box-shadow: 0 3px 10px rgba(15, 23, 42, .16);
+        }
+
+        .auth-qr-texto {
+            margin: 12px 0 0;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .auth-descarga-separador {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 19px 0;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+            .auth-descarga-separador::before,
+            .auth-descarga-separador::after {
+                content: "";
+                flex: 1;
+                height: 1px;
+                background: #e2e8f0;
+            }
+
+        .btn-descargar-auth {
+            width: 100%;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 13px;
+            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 800;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: .2s;
+        }
+
+            .btn-descargar-auth:hover {
+                color: #ffffff;
+                transform: translateY(-1px);
+                box-shadow: 0 8px 20px rgba(37, 99, 235, .22);
+            }
+
+        .auth-instalacion {
+            margin-top: 22px;
+            padding: 17px;
+            border-radius: 16px;
+            background: #f8fafc;
+        }
+
+        .auth-instalacion-titulo {
+            margin-bottom: 13px;
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .auth-instalacion-paso {
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+            margin-bottom: 11px;
+        }
+
+            .auth-instalacion-paso:last-child {
+                margin-bottom: 0;
+            }
+
+        .auth-instalacion-numero {
+            width: 25px;
+            height: 25px;
+            min-width: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .auth-instalacion-paso p {
+            margin: 2px 0 0;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .auth-apk-seguro {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            margin-top: 15px;
+            padding: 12px 13px;
+            border-radius: 12px;
+            background: #f0fdf4;
+            color: #166534;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
+        .auth-descarga-footer {
+            padding: 0 28px 25px;
+            border: none;
+        }
+
+        .btn-ya-instale {
+            border: none;
+            border-radius: 12px;
+            padding: 11px 18px;
+            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
+            font-weight: 700;
+        }
+
+        @@media (max-width: 500px) {
+
+            .auth-descarga-header,
+            .auth-descarga-body,
+            .auth-descarga-footer {
+                padding-left: 18px;
+                padding-right: 18px;
+            }
+
+            .auth-qr-card {
+                width: 220px;
+            }
+
+            .auth-qr-contenedor {
+                width: 170px;
+                height: 170px;
+            }
+
+            #qrDescargaAuthenticator img,
+            #qrDescargaAuthenticator canvas {
+                max-width: 170px;
+                max-height: 170px;
+            }
+
+            .auth-app-logo {
+                width: 56px;
+                height: 56px;
+                min-width: 56px;
+            }
+
+            .auth-descarga-titulo {
+                font-size: 20px;
+            }
+        }
+
+
+        /* ==========================================
+           GUÍA VISUAL AUTHENTICATOR
+           ========================================== */
+
+        .auth-guia-invitacion {
+            margin-top: 20px;
+            padding: 17px;
+            border: 1px solid #dbeafe;
+            border-radius: 16px;
+            background: #f8fbff;
+            text-align: center;
+        }
+
+            .auth-guia-invitacion i {
+                display: block;
+                margin-bottom: 8px;
+                color: #2563eb;
+                font-size: 27px;
+            }
+
+            .auth-guia-invitacion strong {
+                display: block;
+                color: #172554;
+                font-size: 14px;
+            }
+
+            .auth-guia-invitacion p {
+                margin: 5px 0 13px;
+                color: #64748b;
+                font-size: 12px;
+            }
+
+        .btn-ver-guia {
+            border: 1px solid #2563eb;
+            border-radius: 11px;
+            padding: 9px 16px;
+            background: #ffffff;
+            color: #2563eb;
+            font-size: 13px;
+            font-weight: 800;
+            transition: .2s;
+        }
+
+            .btn-ver-guia:hover {
+                background: #eff6ff;
+            }
+
+
+        /* MODAL GUÍA */
+
+        .modal-guia-auth {
+            border: none;
+            border-radius: 26px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 30px 80px rgba(15, 23, 42, .30);
+        }
+
+        .guia-auth-header {
+            padding: 22px 25px;
+            border: none;
+            background: linear-gradient( 135deg, #eff6ff, #eef2ff, #f5f3ff );
+        }
+
+        .guia-auth-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 13px;
+            object-fit: cover;
+        }
+
+        .guia-auth-header h4 {
+            margin: 0;
+            color: #172554;
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .guia-auth-header p {
+            margin: 3px 0 0;
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .guia-auth-body {
+            padding: 22px 25px;
+        }
+
+
+        /* IMAGEN */
+
+        .guia-imagen-contenedor {
+            width: 100%;
+            min-height: 330px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            border-radius: 18px;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+
+        .guia-imagen {
+            display: block;
+            max-width: 100%;
+            max-height: 420px;
+            margin: auto;
+            border-radius: 14px;
+            object-fit: contain;
+            box-shadow: 0 8px 25px rgba(15, 23, 42, .12);
+        }
+
+
+        /* TEXTO DEL PASO */
+
+        .guia-paso-info {
+            margin-top: 18px;
+            text-align: center;
+        }
+
+        .guia-paso-numero {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .guia-paso-info h5 {
+            margin: 10px 0 6px;
+            color: #172554;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .guia-paso-info p {
+            max-width: 430px;
+            margin: 0 auto;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+
+        /* BOTONES */
+
+        .guia-controles {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        .btn-guia-anterior,
+        .btn-guia-siguiente {
+            min-width: 120px;
+            padding: 10px 16px;
+            border-radius: 11px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .btn-guia-anterior {
+            border: 1px solid #dbe4f0;
+            background: #ffffff;
+            color: #475569;
+        }
+
+        .btn-guia-siguiente {
+            border: none;
+            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
+            color: white;
+        }
+
+        .guia-indicadores {
+            display: flex;
+            justify-content: center;
+            gap: 7px;
+            margin-top: 17px;
+        }
+
+        .guia-indicador {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            transition: .2s;
+        }
+
+            .guia-indicador.activo {
+                width: 22px;
+                border-radius: 10px;
+                background: #2563eb;
+            }
+
+
+        /* CELULAR */
+
+        @@media (max-width: 500px) {
+
+            .guia-auth-header,
+            .guia-auth-body {
+                padding-left: 17px;
+                padding-right: 17px;
+            }
+
+            .guia-imagen-contenedor {
+                min-height: 260px;
+            }
+
+            .guia-imagen {
+                max-height: 330px;
+            }
+
+            .btn-guia-anterior,
+            .btn-guia-siguiente {
+                min-width: 105px;
+                padding: 9px 12px;
+            }
+        }
+        /* ==========================================
+           MODAL PRINCIPAL AUTHENTICATOR
+           ========================================== */
+
+        .modal-auth-descarga-principal {
+            border: none;
+            border-radius: 28px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 30px 80px rgba(15, 23, 42, .30);
+        }
+
+        .auth-principal-header {
+            padding: 24px 28px 18px;
+            background: linear-gradient( 135deg, #eff6ff, #eef2ff, #f5f3ff );
+        }
+
+        .auth-principal-logo {
+            width: 62px;
+            height: 62px;
+            min-width: 62px;
+            padding: 5px;
+            border-radius: 17px;
+            object-fit: cover;
+            background: #ffffff;
+            box-shadow: 0 8px 22px rgba(37, 99, 235, .16);
+        }
+
+        .auth-principal-titulo {
+            margin: 0;
+            color: #172554;
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .auth-principal-subtitulo {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .auth-principal-body {
+            padding: 22px 28px 24px;
+        }
+
+        .auth-presentacion {
+            text-align: center;
+        }
+
+        .auth-presentacion-icono {
+            width: 62px;
+            height: 62px;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 18px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 28px;
+        }
+
+        .auth-presentacion h5 {
+            margin-bottom: 7px;
+            color: #172554;
+            font-size: 19px;
+            font-weight: 800;
+        }
+
+        .auth-presentacion p {
+            max-width: 420px;
+            margin: 0 auto;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+
+        /* BENEFICIOS */
+
+        .auth-beneficios {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .auth-beneficio {
+            padding: 13px;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #f8fafc;
+            text-align: center;
+        }
+
+        .auth-beneficio-icono {
+            width: 38px;
+            height: 38px;
+            margin: 0 auto 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 11px;
+            background: #e0e7ff;
+            color: #4f46e5;
+            font-size: 18px;
+        }
+
+        .auth-beneficio strong {
+            display: block;
+            color: #1e293b;
+            font-size: 12px;
+        }
+
+        .auth-beneficio span {
+            display: block;
+            margin-top: 4px;
+            color: #64748b;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+
+
+        /* QR */
+
+        .auth-principal-qr-seccion {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .auth-principal-qr {
+            position: relative;
+            width: 210px;
+            height: 210px;
+            margin: 0 auto;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #dbeafe;
+            border-radius: 22px;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(37, 99, 235, .12);
+        }
+
+        #qrDescargaAuthenticator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            #qrDescargaAuthenticator img,
+            #qrDescargaAuthenticator canvas {
+                width: 190px !important;
+                height: 190px !important;
+            }
+
+        .auth-principal-qr-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 44px;
+            height: 44px;
+            padding: 4px;
+            transform: translate(-50%, -50%);
+            border: 4px solid #ffffff;
+            border-radius: 12px;
+            background: #ffffff;
+            object-fit: cover;
+        }
+
+
+        /* ANDROID */
+
+        .auth-android-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 18px;
+            padding: 13px 15px;
+            border-radius: 14px;
+            background: #f0fdf4;
+        }
+
+        .auth-android-icono {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: #dcfce7;
+            color: #16a34a;
+            font-size: 22px;
+        }
+
+        .auth-android-box strong {
+            display: block;
+            color: #166534;
+            font-size: 12px;
+        }
+
+        .auth-android-box p {
+            margin: 3px 0 0;
+            color: #4b7b5b;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+
+
+        /* ADVERTENCIA */
+
+        .auth-advertencia-instalacion {
+            display: flex;
+            gap: 11px;
+            margin-top: 13px;
+            padding: 13px 15px;
+            border-radius: 14px;
+            background: #fff7ed;
+            color: #9a3412;
+        }
+
+            .auth-advertencia-instalacion > i {
+                margin-top: 2px;
+                color: #ea580c;
+                font-size: 19px;
+            }
+
+            .auth-advertencia-instalacion strong {
+                display: block;
+                font-size: 12px;
+            }
+
+            .auth-advertencia-instalacion p {
+                margin: 3px 0 0;
+                color: #9a3412;
+                font-size: 10px;
+                line-height: 1.45;
+            }
+
+
+        /* SEGURIDAD */
+
+        .auth-seguridad-apk {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            margin-top: 13px;
+            color: #64748b;
+            font-size: 10px;
+            text-align: center;
+        }
+
+            .auth-seguridad-apk i {
+                color: #2563eb;
+                font-size: 15px;
+            }
+
+
+        /* BOTÓN */
+
+        .auth-principal-footer {
+            padding: 0 28px 26px;
+        }
+
+        .auth-btn-iniciar-instalacion {
+            width: 100%;
+            padding: 13px 18px;
+            border: none;
+            border-radius: 13px;
+            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 800;
+            box-shadow: 0 8px 22px rgba(37, 99, 235, .22);
+        }
+
+            .auth-btn-iniciar-instalacion:hover {
+                background: linear-gradient( 135deg, #1d4ed8, #4338ca );
+                color: #ffffff;
+            }
+
+
+        /* RESPONSIVE */
+
+        @@media (max-width: 520px) {
+
+            .auth-principal-header,
+            .auth-principal-body,
+            .auth-principal-footer {
+                padding-left: 18px;
+                padding-right: 18px;
+            }
+
+            .auth-beneficios {
+                grid-template-columns: 1fr;
+            }
+
+            .auth-principal-qr {
+                width: 190px;
+                height: 190px;
+            }
+
+            #qrDescargaAuthenticator img,
+            #qrDescargaAuthenticator canvas {
+                width: 170px !important;
+                height: 170px !important;
+            }
+
+            .auth-principal-titulo {
+                font-size: 19px;
+            }
+        }
+        /* ==========================================
+           GUÍA PASO A PASO AUTHENTICATOR
+           ========================================== */
+
+        .modal-guia-instalacion {
+            border: none;
+            border-radius: 28px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 30px 80px rgba(15, 23, 42, .30);
+        }
+
+        .guia-instalacion-header {
+            padding: 22px 26px;
+            border: none;
+            background: linear-gradient( 135deg, #eff6ff, #eef2ff, #f5f3ff );
+        }
+
+        .guia-etiqueta {
+            display: inline-block;
+            margin-bottom: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .5px;
+        }
+
+        .guia-titulo {
+            margin: 0;
+            color: #172554;
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .guia-subtitulo {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .guia-instalacion-body {
+            padding: 22px 26px 26px;
+        }
+
+        .guia-imagen-box {
+            width: 100%;
+            min-height: 340px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px;
+            border-radius: 20px;
+            background: #f8fafc;
+            overflow: hidden;
+        }
+
+        .guia-imagen-paso {
+            display: block;
+            max-width: 100%;
+            max-height: 430px;
+            object-fit: contain;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, .15);
+        }
+
+        .guia-progreso {
+            margin-top: 18px;
+            text-align: center;
+        }
+
+        .guia-numero-paso {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .guia-paso-texto {
+            margin-top: 14px;
+            text-align: center;
+        }
+
+            .guia-paso-texto h5 {
+                margin-bottom: 7px;
+                color: #172554;
+                font-size: 20px;
+                font-weight: 800;
+            }
+
+            .guia-paso-texto p {
+                max-width: 520px;
+                margin: 0 auto;
+                color: #64748b;
+                font-size: 13px;
+                line-height: 1.55;
+            }
+
+        .guia-accion {
+            max-width: 520px;
+            margin: 14px auto 0;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 13px;
+            background: #eff6ff;
+            color: #1e40af;
+            font-size: 12px;
+        }
+
+            .guia-accion i {
+                color: #2563eb;
+                font-size: 17px;
+            }
+
+        .guia-indicadores-instalacion {
+            display: flex;
+            justify-content: center;
+            gap: 7px;
+            margin-top: 18px;
+        }
+
+        .guia-punto {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            transition: .2s;
+        }
+
+            .guia-punto.activo {
+                width: 24px;
+                border-radius: 10px;
+                background: #2563eb;
+            }
+
+        .guia-botones {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 22px;
+        }
+
+        .btn-guia-atras,
+        .btn-guia-siguiente {
+            min-width: 130px;
+            padding: 11px 18px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .btn-guia-atras {
+            border: 1px solid #dbe4f0;
+            background: #ffffff;
+            color: #64748b;
+        }
+
+            .btn-guia-atras:disabled {
+                opacity: .45;
+                cursor: not-allowed;
+            }
+
+        .btn-guia-siguiente {
+            border: none;
+            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
+            color: #ffffff;
+        }
+
+            .btn-guia-siguiente:hover {
+                background: linear-gradient( 135deg, #1d4ed8, #4338ca );
+            }
+
+
+        /* CELULAR */
+
+        @@media (max-width: 600px) {
+
+            .guia-instalacion-header,
+            .guia-instalacion-body {
+                padding-left: 17px;
+                padding-right: 17px;
+            }
+
+            .guia-imagen-box {
+                min-height: 260px;
+            }
+
+            .guia-imagen-paso {
+                max-height: 340px;
+            }
+
+            .guia-titulo {
+                font-size: 19px;
+            }
+
+            .btn-guia-atras,
+            .btn-guia-siguiente {
+                min-width: 110px;
+                padding: 10px 13px;
+            }
+        }
+        /* ==========================================
+           PASO 2 - DOS FORMAS DE ABRIR EL APK
+           ========================================== */
+
+        .guia-dos-imagenes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .guia-opcion-imagen {
+            position: relative;
+            padding-top: 14px;
+            text-align: center;
+        }
+
+        .guia-opcion-etiqueta {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            z-index: 2;
+            transform: translateX(-50%);
+            padding: 5px 13px;
+            border-radius: 20px;
+            background: #2563eb;
+            color: #ffffff;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .4px;
+        }
+
+        .guia-imagen-box-doble {
+            min-height: 320px;
+        }
+
+            .guia-imagen-box-doble .guia-imagen-paso {
+                max-height: 390px;
+            }
+
+        .guia-opcion-texto {
+            max-width: 300px;
+            margin: 10px auto 0;
+            color: #64748b;
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
+
+        /* CELULAR */
+
+        @@media (max-width: 650px) {
+
+            .guia-dos-imagenes {
+                grid-template-columns: 1fr;
+            }
+
+            .guia-imagen-box-doble {
+                min-height: 250px;
+            }
+
+                .guia-imagen-box-doble .guia-imagen-paso {
+                    max-height: 320px;
+                }
+        }
+        /* ==========================================
+           CONFIGURACIÓN TOTP AUTHENTICATOR
+           ========================================== */
+
+        .modal-totp-auth {
+            border: none;
+            border-radius: 26px;
+            overflow: hidden;
+            background: #ffffff;
+            box-shadow: 0 30px 80px rgba(15, 23, 42, .30);
+        }
+
+        .totp-header {
+            padding: 22px 26px;
+            border: none;
+            background: linear-gradient( 135deg, #eff6ff, #eef2ff, #f5f3ff );
+        }
+
+        .totp-icono {
+            width: 54px;
+            height: 54px;
+            min-width: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 16px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 24px;
+        }
+
+        .totp-header h4 {
+            margin: 0;
+            color: #172554;
+            font-size: 21px;
+            font-weight: 800;
+        }
+
+        .totp-header p {
+            margin: 3px 0 0;
+            color: #64748b;
+            font-size: 12px;
+        }
+
+        .totp-body {
+            padding: 23px 26px;
+        }
+
+        .totp-intro {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+            .totp-intro h5 {
+                margin-bottom: 6px;
+                color: #172554;
+                font-size: 18px;
+                font-weight: 800;
+            }
+
+            .totp-intro p {
+                margin: 0;
+                color: #64748b;
+                font-size: 12px;
+                line-height: 1.55;
+            }
+
+
+        /* DATOS */
+
+        .totp-dato-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 11px;
+            padding: 14px;
+            border: 1px solid #dbe4f0;
+            border-radius: 14px;
+            background: #f8fafc;
+        }
+
+        .totp-dato-icono {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 11px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 17px;
+        }
+
+            .totp-dato-icono.clave {
+                background: #ede9fe;
+                color: #7c3aed;
+            }
+
+        .totp-dato-contenido {
+            flex: 1;
+            min-width: 0;
+        }
+
+            .totp-dato-contenido span {
+                display: block;
+                color: #64748b;
+                font-size: 10px;
+            }
+
+            .totp-dato-contenido strong {
+                display: block;
+                margin-top: 3px;
+                color: #172554;
+                font-size: 13px;
+                word-break: break-all;
+            }
+
+        .totp-clave {
+            letter-spacing: 1px;
+        }
+
+        .btn-copiar-totp {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            border: none;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #2563eb;
+            box-shadow: 0 3px 10px rgba(15, 23, 42, .08);
+        }
+
+
+        /* AYUDA */
+
+        .totp-ayuda {
+            display: flex;
+            gap: 11px;
+            margin-top: 16px;
+            padding: 13px 14px;
+            border-radius: 14px;
+            background: #eff6ff;
+        }
+
+            .totp-ayuda > i {
+                margin-top: 2px;
+                color: #2563eb;
+                font-size: 20px;
+            }
+
+            .totp-ayuda strong {
+                color: #1e40af;
+                font-size: 12px;
+            }
+
+            .totp-ayuda p {
+                margin: 4px 0 0;
+                color: #64748b;
+                font-size: 11px;
+                line-height: 1.5;
+            }
+
+        .totp-separador {
+            margin: 21px 0;
+            border-color: #e2e8f0;
+        }
+
+
+        /* VERIFICACIÓN */
+
+        .totp-verificacion {
+            text-align: center;
+        }
+
+            .totp-verificacion h6 {
+                color: #172554;
+                font-size: 15px;
+                font-weight: 800;
+            }
+
+            .totp-verificacion p {
+                max-width: 430px;
+                margin: 5px auto 14px;
+                color: #64748b;
+                font-size: 11px;
+                line-height: 1.5;
+            }
+
+        .totp-codigo-input {
+            width: 230px !important;
+            height: 58px;
+            margin: 0 auto;
+            border: 2px solid #dbe4f0 !important;
+            border-radius: 14px !important;
+            background: #f8fafc !important;
+            color: #1e3a8a;
+            text-align: center;
+            font-size: 25px !important;
+            font-weight: 800;
+            letter-spacing: 8px;
+        }
+
+            .totp-codigo-input:focus {
+                border-color: #2563eb !important;
+                background: #ffffff !important;
+                box-shadow: 0 0 0 4px rgba(37, 99, 235, .10) !important;
+            }
+
+
+        /* FOOTER */
+
+        .totp-footer {
+            padding: 5px 26px 24px;
+            border: none;
+        }
+
+        .btn-verificar-totp {
+            border: none;
+            border-radius: 11px;
+            padding: 10px 17px;
+            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
+            font-weight: 700;
+        }
+
+
+        @@media (max-width: 520px) {
+
+            .totp-header,
+            .totp-body,
+            .totp-footer {
+                padding-left: 17px;
+                padding-right: 17px;
+            }
+
+            .totp-footer {
+                gap: 8px;
+            }
+
+            .totp-codigo-input {
+                width: 100% !important;
+            }
+        }
+        /* ==========================================
+           QR CONFIGURACIÓN TOTP
+           ========================================== */
+
+        .totp-qr-seccion {
+            margin-top: 18px;
+            padding: 16px;
+            border: 1px solid #dbeafe;
+            border-radius: 16px;
+            background: #f8fbff;
+            text-align: center;
+        }
+
+        .totp-qr-titulo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            color: #172554;
+            font-size: 13px;
+        }
+
+            .totp-qr-titulo i {
+                color: #2563eb;
+                font-size: 18px;
+            }
+
+        .totp-qr-descripcion {
+            margin: 6px 0 13px;
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .totp-qr-box {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-radius: 16px;
+            background: #ffffff;
+            box-shadow: 0 7px 20px rgba(37, 99, 235, .10);
+        }
+
+        #qrConfiguracionTotp img,
+        #qrConfiguracionTotp canvas {
+            width: 164px !important;
+            height: 164px !important;
+        }
+
+        .totp-qr-logo {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 38px;
+            height: 38px;
+            transform: translate(-50%, -50%);
+            padding: 3px;
+            border: 4px solid white;
+            border-radius: 10px;
+            background: white;
+            object-fit: cover;
+        }
+
+        .totp-qr-alternativa {
+            display: block;
+            margin-top: 11px;
+            color: #64748b;
+            font-size: 10px;
+        }
+
+
+        /* BOTÓN GUÍA */
+
+        .btn-guia-vinculacion {
+            width: 100%;
+            margin-top: 12px;
+            padding: 10px 14px;
+            border: 1px solid #bfdbfe;
+            border-radius: 12px;
+            background: #ffffff;
+            color: #2563eb;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+            .btn-guia-vinculacion:hover {
+                background: #eff6ff;
+            }
+
+
+        /* MODAL GUÍA VINCULACIÓN */
+
+        .modal-guia-totp {
+            border: none;
+            border-radius: 22px;
+            overflow: hidden;
+        }
+
+        .guia-totp-header {
+            padding: 20px 22px;
+            border: none;
+            background: linear-gradient( 135deg, #eff6ff, #eef2ff );
+        }
+
+            .guia-totp-header h5 {
+                margin: 0;
+                color: #172554;
+                font-weight: 800;
+            }
+
+            .guia-totp-header p {
+                margin: 3px 0 0;
+                color: #64748b;
+                font-size: 11px;
+            }
+
+        .guia-totp-body {
+            padding: 20px 22px;
+        }
+
+        .guia-totp-opcion {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 13px;
+            padding: 13px;
+            border: 1px solid #e2e8f0;
+            border-radius: 13px;
+        }
+
+        .guia-totp-numero {
+            width: 31px;
+            height: 31px;
+            min-width: 31px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #dbeafe;
+            color: #2563eb;
+            font-weight: 800;
+        }
+
+        .guia-totp-opcion strong {
+            color: #172554;
+            font-size: 12px;
+        }
+
+        .guia-totp-opcion p {
+            margin: 4px 0 0;
+            color: #64748b;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .guia-totp-final {
+            display: flex;
+            gap: 11px;
+            padding: 13px;
+            border-radius: 13px;
+            background: #f0fdf4;
+        }
+
+            .guia-totp-final > i {
+                color: #16a34a;
+                font-size: 20px;
+            }
+
+            .guia-totp-final strong {
+                color: #166534;
+                font-size: 12px;
+            }
+
+            .guia-totp-final p {
+                margin: 3px 0 0;
+                color: #4b7b5b;
+                font-size: 11px;
+            }
+        /* ==========================================
+           GUÍA VISUAL VINCULACIÓN TOTP
+           ========================================== */
+
+        .guia-vinculacion-body {
+            padding: 20px 22px 22px;
+        }
+
+        .guia-totp-badge {
+            display: inline-block;
+            margin-bottom: 5px;
+            padding: 4px 9px;
+            border-radius: 20px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .4px;
+        }
+
+        .guia-vinculacion-paso {
+            text-align: center;
+        }
+
+        .guia-vinculacion-imagen {
+            width: 100%;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            border-radius: 17px;
+            background: #f8fafc;
+        }
+
+            .guia-vinculacion-imagen img {
+                display: block;
+                max-width: 100%;
+                max-height: 390px;
+                object-fit: contain;
+                border-radius: 12px;
+                box-shadow: 0 8px 25px rgba(15, 23, 42, .12);
+            }
+
+        .guia-vinculacion-numero {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: #dbeafe;
+            color: #2563eb;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .guia-vinculacion-paso h5 {
+            margin: 10px 0 5px;
+            color: #172554;
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .guia-vinculacion-paso > p {
+            max-width: 430px;
+            margin: 0 auto;
+            color: #64748b;
+            font-size: 11px;
+            line-height: 1.55;
+        }
+
+        .guia-vinculacion-nota {
+            max-width: 430px;
+            margin: 12px auto 0;
+            padding: 11px 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-radius: 12px;
+            background: #eff6ff;
+            color: #1e40af;
+            font-size: 11px;
+        }
+
+            .guia-vinculacion-nota i {
+                color: #2563eb;
+                font-size: 16px;
+            }
+
+        .guia-vinculacion-indicadores {
+            display: flex;
+            justify-content: center;
+            gap: 7px;
+            margin-top: 17px;
+        }
+
+        .guia-vinculacion-punto {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            transition: .2s;
+        }
+
+            .guia-vinculacion-punto.activo {
+                width: 23px;
+                border-radius: 10px;
+                background: #2563eb;
+            }
+
+        .guia-vinculacion-botones {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn-guia-vinculacion-atras,
+        .btn-guia-vinculacion-siguiente {
+            min-width: 115px;
+            padding: 10px 15px;
+            border-radius: 11px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .btn-guia-vinculacion-atras {
+            border: 1px solid #dbe4f0;
+            background: #ffffff;
+            color: #64748b;
+        }
+
+            .btn-guia-vinculacion-atras:disabled {
+                opacity: .45;
+            }
+
+        .btn-guia-vinculacion-siguiente {
+            border: none;
+            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
+            color: #ffffff;
+        }
+
+        @@media (max-width: 520px) {
+
+            .guia-vinculacion-body {
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+
+            .guia-vinculacion-imagen {
+                min-height: 240px;
+            }
+
+                .guia-vinculacion-imagen img {
+                    max-height: 310px;
+                }
+        }
     </style>
 </head>
 
@@ -1060,26 +2960,25 @@
                     </div>
 
 
-                    <!-- OPCIÓN APLICACIÓN -->
+                    <!-- OPCIÓN CREDIPLUS AUTHENTICATOR -->
                     <div class="opcion-seguridad"
                          id="opcionAplicacion"
                          onclick="seleccionarMetodo('aplicacion')">
 
                         <div class="opcion-icono aplicacion">
-                            <i class="bi bi-shield-lock-fill"></i>
+                            <img src="~/imagenes/AplicacionCrediplus.jpeg"
+                                 alt="CrediPlus Authenticator"
+                                 style="width:38px;height:38px;border-radius:9px;object-fit:cover;" />
                         </div>
+
                         <div class="opcion-contenido">
                             <div class="titulo-opcion">
-                                <h5>Aplicación autenticadora</h5>
-
-                                <span class="badge-proximamente">
-                                    Próximamente
-                                </span>
+                                <h5>CrediPlus Authenticator</h5>
                             </div>
 
                             <p>
-                                Utiliza una aplicación autenticadora
-                                para generar tu código de seguridad.
+                                Verifica tu identidad mediante tu aplicación
+                                CrediPlus Authenticator.
                             </p>
                         </div>
 
@@ -1110,17 +3009,6 @@
                             <span id="radioVoz"></span>
                         </div>
 
-                    </div>
-
-                    <!-- MENSAJE APLICACIÓN NO DISPONIBLE -->
-                    <div id="mensajeAplicacion"
-                         class="alert alert-info mt-3"
-                         style="display:none;">
-
-                        <i class="bi bi-info-circle-fill"></i>
-
-                        La aplicación autenticadora todavía no está disponible.
-                        Por ahora utiliza el correo electrónico.
                     </div>
 
                 </div>
@@ -1412,6 +3300,1699 @@
         </div>
 
     </div>
+    <!-- =====================================================
+     MODAL CONFIRMAR IDENTIDAD PARA AUTHENTICATOR
+     ===================================================== -->
+
+    <div class="modal fade"
+         id="modalFiltroAuthenticator"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-auth-filtro">
+
+                <div class="modal-header border-0">
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div class="auth-shield">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+
+                        <div>
+                            <h4 class="modal-title auth-titulo">
+                                Confirma que eres tú
+                            </h4>
+
+                            <p class="auth-subtitulo">
+                                Verificación previa de seguridad
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar">
+                    </button>
+
+                </div>
+
+
+                <div class="modal-body">
+
+                    <!-- PROGRESO -->
+
+                    <div class="auth-pasos">
+
+                        <div class="auth-paso activo"
+                             id="authPasoIndicador1">
+                            <span>1</span>
+                            <small>Identidad</small>
+                        </div>
+
+                        <div class="auth-linea"></div>
+
+                        <div class="auth-paso"
+                             id="authPasoIndicador2">
+                            <span>2</span>
+                            <small>Confirmación</small>
+                        </div>
+
+                    </div>
+
+
+                    <!-- ============================= -->
+                    <!-- PASO 1 -->
+                    <!-- ============================= -->
+
+                    <div id="authPaso1">
+
+                        <div class="auth-info-box">
+
+                            <i class="bi bi-lock-fill"></i>
+
+                            <div>
+                                <strong>
+                                    Protegemos la vinculación de tu cuenta
+                                </strong>
+
+                                <p>
+                                    Antes de registrar CrediPlus Authenticator,
+                                    necesitamos comprobar que realmente eres tú.
+                                </p>
+                            </div>
+
+                        </div>
+
+
+                        <p class="auth-texto">
+                            Enviaremos un código temporal al correo
+                            registrado en tu cuenta:
+                        </p>
+
+
+                        <div class="auth-correo-box">
+
+                            <div class="auth-correo-icon">
+                                <i class="bi bi-envelope-check-fill"></i>
+                            </div>
+
+                            <div>
+                                <small>Correo registrado</small>
+
+                                <strong id="correoOcultoAuthenticator">
+                                    ---*****@@gmail.com
+                                </strong>
+                            </div>
+
+                            <i class="bi bi-check-circle-fill auth-check"></i>
+
+                        </div>
+
+
+                        <div class="auth-seguridad-nota">
+
+                            <i class="bi bi-info-circle-fill"></i>
+
+                            <span>
+                                El código solo será válido durante
+                                1 minuto y se enviará únicamente
+                                al correo asociado a tu cuenta.
+                            </span>
+
+                        </div>
+
+
+                        <div id="mensajeAuthenticatorPaso1"
+                             class="mt-3"
+                             style="display:none;">
+                        </div>
+
+                    </div>
+
+
+                    <!-- ============================= -->
+                    <!-- PASO 2 -->
+                    <!-- ============================= -->
+
+                    <div id="authPaso2"
+                         style="display:none;">
+
+                        <div class="text-center">
+
+                            <div class="auth-codigo-icon mx-auto">
+                                <i class="bi bi-envelope-open-fill"></i>
+                            </div>
+
+                            <h5 class="mt-3 fw-bold"
+                                style="color:#172554;">
+                                Revisa tu correo
+                            </h5>
+
+                            <p class="auth-texto mb-1">
+                                Ingresa el código que enviamos a
+                            </p>
+
+                            <strong id="correoOcultoAuthenticator2"
+                                    style="color:#2563eb;">
+                            </strong>
+
+
+                            <input type="text"
+                                   id="codigoAuthenticatorCorreo"
+                                   class="form-control codigo-authenticator mt-4"
+                                   maxlength="6"
+                                   autocomplete="one-time-code"
+                                   placeholder="XXXXXX"
+                                   oninput="this.value =
+                                    this.value
+                                        .replace(/[^a-zA-Z0-9]/g,'')
+                                        .toUpperCase()" />
+
+
+                            <div class="auth-contador mt-3">
+
+                                <i class="bi bi-clock-fill"></i>
+
+                                <span>
+                                    El código expira en
+                                </span>
+
+                                <strong id="tiempoAuthenticator">
+                                    01:00
+                                </strong>
+
+                            </div>
+
+
+                            <button type="button"
+                                    id="btnReenviarAuthenticator"
+                                    class="btn btn-link mt-2"
+                                    onclick="enviarCodigoAuthenticator()"
+                                    disabled>
+
+                                <i class="bi bi-arrow-clockwise"></i>
+                                Reenviar código
+
+                            </button>
+
+
+                            <div id="mensajeAuthenticatorPaso2"
+                                 class="mt-3"
+                                 style="display:none;">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="modal-footer border-0 auth-footer">
+
+                    <button type="button"
+                            class="btn btn-light"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+
+
+                    <button type="button"
+                            id="btnEnviarCodigoAuthenticator"
+                            class="btn btn-primary auth-btn-principal"
+                            onclick="enviarCodigoAuthenticator()">
+
+                        <i class="bi bi-send-fill me-1"></i>
+                        Enviar código
+
+                    </button>
+
+
+                    <button type="button"
+                            id="btnVerificarAuthenticator"
+                            class="btn btn-primary auth-btn-principal"
+                            onclick="verificarCodigoAuthenticator()"
+                            style="display:none;">
+
+                        <i class="bi bi-shield-check me-1"></i>
+                        Verificar identidad
+
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- =====================================================
+     MODAL IDENTIDAD CONFIRMADA AUTHENTICATOR
+     ===================================================== -->
+
+    <div class="modal fade"
+         id="modalIdentidadConfirmadaAuthenticator"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+
+            <div class="modal-content"
+                 style="
+                border:none;
+                border-radius:24px;
+                box-shadow:0 25px 70px rgba(15,23,42,.30);
+                overflow:hidden;
+             ">
+
+                <div class="modal-body text-center p-4">
+
+                    <!-- ICONO -->
+
+                    <div style="
+                    width:76px;
+                    height:76px;
+                    margin:0 auto 20px;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    border-radius:50%;
+                    background:#dcfce7;
+                    color:#16a34a;
+                    font-size:34px;
+                ">
+
+                        <i class="bi bi-shield-check"></i>
+
+                    </div>
+
+
+                    <!-- TÍTULO -->
+
+                    <h4 style="
+                    color:#172554;
+                    font-weight:800;
+                    margin-bottom:10px;
+                ">
+
+                        Identidad confirmada
+
+                    </h4>
+
+
+                    <!-- TEXTO -->
+
+                    <p style="
+                    color:#64748b;
+                    font-size:14px;
+                    line-height:1.6;
+                    margin-bottom:18px;
+                ">
+
+                        Hemos confirmado correctamente
+                        que eres el propietario de esta cuenta.
+
+                        <br><br>
+
+                        Ahora puedes continuar con la configuración
+                        de <strong>CrediPlus Authenticator</strong>.
+
+                    </p>
+
+
+                    <!-- SEGURIDAD -->
+
+                    <div style="
+                    padding:13px;
+                    border-radius:14px;
+                    background:#f0fdf4;
+                    color:#166534;
+                    font-size:12px;
+                    text-align:left;
+                    margin-bottom:20px;
+                ">
+
+                        <i class="bi bi-lock-fill me-1"></i>
+
+                        La configuración estará vinculada únicamente
+                        a tu cuenta y al dispositivo que registres.
+
+                    </div>
+
+
+                    <!-- BOTÓN -->
+
+                    <button type="button"
+                            class="btn btn-primary w-100"
+                            style="
+                            border:none;
+                            border-radius:12px;
+                            padding:12px;
+                            font-weight:700;
+                            background:linear-gradient(
+                                135deg,
+                                #2563eb,
+                                #4f46e5
+                            );
+                        "
+                            onclick="continuarConfiguracionAuthenticator()">
+
+                        Continuar configuración
+
+                        <i class="bi bi-arrow-right ms-1"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    <!-- =====================================================
+      MODAL PRINCIPAL - CREDIPLUS AUTHENTICATOR
+      ===================================================== -->
+
+    <div class="modal fade"
+         id="modalDescargaAuthenticator"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content modal-auth-descarga-principal">
+
+                <!-- CABECERA -->
+
+                <div class="modal-header border-0 auth-principal-header">
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <img src="~/imagenes/AplicacionCrediplus.jpeg"
+                             alt="CrediPlus Authenticator"
+                             class="auth-principal-logo" />
+
+                        <div>
+
+                            <h4 class="auth-principal-titulo">
+                                CrediPlus Authenticator
+                            </h4>
+
+                            <p class="auth-principal-subtitulo">
+                                Seguridad adicional para tu cuenta
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar">
+                    </button>
+
+                </div>
+
+
+                <!-- CONTENIDO -->
+
+                <div class="modal-body auth-principal-body">
+
+                    <!-- PRESENTACIÓN -->
+
+                    <div class="auth-presentacion">
+
+                        <div class="auth-presentacion-icono">
+
+                            <i class="bi bi-shield-lock-fill"></i>
+
+                        </div>
+
+                        <h5>
+                            Protege tus inicios de sesión
+                        </h5>
+
+                        <p>
+                            CrediPlus Authenticator te permite confirmar
+                            fácilmente si realmente eres tú quien está
+                            intentando ingresar a tu cuenta.
+                        </p>
+
+                    </div>
+
+
+                    <!-- BENEFICIOS -->
+
+                    <div class="auth-beneficios">
+
+                        <div class="auth-beneficio">
+
+                            <div class="auth-beneficio-icono">
+                                <i class="bi bi-lightning-charge-fill"></i>
+                            </div>
+
+                            <div>
+                                <strong>Verificación rápida</strong>
+
+                                <span>
+                                    Aprueba tus inicios de sesión desde tu celular.
+                                </span>
+                            </div>
+
+                        </div>
+
+
+                        <div class="auth-beneficio">
+
+                            <div class="auth-beneficio-icono">
+                                <i class="bi bi-phone-fill"></i>
+                            </div>
+
+                            <div>
+                                <strong>Fácil de usar</strong>
+
+                                <span>
+                                    Recibe una solicitud y confirma tu identidad.
+                                </span>
+                            </div>
+
+                        </div>
+
+
+                        <div class="auth-beneficio">
+
+                            <div class="auth-beneficio-icono">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
+
+                            <div>
+                                <strong>Mayor seguridad</strong>
+
+                                <span>
+                                    Ayuda a proteger tu cuenta frente a accesos no autorizados.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- QR -->
+
+                    <div class="auth-principal-qr-seccion">
+
+                        <div class="auth-principal-qr">
+
+                            <div id="qrDescargaAuthenticator"></div>
+
+                            <img src="~/imagenes/AplicacionCrediplus.jpeg"
+                                 alt="CrediPlus"
+                                 class="auth-principal-qr-logo" />
+
+                        </div>
+
+
+                        <h6>
+                            Escanea para descargar
+                        </h6>
+
+                        <p>
+                            Utiliza la cámara de tu celular Android
+                            para escanear el código QR.
+                        </p>
+
+                    </div>
+
+
+                    <!-- ANDROID -->
+
+                    <div class="auth-android-box">
+
+                        <div class="auth-android-icono">
+
+                            <i class="bi bi-android2"></i>
+
+                        </div>
+
+                        <div>
+
+                            <strong>
+                                Disponible para Android
+                            </strong>
+
+                            <p>
+                                La aplicación CrediPlus Authenticator
+                                está disponible actualmente para dispositivos Android.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ADVERTENCIA -->
+
+                    <div class="auth-advertencia-instalacion">
+
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+
+                        <div>
+
+                            <strong>
+                                Importante antes de instalar
+                            </strong>
+
+                            <p>
+                                Android puede solicitar autorización para instalar
+                                aplicaciones descargadas fuera de Google Play.
+                                Durante el proceso te indicaremos paso a paso
+                                cómo habilitar este permiso de forma segura.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- SEGURIDAD -->
+
+                    <div class="auth-seguridad-apk">
+
+                        <i class="bi bi-patch-check-fill"></i>
+
+                        <span>
+                            Esta aplicación es proporcionada directamente por
+                            <strong>CrediPlus</strong> para la protección
+                            de tu cuenta.
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- FOOTER -->
+
+                <div class="modal-footer border-0 auth-principal-footer">
+
+                    <button type="button"
+                            class="btn btn-primary auth-btn-iniciar-instalacion"
+                            onclick="iniciarProcesoInstalacionAuthenticator()">
+
+                        <i class="bi bi-download me-2"></i>
+
+                        Iniciar proceso de instalación
+
+                        <i class="bi bi-arrow-right ms-2"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    <!-- =====================================================
+     GUÍA PASO A PASO - CREDIPLUS AUTHENTICATOR
+     ===================================================== -->
+
+    <div class="modal fade"
+         id="modalGuiaInstalacionAuthenticator"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+
+            <div class="modal-content modal-guia-instalacion">
+
+                <!-- CABECERA -->
+
+                <div class="modal-header guia-instalacion-header">
+
+                    <div>
+
+                        <span class="guia-etiqueta">
+                            INSTALACIÓN EN ANDROID
+                        </span>
+
+                        <h4 class="guia-titulo">
+                            Cómo instalar CrediPlus Authenticator
+                        </h4>
+
+                        <p class="guia-subtitulo">
+                            Sigue los pasos para completar la instalación
+                            de forma segura.
+                        </p>
+
+                    </div>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar">
+                    </button>
+
+                </div>
+
+
+                <!-- CUERPO -->
+
+                <div class="modal-body guia-instalacion-body">
+
+                    <!-- PASO 1 -->
+
+                    <div class="guia-paso-pagina"
+                         id="guiaInstalacionPaso1">
+
+                        <!-- IMAGEN -->
+
+                        <div class="guia-imagen-box">
+
+                            <img src="~/PASO A PASO/paso_1.jpeg"
+                                 alt="Paso 1 - Descargar CrediPlus Authenticator"
+                                 class="guia-imagen-paso" />
+
+                        </div>
+
+
+                        <!-- PROGRESO -->
+
+                        <div class="guia-progreso">
+
+                            <span class="guia-numero-paso">
+                                Paso 1 de 8
+                            </span>
+
+                        </div>
+
+
+                        <!-- TEXTO -->
+
+                        <div class="guia-paso-texto">
+
+                            <h5>
+                                Descarga la aplicación
+                            </h5>
+
+                            <p>
+                                Android mostrará una advertencia porque
+                                CrediPlus Authenticator se descarga directamente
+                                desde CrediPlus y no desde Google Play.
+                            </p>
+
+                            <div class="guia-accion">
+
+                                <i class="bi bi-hand-index-thumb-fill"></i>
+
+                                <span>
+                                    Presiona
+                                    <strong>
+                                        “Descargar de todos modos”
+                                    </strong>
+                                    para continuar.
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                    <!-- =====================================================
+                    PASO 2
+                    ===================================================== -->
+
+                    <div class="guia-paso-pagina"
+                         id="guiaInstalacionPaso2"
+                         style="display:none;">
+
+                        <!-- DOS FORMAS DE ABRIR EL APK -->
+
+                        <div class="guia-dos-imagenes">
+
+                            <!-- OPCIÓN 1 -->
+
+                            <div class="guia-opcion-imagen">
+
+                                <span class="guia-opcion-etiqueta">
+                                    OPCIÓN 1
+                                </span>
+
+                                <div class="guia-imagen-box guia-imagen-box-doble">
+
+                                    <img src="~/PASO A PASO/paso_2_1.jpeg"
+                                         alt="Abrir APK desde Chrome"
+                                         class="guia-imagen-paso" />
+
+                                </div>
+
+                                <p class="guia-opcion-texto">
+                                    Desde Chrome, cuando termine la descarga,
+                                    presiona <strong>“Abrir”</strong>.
+                                </p>
+
+                            </div>
+
+
+                            <!-- OPCIÓN 2 -->
+
+                            <div class="guia-opcion-imagen">
+
+                                <span class="guia-opcion-etiqueta">
+                                    OPCIÓN 2
+                                </span>
+
+                                <div class="guia-imagen-box guia-imagen-box-doble">
+
+                                    <img src="~/PASO A PASO/paso_2_2.jpeg"
+                                         alt="Abrir APK desde Descargas"
+                                         class="guia-imagen-paso" />
+
+                                </div>
+
+                                <p class="guia-opcion-texto">
+                                    También puedes entrar a
+                                    <strong>Descargas</strong>
+                                    y seleccionar
+                                    <strong>CrediPlusAuthenticator.apk</strong>.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- PROGRESO -->
+
+                        <div class="guia-progreso">
+
+                            <span class="guia-numero-paso">
+                                Paso 2 de 8
+                            </span>
+
+                        </div>
+
+
+                        <!-- EXPLICACIÓN -->
+
+                        <div class="guia-paso-texto">
+
+                            <h5>
+                                Abre el archivo descargado
+                            </h5>
+
+                            <p>
+                                Cuando la descarga termine, debes abrir
+                                <strong>CrediPlusAuthenticator.apk</strong>
+                                para iniciar la instalación.
+                            </p>
+
+
+                            <div class="guia-accion">
+
+                                <i class="bi bi-folder2-open"></i>
+
+                                <span>
+                                    Puedes abrirlo desde
+                                    <strong>Chrome</strong>
+                                    o desde la carpeta
+                                    <strong>Descargas</strong>.
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                    <!-- =====================================================
+                    PASO 3
+                    ===================================================== -->
+
+                    <div class="guia-paso-pagina"
+                         id="guiaInstalacionPaso3"
+                         style="display:none;">
+
+                        <div class="guia-imagen-box">
+                            <img src="~/PASO A PASO/paso_3.jpeg"
+                                 alt="Paso 3 - Instalar CrediPlus Authenticator"
+                                 class="guia-imagen-paso" />
+                        </div>
+
+                        <div class="guia-progreso">
+                            <span class="guia-numero-paso">
+                                Paso 3 de 8
+                            </span>
+                        </div>
+
+                        <div class="guia-paso-texto">
+
+                            <h5>
+                                Instala CrediPlus Authenticator
+                            </h5>
+
+                            <p>
+                                Android mostrará la confirmación para instalar
+                                la aplicación en tu dispositivo.
+                            </p>
+
+                            <div class="guia-accion">
+                                <i class="bi bi-download"></i>
+
+                                <span>
+                                    Presiona <strong>“Instalar”</strong>
+                                    para comenzar la instalación.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================================
+                         PASO 4
+                         ===================================================== -->
+
+                    <div class="guia-paso-pagina"
+                         id="guiaInstalacionPaso4"
+                         style="display:none;">
+
+                        <div class="guia-imagen-box">
+                            <img src="~/PASO A PASO/paso_4.jpeg"
+                                 alt="Paso 4 - Verificación de Google Play Protect"
+                                 class="guia-imagen-paso" />
+                        </div>
+
+                        <div class="guia-progreso">
+                            <span class="guia-numero-paso">
+                                Paso 4 de 8
+                            </span>
+                        </div>
+
+                        <div class="guia-paso-texto">
+
+                            <h5>
+                                Verifica la aplicación
+                            </h5>
+
+                            <p>
+                                En algunos dispositivos, Google Play Protect puede
+                                solicitar una revisión de seguridad antes de continuar.
+                            </p>
+
+                            <div class="guia-accion">
+                                <i class="bi bi-shield-check"></i>
+
+                                <span>
+                                    Presiona <strong>“Analizar app”</strong>
+                                    y espera a que Android complete la verificación.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================================
+                         PASO 5
+                         ===================================================== -->
+
+                    <div class="guia-paso-pagina"
+                         id="guiaInstalacionPaso5"
+                         style="display:none;">
+
+                        <div class="guia-imagen-box">
+                            <img src="~/PASO A PASO/paso_5.jpeg"
+                                 alt="Paso 5 - Permisos de CrediPlus Authenticator"
+                                 class="guia-imagen-paso" />
+                        </div>
+
+                        <div class="guia-progreso">
+                            <span class="guia-numero-paso">
+                                Paso 5 de 8
+                            </span>
+                        </div>
+
+                        <div class="guia-paso-texto">
+
+                            <h5>
+                                Autoriza los permisos necesarios
+                            </h5>
+
+                            <p>
+                                Al abrir CrediPlus Authenticator por primera vez,
+                                la aplicación solicitará algunos permisos necesarios
+                                para mostrar tus solicitudes de inicio de sesión.
+                            </p>
+
+                            <div class="guia-accion">
+                                <i class="bi bi-bell-fill"></i>
+
+                                <span>
+                                    Presiona <strong>“Permitir”</strong> para recibir
+                                    notificaciones y luego selecciona
+                                    <strong>“PERMITIR”</strong> en la ventana flotante.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================================
+                         PASO 6
+                         ===================================================== -->
+
+                    <div class="guia-paso-pagina"
+                         id="guiaInstalacionPaso6"
+                         style="display:none;">
+
+                        <div class="guia-imagen-box">
+                            <img src="~/PASO A PASO/paso_6.jpeg"
+                                 alt="Paso 6 - Buscar CrediPlus Authenticator"
+                                 class="guia-imagen-paso" />
+                        </div>
+
+                        <div class="guia-progreso">
+                            <span class="guia-numero-paso">
+                                Paso 6 de 8
+                            </span>
+                        </div>
+
+                        <div class="guia-paso-texto">
+
+                            <h5>
+                                Selecciona CrediPlus Authenticator
+                            </h5>
+
+                            <p>
+                                Android abrirá la configuración de aplicaciones
+                                que pueden mostrarse sobre otras apps.
+                            </p>
+
+                            <div class="guia-accion">
+                                <i class="bi bi-phone"></i>
+
+                                <span>
+                                    Busca y selecciona
+                                    <strong>“crediplus_authenticator”</strong>
+                                    en la lista.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================================
+                         PASO 7
+                         ===================================================== -->
+
+                    <div class="guia-paso-pagina"
+                         id="guiaInstalacionPaso7"
+                         style="display:none;">
+
+                        <div class="guia-imagen-box">
+                            <img src="~/PASO A PASO/paso_7.jpeg"
+                                 alt="Paso 7 - Activar ventana flotante"
+                                 class="guia-imagen-paso" />
+                        </div>
+
+                        <div class="guia-progreso">
+                            <span class="guia-numero-paso">
+                                Paso 7 de 8
+                            </span>
+                        </div>
+
+                        <div class="guia-paso-texto">
+
+                            <h5>
+                                Activa la ventana flotante
+                            </h5>
+
+                            <p>
+                                Este permiso permite que CrediPlus muestre una solicitud
+                                de verificación incluso cuando estés utilizando otra aplicación.
+                            </p>
+
+                            <div class="guia-accion">
+                                <i class="bi bi-toggle-on"></i>
+
+                                <span>
+                                    Activa la opción
+                                    <strong>“Permitir mostrar sobre otras apps”</strong>.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =====================================================
+                         PASO 8
+                      ===================================================== -->
+
+                    <div class="guia-paso-pagina"
+                         id="guiaInstalacionPaso8"
+                         style="display:none;">
+
+                        <div class="guia-imagen-box">
+                            <img src="~/PASO A PASO/paso_8.jpeg"
+                                 alt="Paso 8 - CrediPlus Authenticator instalado"
+                                 class="guia-imagen-paso" />
+                        </div>
+
+                        <div class="guia-progreso">
+                            <span class="guia-numero-paso">
+                                Paso 8 de 8
+                            </span>
+                        </div>
+
+                        <div class="guia-paso-texto">
+
+                            <h5>
+                                CrediPlus Authenticator está listo
+                            </h5>
+
+                            <p>
+                                La instalación y los permisos necesarios se completaron.
+                                Ahora debes vincular tu cuenta de CrediPlus con la aplicación.
+                            </p>
+
+                            <div class="guia-accion guia-accion-final">
+                                <i class="bi bi-check-circle-fill"></i>
+
+                                <span>
+                                    Regresa a esta página y presiona
+                                    <strong>“Continuar con la configuración”</strong>.
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+                    
+
+                    <!-- INDICADORES -->
+
+                    <div class="guia-indicadores-instalacion">
+
+                        <span class="guia-punto activo"></span>
+                        <span class="guia-punto"></span>
+                        <span class="guia-punto"></span>
+                        <span class="guia-punto"></span>
+                        <span class="guia-punto"></span>
+                        <span class="guia-punto"></span>
+                        <span class="guia-punto"></span>
+                        <span class="guia-punto"></span>
+
+                    </div>
+
+
+                    <!-- BOTONES -->
+
+                    <div class="guia-botones">
+
+                        <button type="button"
+                                id="btnGuiaInstalacionAnterior"
+                                class="btn-guia-atras"
+                                onclick="anteriorGuiaInstalacionAuthenticator()"
+                                disabled>
+
+                            <i class="bi bi-arrow-left me-1"></i>
+
+                            Anterior
+
+                        </button>
+
+
+                        <button type="button"
+                                id="btnGuiaInstalacionSiguiente"
+                                class="btn-guia-siguiente"
+                                onclick="siguienteGuiaInstalacionAuthenticator()">
+
+                            Siguiente
+
+                            <i class="bi bi-arrow-right ms-1"></i>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    <!-- =====================================================
+     CONFIGURACIÓN TOTP - CREDIPLUS AUTHENTICATOR
+     ===================================================== -->
+
+    <div class="modal fade"
+         id="modalConfigurarTotpAuthenticator"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content modal-totp-auth">
+
+                <!-- CABECERA -->
+
+                <div class="modal-header totp-header">
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div class="totp-icono">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </div>
+
+                        <div>
+
+                            <h4>
+                                Configura tu cuenta
+                            </h4>
+
+                            <p>
+                                CrediPlus Authenticator
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar">
+                    </button>
+
+                </div>
+
+
+                <!-- CUERPO -->
+
+                <div class="modal-body totp-body">
+
+                    <div class="totp-intro">
+
+                        <h5>
+                            Vincula tu cuenta con la aplicación
+                        </h5>
+
+                        <p>
+                            Ingresa estos datos en
+                            <strong>CrediPlus Authenticator</strong>
+                            para comenzar a generar tus códigos de seguridad.
+                        </p>
+
+                    </div>
+
+
+                    <!-- CORREO -->
+
+                    <div class="totp-dato-box">
+
+                        <div class="totp-dato-icono">
+                            <i class="bi bi-envelope-fill"></i>
+                        </div>
+
+                        <div class="totp-dato-contenido">
+
+                            <span>
+                                Correo de la cuenta
+                            </span>
+
+                            <strong id="correoConfiguracionTotp">
+                                Cargando...
+                            </strong>
+
+                        </div>
+
+                        <button type="button"
+                                class="btn-copiar-totp"
+                                onclick="copiarCorreoTotp()">
+
+                            <i class="bi bi-copy"></i>
+
+                        </button>
+
+                    </div>
+
+
+                    <!-- CLAVE TOTP -->
+
+                    <div class="totp-dato-box">
+
+                        <div class="totp-dato-icono clave">
+                            <i class="bi bi-key-fill"></i>
+                        </div>
+
+                        <div class="totp-dato-contenido">
+
+                            <span>
+                                Clave de configuración
+                            </span>
+
+                            <strong id="claveConfiguracionTotp"
+                                    class="totp-clave">
+                                Cargando...
+                            </strong>
+
+                        </div>
+
+                        <button type="button"
+                                class="btn-copiar-totp"
+                                onclick="copiarClaveTotp()">
+
+                            <i class="bi bi-copy"></i>
+
+                        </button>
+
+                    </div>
+                    <!-- QR DE VINCULACIÓN -->
+
+                    <div class="totp-qr-seccion">
+
+                        <div class="totp-qr-titulo">
+                            <i class="bi bi-qr-code-scan"></i>
+                            <strong>Escanea para vincular más rápido</strong>
+                        </div>
+
+                        <p class="totp-qr-descripcion">
+                            Abre CrediPlus Authenticator y selecciona
+                            <strong>“Escanear código QR”</strong>.
+                        </p>
+
+                        <div class="totp-qr-box">
+
+                            <div id="qrConfiguracionTotp"></div>
+
+                            <img src="~/imagenes/AplicacionCrediplus.jpeg"
+                                 alt="CrediPlus"
+                                 class="totp-qr-logo" />
+
+                        </div>
+
+                        <span class="totp-qr-alternativa">
+                            También puedes utilizar el correo y la clave
+                            mostrados arriba para configurarlo manualmente.
+                        </span>
+
+                    </div>
+
+                    <!-- INSTRUCCIÓN -->
+
+                    <div class="totp-ayuda">
+
+                        <i class="bi bi-phone-fill"></i>
+
+                        <div>
+
+                            <strong>
+                                Ahora abre CrediPlus Authenticator
+                            </strong>
+
+                            <p>
+                                Selecciona
+                                <strong>“Agregar clave manualmente”</strong>
+                                e ingresa el correo y la clave mostrados arriba.
+                            </p>
+
+                        </div>
+
+                    </div>
+                    <button type="button"
+                            class="btn-guia-vinculacion"
+                            onclick="abrirGuiaVinculacionTotp()">
+
+                        <i class="bi bi-question-circle-fill"></i>
+
+                        ¿Cómo vinculo mi cuenta?
+
+                    </button>
+
+                    <hr class="totp-separador" />
+
+
+                    <!-- VERIFICACIÓN -->
+
+                    <div class="totp-verificacion">
+
+                        <h6>
+                            Verifica la vinculación
+                        </h6>
+
+                        <p>
+                            La aplicación comenzará a generar un código
+                            de 6 dígitos. Escríbelo aquí para confirmar
+                            que la configuración fue realizada correctamente.
+                        </p>
+
+
+                        <input type="text"
+                               id="codigoVerificacionTotp"
+                               class="form-control totp-codigo-input"
+                               maxlength="6"
+                               inputmode="numeric"
+                               autocomplete="one-time-code"
+                               placeholder="000000" />
+
+
+                        <div id="mensajeConfiguracionTotp"
+                             class="mt-3"
+                             style="display:none;">
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- FOOTER -->
+
+                <div class="modal-footer totp-footer">
+
+                    <button type="button"
+                            class="btn btn-light"
+                            onclick="volverGuiaInstalacion()">
+
+                        <i class="bi bi-arrow-left me-1"></i>
+                        Volver
+
+                    </button>
+
+
+                    <button type="button"
+                            id="btnVerificarTotp"
+                            class="btn btn-primary btn-verificar-totp"
+                            onclick="verificarConfiguracionTotp()">
+
+                        Verificar y vincular
+
+                        <i class="bi bi-check-circle ms-1"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+    <!-- =====================================================
+      GUÍA VISUAL DE VINCULACIÓN TOTP
+      ===================================================== -->
+
+    <div class="modal fade"
+         id="modalGuiaVinculacionTotp"
+         tabindex="-1"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content modal-guia-totp">
+
+                <!-- CABECERA -->
+
+                <div class="modal-header guia-totp-header">
+
+                    <div>
+
+                        <span class="guia-totp-badge">
+                            CREDIPLUS AUTHENTICATOR
+                        </span>
+
+                        <h5>
+                            Cómo vincular tu cuenta
+                        </h5>
+
+                        <p>
+                            Sigue estos pasos desde tu celular.
+                        </p>
+
+                    </div>
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Cerrar">
+                    </button>
+
+                </div>
+
+
+                <!-- CUERPO -->
+
+                <div class="modal-body guia-vinculacion-body">
+
+
+                    <!-- =============================
+                         PASO 1
+                         ============================= -->
+
+                    <div class="guia-vinculacion-paso"
+                         id="guiaVinculacionPaso1">
+
+                        <div class="guia-vinculacion-imagen">
+
+                            <img src="~/SCANO_AUTHENTICADOR/paso_1.jpeg"
+                                 alt="Paso 1 - Elegir método de vinculación" />
+
+                        </div>
+
+
+                        <span class="guia-vinculacion-numero">
+                            Paso 1 de 4
+                        </span>
+
+
+                        <h5>
+                            Elige cómo vincular tu cuenta
+                        </h5>
+
+                        <p>
+                            Abre <strong>CrediPlus Authenticator</strong>.
+                            Puedes vincular tu cuenta escaneando el código QR
+                            o agregando la clave manualmente.
+                        </p>
+
+
+                        <div class="guia-vinculacion-nota">
+
+                            <i class="bi bi-info-circle-fill"></i>
+
+                            <span>
+                                Si deseas usar el QR, presiona
+                                <strong>“Escanear código QR”</strong>.
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =============================
+                         PASO 2
+                         ============================= -->
+
+                    <div class="guia-vinculacion-paso"
+                         id="guiaVinculacionPaso2"
+                         style="display:none;">
+
+                        <div class="guia-vinculacion-imagen">
+
+                            <img src="~/SCANO_AUTHENTICADOR/paso_2.jpeg"
+                                 alt="Paso 2 - Permitir acceso a cámara" />
+
+                        </div>
+
+
+                        <span class="guia-vinculacion-numero">
+                            Paso 2 de 4
+                        </span>
+
+
+                        <h5>
+                            Permite el acceso a la cámara
+                        </h5>
+
+                        <p>
+                            La primera vez que uses el escáner,
+                            Android solicitará permiso para utilizar
+                            la cámara del dispositivo.
+                        </p>
+
+
+                        <div class="guia-vinculacion-nota">
+
+                            <i class="bi bi-camera-fill"></i>
+
+                            <span>
+                                Presiona
+                                <strong>“Mientras la app está en uso”</strong>
+                                para continuar.
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =============================
+                         PASO 3
+                         ============================= -->
+
+                    <div class="guia-vinculacion-paso"
+                         id="guiaVinculacionPaso3"
+                         style="display:none;">
+
+                        <div class="guia-vinculacion-imagen">
+
+                            <img src="~/SCANO_AUTHENTICADOR/paso_3.jpeg"
+                                 alt="Paso 3 - Escanear código QR" />
+
+                        </div>
+
+
+                        <span class="guia-vinculacion-numero">
+                            Paso 3 de 4
+                        </span>
+
+
+                        <h5>
+                            Escanea el código QR
+                        </h5>
+
+                        <p>
+                            Apunta la cámara del celular hacia el código QR
+                            que aparece en la página web de CrediPlus.
+                        </p>
+
+
+                        <div class="guia-vinculacion-nota">
+
+                            <i class="bi bi-qr-code-scan"></i>
+
+                            <span>
+                                Coloca el QR dentro del recuadro.
+                                La aplicación lo reconocerá automáticamente.
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =============================
+                         PASO 4
+                         ============================= -->
+
+                    <div class="guia-vinculacion-paso"
+                         id="guiaVinculacionPaso4"
+                         style="display:none;">
+
+                        <div class="guia-vinculacion-imagen">
+
+                            <img src="~/SCANO_AUTHENTICADOR/paso_4.jpeg"
+                                 alt="Paso 4 - Agregar cuenta manualmente" />
+
+                        </div>
+
+
+                        <span class="guia-vinculacion-numero">
+                            Paso 4 de 4
+                        </span>
+
+
+                        <h5>
+                            También puedes agregarla manualmente
+                        </h5>
+
+                        <p>
+                            Si prefieres no usar el QR, presiona
+                            <strong>“Agregar clave manualmente”</strong>
+                            e ingresa los datos mostrados en la web.
+                        </p>
+
+
+                        <div class="guia-vinculacion-nota">
+
+                            <i class="bi bi-key-fill"></i>
+
+                            <span>
+                                En <strong>Nombre de cuenta</strong> coloca
+                                tu correo y en <strong>Clave secreta</strong>
+                                coloca la clave de configuración.
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- INDICADORES -->
+
+                    <div class="guia-vinculacion-indicadores">
+
+                        <span class="guia-vinculacion-punto activo"></span>
+                        <span class="guia-vinculacion-punto"></span>
+                        <span class="guia-vinculacion-punto"></span>
+                        <span class="guia-vinculacion-punto"></span>
+
+                    </div>
+
+
+                    <!-- BOTONES -->
+
+                    <div class="guia-vinculacion-botones">
+
+                        <button type="button"
+                                id="btnGuiaVinculacionAnterior"
+                                class="btn-guia-vinculacion-atras"
+                                onclick="anteriorGuiaVinculacionTotp()"
+                                disabled>
+
+                            <i class="bi bi-arrow-left me-1"></i>
+
+                            Anterior
+
+                        </button>
+
+
+                        <button type="button"
+                                id="btnGuiaVinculacionSiguiente"
+                                class="btn-guia-vinculacion-siguiente"
+                                onclick="siguienteGuiaVinculacionTotp()">
+
+                            Siguiente
+
+                            <i class="bi bi-arrow-right ms-1"></i>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
     <!-- ==========================================
      MODAL CONFIRMAR NUEVA VOZ
      ========================================== -->
@@ -1509,6 +5090,162 @@
         </div>
 
     </div>
+    <!-- ==========================================
+     MODAL ESPERANDO CREDIPLUS AUTHENTICATOR
+     ========================================== -->
+
+    <div class="modal fade"
+         id="modalEsperandoAuthenticator"
+         tabindex="-1"
+         data-bs-backdrop="static"
+         data-bs-keyboard="false"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content"
+                 style="
+                border:none;
+                border-radius:24px;
+                overflow:hidden;
+                box-shadow:0 25px 70px rgba(15,23,42,.30);
+             ">
+
+                <div class="modal-body text-center p-4">
+
+                    <div style="
+                        width:65px;
+                        height:65px;
+                        margin:5px auto 15px;
+                        border-radius:20px;
+                        background:#dbeafe;
+                        color:#2563eb;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        font-size:30px;
+                    ">
+
+                        <i id="iconoEstadoAuthenticator"
+                           class="bi bi-phone"></i>
+
+                    </div>
+
+                    <h4 id="tituloEstadoAuthenticator"
+                        style="
+                        color:#172554;
+                        font-weight:800;
+                        margin-bottom:8px;
+                    ">
+                        Confirma desde tu celular
+                    </h4>
+
+                    <p id="textoEstadoAuthenticator"
+                       style="
+                        color:#64748b;
+                        font-size:14px;
+                        margin-bottom:18px;
+                   ">
+                        Hemos enviado una solicitud a
+                        CrediPlus Authenticator.
+                    </p>
+
+
+                    <div id="contenedorNumeroAuthenticator">
+
+                        <small style="
+                            color:#64748b;
+                            font-weight:600;
+                          ">
+                            NÚMERO DE VERIFICACIÓN
+                        </small>
+
+                        <div id="numeroEstadoAuthenticator"
+                             style="
+                            margin:8px auto 18px;
+                            width:125px;
+                            padding:10px;
+                            border-radius:14px;
+                            background:#eff6ff;
+                            color:#1e3a8a;
+                            font-size:32px;
+                            font-weight:900;
+                            letter-spacing:5px;
+                         ">
+                            --
+                        </div>
+
+                    </div>
+
+
+                    <div id="esperandoEstadoAuthenticator"
+                         class="flex-column align-items-center justify-content-center gap-2"
+                         style="display:flex;">
+
+                        <div class="d-flex align-items-center gap-2">
+
+                            <div class="spinner-border spinner-border-sm text-primary"
+                                 role="status">
+                            </div>
+
+                            <span style="
+            color:#475569;
+            font-size:13px;
+        ">
+                                Esperando confirmación...
+                            </span>
+
+                        </div>
+
+                        <div style="
+        color:#64748b;
+        font-size:13px;
+        margin-top:5px;
+    ">
+                            La solicitud expira en
+                            <strong id="tiempoSolicitudAuthenticator"
+                                    style="color:#2563eb;">
+                                30 s
+                            </strong>
+                        </div>
+
+                    </div>
+
+                    <button type="button"
+                            id="btnCancelarEstadoAuthenticator"
+                            class="btn btn-outline-danger mt-3 px-4"
+                            onclick="cancelarSolicitudAuthenticatorDesdeWeb()">
+
+                        <i class="bi bi-x-circle me-1"></i>
+
+                        Cancelar solicitud
+
+                    </button>
+                    <button type="button"
+                            id="btnReenviarEstadoAuthenticator"
+                            class="btn btn-primary mt-3 px-4"
+                            style="display:none;"
+                            onclick="reenviarSolicitudAuthenticator()">
+
+                        <i class="bi bi-arrow-clockwise me-1"></i>
+                        Reenviar solicitud
+
+                    </button>
+                    <button type="button"
+                            id="btnCerrarEstadoAuthenticator"
+                            class="btn btn-light mt-3 px-4"
+                            data-bs-dismiss="modal"
+                            style="display:none;">
+                        Cerrar
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
     <!-- Bootstrap JavaScript -->
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -1521,10 +5258,18 @@
             let intervaloCodigo = null;
             let fraseVozBD = "";
             let segundosCodigo = 60;
+        let solicitudAuthenticatorActual = null;
+
+        let intervaloSolicitudAuthenticator = null;
+
+        let solicitudAuthenticatorTerminada = false;
             // NUEVO
             let vozHabilitadaLogin = false;
             // NUEVO
             let tieneRegistroVozLogin = false;
+                    let intervaloAuthenticator = null;
+        let segundosAuthenticator = 60;
+        let correoAuthenticatorOculto = "";
             // ==========================================
             // CONTADOR DEL CÓDIGO
             // ==========================================
@@ -1643,8 +5388,6 @@
                 const radioVoz =
                     document.getElementById("radioVoz");
 
-                const mensajeAplicacion =
-                    document.getElementById("mensajeAplicacion");
 
                 const bloqueRegistroVoz =
                     document.getElementById("bloqueRegistroVoz");
@@ -1666,7 +5409,6 @@
                     radioAplicacion.style.display = "none";
                     radioVoz.style.display = "none";
 
-                    mensajeAplicacion.style.display = "none";
 
                     bloqueRegistroVoz.style.display = "none";
                     bloqueVerificacionVoz.style.display = "none";
@@ -1686,7 +5428,6 @@
                     radioAplicacion.style.display = "block";
                     radioVoz.style.display = "none";
 
-                    mensajeAplicacion.style.display = "block";
 
                     bloqueRegistroVoz.style.display = "none";
                     bloqueVerificacionVoz.style.display = "none";
@@ -1749,8 +5490,6 @@
                     radioVoz.style.display =
                         "block";
 
-                    mensajeAplicacion.style.display =
-                        "none";
 
                     bloqueRegistroVoz.style.display =
                         "none";
@@ -1759,7 +5498,422 @@
                         "none";
                 }
             }
+                    function abrirFiltroAuthenticator(correoOculto) {
 
+            correoAuthenticatorOculto =
+                correoOculto || "Correo registrado";
+
+            document.getElementById(
+                "correoOcultoAuthenticator"
+            ).innerText =
+                correoAuthenticatorOculto;
+
+            document.getElementById(
+                "correoOcultoAuthenticator2"
+            ).innerText =
+                correoAuthenticatorOculto;
+
+
+            // Reiniciar pasos
+            document.getElementById(
+                "authPaso1"
+            ).style.display = "block";
+
+            document.getElementById(
+                "authPaso2"
+            ).style.display = "none";
+
+
+            document.getElementById(
+                "btnEnviarCodigoAuthenticator"
+            ).style.display = "inline-block";
+
+            document.getElementById(
+                "btnVerificarAuthenticator"
+            ).style.display = "none";
+
+
+            document.getElementById(
+                "authPasoIndicador1"
+            ).classList.add("activo");
+
+            document.getElementById(
+                "authPasoIndicador2"
+            ).classList.remove("activo");
+
+
+            document.getElementById(
+                "codigoAuthenticatorCorreo"
+            ).value = "";
+
+
+            // Cerrar modal anterior
+            const modalSeguridad =
+                bootstrap.Modal.getInstance(
+                    document.getElementById(
+                        "modalVerificacionSeguridad"
+                    )
+                );
+
+            if (modalSeguridad) {
+                modalSeguridad.hide();
+            }
+
+
+            setTimeout(function () {
+
+                const modal =
+                    bootstrap.Modal.getOrCreateInstance(
+                        document.getElementById(
+                            "modalFiltroAuthenticator"
+                        )
+                    );
+
+                modal.show();
+
+            }, 250);
+        }
+
+
+        async function enviarCodigoAuthenticator() {
+
+            const boton =
+                document.getElementById(
+                    "btnEnviarCodigoAuthenticator"
+                );
+
+            if (boton) {
+                boton.disabled = true;
+
+                boton.innerHTML =
+                    '<span class="spinner-border spinner-border-sm me-1"></span> Enviando...';
+            }
+
+            try {
+
+                const respuesta =
+                    await fetch(
+                        "/Login/EnviarCodigoVinculacionAuthenticator",
+                        {
+                            method: "POST"
+                        }
+                    );
+
+                const resultado =
+                    await respuesta.json();
+
+
+                if (!resultado.ok) {
+
+                    mostrarMensajeAuthenticator(
+                        "mensajeAuthenticatorPaso1",
+                        resultado.mensaje,
+                        false
+                    );
+
+                    return;
+                }
+
+
+                correoAuthenticatorOculto =
+                    resultado.correoOculto;
+
+
+                document.getElementById(
+                    "correoOcultoAuthenticator2"
+                ).innerText =
+                    correoAuthenticatorOculto;
+
+
+                // Pasar a PASO 2
+                document.getElementById(
+                    "authPaso1"
+                ).style.display = "none";
+
+                document.getElementById(
+                    "authPaso2"
+                ).style.display = "block";
+
+
+                document.getElementById(
+                    "btnEnviarCodigoAuthenticator"
+                ).style.display = "none";
+
+                document.getElementById(
+                    "btnVerificarAuthenticator"
+                ).style.display = "inline-block";
+
+
+                document.getElementById(
+                    "authPasoIndicador2"
+                ).classList.add("activo");
+
+
+                iniciarContadorAuthenticator();
+
+
+                setTimeout(function () {
+                    document.getElementById(
+                        "codigoAuthenticatorCorreo"
+                    ).focus();
+                }, 200);
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                mostrarMensajeAuthenticator(
+                    "mensajeAuthenticatorPaso1",
+                    "No se pudo enviar el código.",
+                    false
+                );
+            }
+            finally {
+
+                if (boton) {
+
+                    boton.disabled = false;
+
+                    boton.innerHTML =
+                        '<i class="bi bi-send-fill me-1"></i> Enviar código';
+                }
+            }
+        }
+
+
+        async function verificarCodigoAuthenticator() {
+
+            const input =
+                document.getElementById(
+                    "codigoAuthenticatorCorreo"
+                );
+
+            const codigo =
+                input.value
+                    .trim()
+                    .toUpperCase();
+
+
+            if (codigo.length !== 6) {
+
+                mostrarMensajeAuthenticator(
+                    "mensajeAuthenticatorPaso2",
+                    "Ingresa los 6 caracteres del código.",
+                    false
+                );
+
+                return;
+            }
+
+
+            const boton =
+                document.getElementById(
+                    "btnVerificarAuthenticator"
+                );
+
+            boton.disabled = true;
+
+            boton.innerHTML =
+                '<span class="spinner-border spinner-border-sm me-1"></span> Verificando...';
+
+
+            try {
+
+                const cuerpo =
+                    new URLSearchParams();
+
+                cuerpo.append(
+                    "codigo",
+                    codigo
+                );
+
+
+                const respuesta =
+                    await fetch(
+                        "/Login/VerificarCodigoVinculacionAuthenticator",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/x-www-form-urlencoded"
+                            },
+
+                            body:
+                                cuerpo.toString()
+                        }
+                    );
+
+
+                const resultado =
+                    await respuesta.json();
+
+
+                if (!resultado.ok) {
+
+                    mostrarMensajeAuthenticator(
+                        "mensajeAuthenticatorPaso2",
+                        resultado.mensaje,
+                        false
+                    );
+
+                    return;
+                }
+
+
+                if (intervaloAuthenticator) {
+
+                    clearInterval(
+                        intervaloAuthenticator
+                    );
+
+                    intervaloAuthenticator = null;
+                }
+
+
+                mostrarMensajeAuthenticator(
+                    "mensajeAuthenticatorPaso2",
+                    "Identidad confirmada correctamente.",
+                    true
+                );
+
+
+                // POR AHORA:
+                // Luego este punto abrirá la pantalla
+                // de descarga y vinculación de la app.
+
+        setTimeout(function () {
+
+            const modalActual =
+                bootstrap.Modal.getInstance(
+                    document.getElementById(
+                        "modalFiltroAuthenticator"
+                    )
+                );
+
+            if (modalActual) {
+                modalActual.hide();
+            }
+
+            setTimeout(function () {
+
+                const modalExito =
+                    bootstrap.Modal.getOrCreateInstance(
+                        document.getElementById(
+                            "modalIdentidadConfirmadaAuthenticator"
+                        )
+                    );
+
+                modalExito.show();
+
+            }, 250);
+
+        }, 700);
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                mostrarMensajeAuthenticator(
+                    "mensajeAuthenticatorPaso2",
+                    "No se pudo verificar el código.",
+                    false
+                );
+            }
+            finally {
+
+                boton.disabled = false;
+
+                boton.innerHTML =
+                    '<i class="bi bi-shield-check me-1"></i> Verificar identidad';
+            }
+        }
+
+
+        function iniciarContadorAuthenticator() {
+
+            if (intervaloAuthenticator) {
+                clearInterval(
+                    intervaloAuthenticator
+                );
+            }
+
+            segundosAuthenticator = 60;
+
+            const tiempo =
+                document.getElementById(
+                    "tiempoAuthenticator"
+                );
+
+            const reenviar =
+                document.getElementById(
+                    "btnReenviarAuthenticator"
+                );
+
+            reenviar.disabled = true;
+
+            tiempo.innerText = "01:00";
+
+
+            intervaloAuthenticator =
+                setInterval(function () {
+
+                    segundosAuthenticator--;
+
+                    const minutos =
+                        Math.floor(
+                            segundosAuthenticator / 60
+                        );
+
+                    const segundos =
+                        segundosAuthenticator % 60;
+
+                    tiempo.innerText =
+                        String(minutos).padStart(2, "0")
+                        +
+                        ":"
+                        +
+                        String(segundos).padStart(2, "0");
+
+
+                    if (segundosAuthenticator <= 0) {
+
+                        clearInterval(
+                            intervaloAuthenticator
+                        );
+
+                        intervaloAuthenticator = null;
+
+                        tiempo.innerText = "00:00";
+
+                        reenviar.disabled = false;
+                    }
+
+                }, 1000);
+        }
+
+
+        function mostrarMensajeAuthenticator(
+            id,
+            mensaje,
+            correcto
+        ) {
+
+            const elemento =
+                document.getElementById(id);
+
+            elemento.style.display = "block";
+
+            elemento.className =
+                correcto
+                    ? "alert alert-success mt-3"
+                    : "alert alert-danger mt-3";
+
+            elemento.innerText =
+                mensaje;
+        }
 
             // ==========================================
             // CONTINUAR
@@ -1893,8 +6047,7 @@
                     const bloqueVerificacionVoz =
                         document.getElementById("bloqueVerificacionVoz");
 
-                    const mensajeAplicacion =
-                        document.getElementById("mensajeAplicacion");
+
 
                     const botonContinuar =
                         document.querySelector(".btn-continuar-seguridad");
@@ -1926,9 +6079,7 @@
                         opcionVoz.style.display = "none";
                     }
 
-                    if (mensajeAplicacion) {
-                        mensajeAplicacion.style.display = "none";
-                    }
+
 
 
                     // ==========================================
@@ -2012,19 +6163,110 @@
                 }
 
 
-                // ==========================================
-                // APLICACIÓN AUTENTICADORA
-                // ==========================================
+        if (metodoVerificacion === "aplicacion") {
 
-                if (metodoVerificacion === "aplicacion") {
+            const boton =
+                document.querySelector(
+                    ".btn-continuar-seguridad"
+                );
+
+            if (boton) {
+                boton.disabled = true;
+
+                boton.innerHTML =
+                    '<span class="spinner-border spinner-border-sm"></span> Verificando...';
+            }
+
+            try {
+
+                const respuesta =
+                    await fetch(
+                        "/Login/CrearSolicitudAuthenticator",
+                        {
+                            method: "POST"
+                        }
+                    );
+
+                const resultado =
+                    await respuesta.json();
+
+                if (!resultado.ok) {
 
                     alert(
-                        "La aplicación autenticadora todavía no está disponible. " +
-                        "Por ahora utiliza el correo electrónico."
+                        resultado.mensaje ||
+                        "No se pudo iniciar la verificación."
                     );
 
                     return;
                 }
+
+                // ==========================================
+                // PRIMERA VEZ
+                // TODAVÍA NO TIENE CELULAR VINCULADO
+                // ==========================================
+
+        if (!resultado.configurado) {
+
+            abrirFiltroAuthenticator(
+                resultado.correoOculto
+            );
+
+            return;
+        }
+
+                // ==========================================
+                // YA TIENE AUTHENTICATOR CONFIGURADO
+                // ==========================================
+
+
+        solicitudAuthenticatorActual =
+            resultado.solicitudId;
+
+        solicitudAuthenticatorTerminada =
+            false;
+
+        iniciarContadorSolicitudAuthenticator();
+
+        mostrarModalAuthenticator(
+            "Confirma el inicio de sesión",
+            "Abre CrediPlus Authenticator en tu celular e ingresa el número mostrado.",
+            resultado.numero,
+            "esperando"
+        );
+
+        esperarRespuestaAuthenticator(
+            resultado.solicitudId
+        );
+                console.log(
+                    "Solicitud Authenticator:",
+                    resultado.solicitudId
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    "ERROR AUTHENTICATOR:",
+                    error
+                );
+
+                alert(
+                    "No se pudo conectar con CrediPlus Authenticator."
+                );
+            }
+            finally {
+
+                if (boton) {
+
+                    boton.disabled = false;
+
+                    boton.innerHTML =
+                        'Continuar <i class="bi bi-arrow-right ms-1"></i>';
+                }
+            }
+
+            return;
+        }
 
 
                 // ==========================================
@@ -4282,8 +8524,6 @@
                 const opcionVoz =
                     document.getElementById("opcionVoz");
 
-                const mensajeAplicacion =
-                    document.getElementById("mensajeAplicacion");
 
                 const botonContinuar =
                     modal.querySelector(".btn-continuar-seguridad");
@@ -4356,9 +8596,7 @@
                     bloqueVerificacionVoz.style.display = "none";
                 }
 
-                if (mensajeAplicacion) {
-                    mensajeAplicacion.style.display = "none";
-                }
+
 
                 // ==========================================
                 // RESTAURAR TÍTULO
@@ -4598,6 +8836,1512 @@
 
                 modal.hide();
             }
+                            let qrDescargaAuthenticatorCreado = false;
+
+        function continuarConfiguracionAuthenticator() {
+
+            const modalExitoElemento =
+                document.getElementById(
+                    "modalIdentidadConfirmadaAuthenticator"
+                );
+
+            const modalExito =
+                bootstrap.Modal.getInstance(
+                    modalExitoElemento
+                );
+
+            if (modalExito) {
+                modalExito.hide();
+            }
+
+
+            modalExitoElemento.addEventListener(
+                "hidden.bs.modal",
+                function abrirDescarga() {
+
+                    modalExitoElemento.removeEventListener(
+                        "hidden.bs.modal",
+                        abrirDescarga
+                    );
+
+
+                    const modalDescargaElemento =
+                        document.getElementById(
+                            "modalDescargaAuthenticator"
+                        );
+
+
+                    const modalDescarga =
+                        bootstrap.Modal.getOrCreateInstance(
+                            modalDescargaElemento
+                        );
+
+
+                    modalDescarga.show();
+
+
+                    setTimeout(function () {
+
+                        generarQrDescargaAuthenticator();
+
+                    }, 250);
+                }
+            );
+        }
+                function generarQrDescargaAuthenticator() {
+
+            if (qrDescargaAuthenticatorCreado) {
+                return;
+            }
+
+            const contenedor =
+                document.getElementById(
+                    "qrDescargaAuthenticator"
+                );
+
+            if (!contenedor) {
+                return;
+            }
+
+
+            contenedor.innerHTML = "";
+
+
+                        let origenDescarga = window.location.origin;
+
+        /*
+            Si estamos trabajando localmente,
+            localhost no sirve desde el celular.
+        */
+        if (
+            window.location.hostname === "localhost" ||
+            window.location.hostname === "127.0.0.1"
+        ) {
+            origenDescarga = "http://192.168.18.127:5280";
+        }
+
+        const urlApk =
+            origenDescarga +
+            "/Login/DescargarAuthenticator";
+
+
+            new QRCode(
+                contenedor,
+                {
+                    text: urlApk,
+
+                    width: 190,
+                    height: 190,
+
+                    colorDark: "#172554",
+                    colorLight: "#ffffff",
+
+                    correctLevel:
+                        QRCode.CorrectLevel.H
+                }
+            );
+
+
+            qrDescargaAuthenticatorCreado = true;
+        }
+                function continuarDespuesDeInstalarAuthenticator() {
+
+            const modal =
+                bootstrap.Modal.getInstance(
+                    document.getElementById(
+                        "modalDescargaAuthenticator"
+                    )
+                );
+
+            if (modal) {
+                modal.hide();
+            }
+
+
+            console.log(
+                "Aplicación instalada. Continuar con vinculación."
+            );
+
+        }
+                               function iniciarProcesoInstalacionAuthenticator() {
+
+            const elementoModalPrincipal =
+                document.getElementById(
+                    "modalDescargaAuthenticator"
+                );
+
+            const modalPrincipal =
+                bootstrap.Modal.getInstance(
+                    elementoModalPrincipal
+                );
+
+            if (modalPrincipal) {
+                modalPrincipal.hide();
+            }
+
+
+            elementoModalPrincipal.addEventListener(
+                "hidden.bs.modal",
+                function abrirGuiaInstalacion() {
+
+                    elementoModalPrincipal.removeEventListener(
+                        "hidden.bs.modal",
+                        abrirGuiaInstalacion
+                    );
+
+                    const modalGuia =
+                        bootstrap.Modal.getOrCreateInstance(
+                            document.getElementById(
+                                "modalGuiaInstalacionAuthenticator"
+                            )
+                        );
+
+                    modalGuia.show();
+                }
+            );
+        }
+                      let pasoActualInstalacionAuthenticator = 1;
+
+
+        function mostrarPasoInstalacionAuthenticator(numeroPaso) {
+
+            pasoActualInstalacionAuthenticator = numeroPaso;
+
+
+            // =====================================
+            // MOSTRAR SOLAMENTE EL PASO ACTUAL
+            // =====================================
+
+            for (let i = 1; i <= 8; i++) {
+
+                const paso =
+                    document.getElementById(
+                        "guiaInstalacionPaso" + i
+                    );
+
+                if (paso) {
+
+                    paso.style.display =
+                        i === numeroPaso
+                            ? "block"
+                            : "none";
+
+                }
+            }
+
+
+            // =====================================
+            // INDICADORES
+            // =====================================
+
+            const indicadores =
+                document.querySelectorAll(
+                    ".guia-indicadores-instalacion .guia-punto"
+                );
+
+            indicadores.forEach(
+                function (indicador, indice) {
+
+                    indicador.classList.toggle(
+                        "activo",
+                        indice === numeroPaso - 1
+                    );
+
+                }
+            );
+
+
+            // =====================================
+            // BOTÓN ANTERIOR
+            // =====================================
+
+            const botonAnterior =
+                document.getElementById(
+                    "btnGuiaInstalacionAnterior"
+                );
+
+            if (botonAnterior) {
+
+                botonAnterior.disabled =
+                    numeroPaso === 1;
+
+            }
+
+
+            // =====================================
+            // BOTÓN SIGUIENTE
+            // =====================================
+
+            const botonSiguiente =
+                document.getElementById(
+                    "btnGuiaInstalacionSiguiente"
+                );
+
+            if (botonSiguiente) {
+
+                if (numeroPaso === 8) {
+
+                    botonSiguiente.innerHTML =
+                        'Continuar con la configuración ' +
+                        '<i class="bi bi-arrow-right ms-1"></i>';
+
+                }
+                else {
+
+                    botonSiguiente.innerHTML =
+                        'Siguiente ' +
+                        '<i class="bi bi-arrow-right ms-1"></i>';
+
+                }
+            }
+        }
+
+
+        function siguienteGuiaInstalacionAuthenticator() {
+
+            // =====================================
+            // PASOS 1 AL 7
+            // =====================================
+
+            if (
+                pasoActualInstalacionAuthenticator < 8
+            ) {
+
+                mostrarPasoInstalacionAuthenticator(
+                    pasoActualInstalacionAuthenticator + 1
+                );
+
+                return;
+            }
+
+
+            // =====================================
+            // PASO 8 TERMINADO
+            // =====================================
+
+            continuarConfiguracionCuentaAuthenticator();
+        }
+
+
+        function anteriorGuiaInstalacionAuthenticator() {
+
+            if (
+                pasoActualInstalacionAuthenticator > 1
+            ) {
+
+                mostrarPasoInstalacionAuthenticator(
+                    pasoActualInstalacionAuthenticator - 1
+                );
+
+            }
+        }
+        function continuarConfiguracionCuentaAuthenticator() {
+
+            const elementoGuia =
+                document.getElementById(
+                    "modalGuiaInstalacionAuthenticator"
+                );
+
+            const modalGuia =
+                bootstrap.Modal.getInstance(
+                    elementoGuia
+                );
+
+            if (modalGuia) {
+                modalGuia.hide();
+            }
+
+
+            elementoGuia.addEventListener(
+                "hidden.bs.modal",
+                function abrirConfiguracionTotp() {
+
+                    elementoGuia.removeEventListener(
+                        "hidden.bs.modal",
+                        abrirConfiguracionTotp
+                    );
+
+
+                    const modalTotp =
+                        bootstrap.Modal.getOrCreateInstance(
+                            document.getElementById(
+                                "modalConfigurarTotpAuthenticator"
+                            )
+                        );
+
+                    modalTotp.show();
+
+
+                    prepararConfiguracionTotp();
+
+                }
+            );
+        }
+                async function prepararConfiguracionTotp() {
+
+            const correo =
+                document.getElementById(
+                    "correoConfiguracionTotp"
+                );
+
+            const clave =
+                document.getElementById(
+                    "claveConfiguracionTotp"
+                );
+
+
+            correo.innerText = "Cargando...";
+            clave.innerText = "Cargando...";
+
+
+            try {
+
+                const respuesta =
+                    await fetch(
+                        "/Login/PrepararConfiguracionTotp",
+                        {
+                            method: "POST"
+                        }
+                    );
+
+
+                const datos =
+                    await respuesta.json();
+
+
+                if (!datos.ok) {
+
+                    mostrarMensajeTotp(
+                        datos.mensaje ||
+                        "No se pudo preparar la configuración.",
+                        "danger"
+                    );
+
+                    return;
+                }
+
+
+                correo.innerText =
+                    datos.correo;
+
+                clave.innerText =
+                    datos.clave;
+                            generarQrConfiguracionTotp(
+            datos.correo,
+            datos.clave
+        );
+
+            }
+            catch {
+
+                mostrarMensajeTotp(
+                    "No fue posible conectar con el servidor.",
+                    "danger"
+                );
+
+            }
+        }
+                function generarQrConfiguracionTotp(
+            correo,
+            clave
+        ) {
+
+            const contenedor =
+                document.getElementById(
+                    "qrConfiguracionTotp"
+                );
+
+            if (!contenedor) {
+                return;
+            }
+
+
+            // Limpiar QR anterior
+            contenedor.innerHTML = "";
+
+
+            // La clave viene visualmente con espacios.
+            // Para TOTP debemos quitar esos espacios.
+            const secreto =
+                clave.replace(/\s/g, "");
+
+
+            const issuer =
+                "CrediPlus";
+
+
+            const etiqueta =
+                encodeURIComponent(
+                    issuer + ":" + correo
+                );
+
+
+            const uriTotp =
+                "otpauth://totp/" +
+                etiqueta +
+                "?secret=" +
+                encodeURIComponent(secreto) +
+                "&issuer=" +
+                encodeURIComponent(issuer) +
+                "&algorithm=SHA1" +
+                "&digits=6" +
+                "&period=30";
+
+
+            new QRCode(
+                contenedor,
+                {
+                    text: uriTotp,
+                    width: 164,
+                    height: 164,
+                    colorDark: "#172554",
+                    colorLight: "#ffffff",
+                    correctLevel:
+                        QRCode.CorrectLevel.H
+                }
+            );
+        }
+
+        function copiarCorreoTotp() {
+
+            const correo =
+                document.getElementById(
+                    "correoConfiguracionTotp"
+                ).innerText;
+
+            navigator.clipboard.writeText(
+                correo
+            );
+        }
+
+
+        function copiarClaveTotp() {
+
+            const clave =
+                document.getElementById(
+                    "claveConfiguracionTotp"
+                ).innerText;
+
+            navigator.clipboard.writeText(
+                clave.replace(/\s/g, "")
+            );
+        }
+
+
+        async function verificarConfiguracionTotp() {
+
+            const codigo =
+                document.getElementById(
+                    "codigoVerificacionTotp"
+                ).value.trim();
+
+
+            if (!/^\d{6}$/.test(codigo)) {
+
+                mostrarMensajeTotp(
+                    "Ingresa el código de 6 dígitos generado por la aplicación.",
+                    "warning"
+                );
+
+                return;
+            }
+
+
+            try {
+
+                const respuesta =
+                    await fetch(
+                        "/Login/ConfirmarConfiguracionTotp",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/x-www-form-urlencoded"
+                            },
+
+                            body:
+                                "codigo=" +
+                                encodeURIComponent(codigo)
+                        }
+                    );
+
+
+                const datos =
+                    await respuesta.json();
+
+
+                if (!datos.ok) {
+
+                    mostrarMensajeTotp(
+                        datos.mensaje ||
+                        "El código ingresado no es correcto.",
+                        "danger"
+                    );
+
+                    return;
+                }
+
+        mostrarMensajeTotp(
+            "CrediPlus Authenticator fue vinculado correctamente.",
+            "success"
+        );
+
+        const botonVerificar =
+            document.getElementById(
+                "btnVerificarTotp"
+            );
+
+        if (botonVerificar) {
+            botonVerificar.disabled = true;
+        }
+
+        setTimeout(function () {
+
+            const elementoModal =
+                document.getElementById(
+                    "modalConfigurarTotpAuthenticator"
+                );
+
+            const modal =
+                bootstrap.Modal.getInstance(
+                    elementoModal
+                );
+
+            if (modal) {
+                modal.hide();
+            }
+
+            elementoModal.addEventListener(
+                "hidden.bs.modal",
+                function volverInicioSesion() {
+
+                    elementoModal.removeEventListener(
+                        "hidden.bs.modal",
+                        volverInicioSesion
+                    );
+
+                    window.location.href =
+                        "/Login/IniciarSesion";
+                }
+            );
+
+        }, 1400);
+
+            }
+            catch {
+
+                mostrarMensajeTotp(
+                    "No fue posible verificar el código.",
+                    "danger"
+                );
+
+            }
+        }
+
+
+        function mostrarMensajeTotp(
+            mensaje,
+            tipo
+        ) {
+
+            const contenedor =
+                document.getElementById(
+                    "mensajeConfiguracionTotp"
+                );
+
+            contenedor.style.display =
+                "block";
+
+            contenedor.className =
+                "alert alert-" +
+                tipo +
+                " mt-3";
+
+            contenedor.innerText =
+                mensaje;
+        }
+
+
+        function volverGuiaInstalacion() {
+
+            const elementoTotp =
+                document.getElementById(
+                    "modalConfigurarTotpAuthenticator"
+                );
+
+            const modalTotp =
+                bootstrap.Modal.getInstance(
+                    elementoTotp
+                );
+
+            if (modalTotp) {
+                modalTotp.hide();
+            }
+
+
+            elementoTotp.addEventListener(
+                "hidden.bs.modal",
+                function volverGuia() {
+
+                    elementoTotp.removeEventListener(
+                        "hidden.bs.modal",
+                        volverGuia
+                    );
+
+                    const modalGuia =
+                        bootstrap.Modal.getOrCreateInstance(
+                            document.getElementById(
+                                "modalGuiaInstalacionAuthenticator"
+                            )
+                        );
+
+                    mostrarPasoInstalacionAuthenticator(8);
+
+                    modalGuia.show();
+
+                }
+            );
+        }
+        let pasoActualGuiaVinculacion = 1;
+
+
+        function abrirGuiaVinculacionTotp() {
+
+            pasoActualGuiaVinculacion = 1;
+
+            mostrarPasoGuiaVinculacion(1);
+
+
+            const modal =
+                bootstrap.Modal.getOrCreateInstance(
+                    document.getElementById(
+                        "modalGuiaVinculacionTotp"
+                    )
+                );
+
+            modal.show();
+        }
+
+
+        function mostrarPasoGuiaVinculacion(numeroPaso) {
+
+            pasoActualGuiaVinculacion =
+                numeroPaso;
+
+
+            // MOSTRAR SOLO EL PASO ACTUAL
+
+            for (let i = 1; i <= 4; i++) {
+
+                const paso =
+                    document.getElementById(
+                        "guiaVinculacionPaso" + i
+                    );
+
+                if (paso) {
+
+                    paso.style.display =
+                        i === numeroPaso
+                            ? "block"
+                            : "none";
+                }
+            }
+
+
+            // INDICADORES
+
+            const indicadores =
+                document.querySelectorAll(
+                    ".guia-vinculacion-punto"
+                );
+
+            indicadores.forEach(
+                function (indicador, indice) {
+
+                    indicador.classList.toggle(
+                        "activo",
+                        indice === numeroPaso - 1
+                    );
+                }
+            );
+
+
+            // BOTÓN ANTERIOR
+
+            const btnAnterior =
+                document.getElementById(
+                    "btnGuiaVinculacionAnterior"
+                );
+
+            if (btnAnterior) {
+
+                btnAnterior.disabled =
+                    numeroPaso === 1;
+            }
+
+
+            // BOTÓN SIGUIENTE
+
+            const btnSiguiente =
+                document.getElementById(
+                    "btnGuiaVinculacionSiguiente"
+                );
+
+            if (btnSiguiente) {
+
+                if (numeroPaso === 4) {
+
+                    btnSiguiente.innerHTML =
+                        'Entendido ' +
+                        '<i class="bi bi-check-lg ms-1"></i>';
+
+                }
+                else {
+
+                    btnSiguiente.innerHTML =
+                        'Siguiente ' +
+                        '<i class="bi bi-arrow-right ms-1"></i>';
+                }
+            }
+        }
+
+
+        function siguienteGuiaVinculacionTotp() {
+
+            if (
+                pasoActualGuiaVinculacion < 4
+            ) {
+
+                mostrarPasoGuiaVinculacion(
+                    pasoActualGuiaVinculacion + 1
+                );
+
+                return;
+            }
+
+
+            const modal =
+                bootstrap.Modal.getInstance(
+                    document.getElementById(
+                        "modalGuiaVinculacionTotp"
+                    )
+                );
+
+            if (modal) {
+                modal.hide();
+            }
+        }
+
+
+        function anteriorGuiaVinculacionTotp() {
+
+            if (
+                pasoActualGuiaVinculacion > 1
+            ) {
+
+                mostrarPasoGuiaVinculacion(
+                    pasoActualGuiaVinculacion - 1
+                );
+            }
+        }
+        async function esperarRespuestaAuthenticator(
+            solicitudId
+        ) {
+
+            const inicio = Date.now();
+
+            const tiempoMaximo = 30000;
+
+            while (
+                Date.now() - inicio <
+                tiempoMaximo
+            ) {
+
+                await new Promise(
+                    resolve =>
+                        setTimeout(
+                            resolve,
+                            1000
+                        )
+                );
+
+                /*
+                 * Si el usuario ya canceló desde
+                 * la propia página, dejamos de consultar.
+                 */
+                if (
+                    solicitudAuthenticatorTerminada
+                ) {
+                    return;
+                }
+
+                try {
+
+                    const respuesta =
+                        await fetch(
+                            "/Login/ConsultarEstadoSolicitudAuthenticator" +
+                            "?solicitudId=" +
+                            encodeURIComponent(
+                                solicitudId
+                            ),
+                            {
+                                cache: "no-store"
+                            }
+                        );
+
+                    const datos =
+                        await respuesta.json();
+
+                    if (!datos.ok) {
+
+                        solicitudAuthenticatorTerminada =
+                            true;
+
+                        if (
+                            intervaloSolicitudAuthenticator
+                        ) {
+
+                            clearInterval(
+                                intervaloSolicitudAuthenticator
+                            );
+
+                            intervaloSolicitudAuthenticator =
+                                null;
+                        }
+
+                        mostrarModalAuthenticator(
+                            "No se pudo verificar",
+                            datos.mensaje ||
+                                "No se pudo consultar la solicitud.",
+                            null,
+                            "error"
+                        );
+
+                        return;
+                    }
+
+                    // ==============================
+                    // CANCELADO / RECHAZADO
+                    // ==============================
+
+                    if (
+                        datos.estado ===
+                        "Rechazado"
+                    ) {
+
+                        solicitudAuthenticatorTerminada =
+                            true;
+
+                        if (
+                            intervaloSolicitudAuthenticator
+                        ) {
+
+                            clearInterval(
+                                intervaloSolicitudAuthenticator
+                            );
+
+                            intervaloSolicitudAuthenticator =
+                                null;
+                        }
+
+                        mostrarModalAuthenticator(
+                            "Solicitud cancelada",
+                            "El inicio de sesión fue cancelado desde CrediPlus Authenticator.",
+                            null,
+                            "error"
+                        );
+
+                        return;
+                    }
+
+                    // ==============================
+                    // EXPIRADO
+                    // ==============================
+
+                    if (
+                        datos.estado ===
+                        "Expirado"
+                    ) {
+
+                        solicitudAuthenticatorTerminada =
+                            true;
+
+                        if (
+                            intervaloSolicitudAuthenticator
+                        ) {
+
+                            clearInterval(
+                                intervaloSolicitudAuthenticator
+                            );
+
+                            intervaloSolicitudAuthenticator =
+                                null;
+                        }
+
+                        mostrarModalAuthenticator(
+                            "Solicitud expirada",
+                            "Los 30 segundos terminaron. Inicia una nueva solicitud para volver a intentarlo.",
+                            null,
+                            "error"
+                        );
+
+                        return;
+                    }
+
+                    // ==============================
+                    // APROBADO
+                    // ==============================
+
+                    if (
+                        datos.aprobado === true
+                    ) {
+
+                        solicitudAuthenticatorTerminada =
+                            true;
+
+                        if (
+                            intervaloSolicitudAuthenticator
+                        ) {
+
+                            clearInterval(
+                                intervaloSolicitudAuthenticator
+                            );
+
+                            intervaloSolicitudAuthenticator =
+                                null;
+                        }
+
+                        window.location.href =
+                            datos.redirectUrl;
+
+                        return;
+                    }
+
+                }
+                catch (error) {
+
+                    console.error(
+                        "Error consultando Authenticator:",
+                        error
+                    );
+
+                    /*
+                     * No terminamos inmediatamente.
+                     * Puede haber sido un fallo momentáneo
+                     * de red.
+                     */
+                }
+            }
+
+            // ==========================================
+            // TERMINARON LOS 30 SEGUNDOS
+            // ==========================================
+
+            solicitudAuthenticatorTerminada =
+                true;
+
+            if (
+                intervaloSolicitudAuthenticator
+            ) {
+
+                clearInterval(
+                    intervaloSolicitudAuthenticator
+                );
+
+                intervaloSolicitudAuthenticator =
+                    null;
+            }
+
+            /*
+             * Hacemos una última consulta.
+             * El backend verá que FechaExpiracion
+             * ya terminó y pondrá Expirado.
+             */
+            try {
+
+                await fetch(
+                    "/Login/ConsultarEstadoSolicitudAuthenticator" +
+                    "?solicitudId=" +
+                    encodeURIComponent(
+                        solicitudId
+                    ),
+                    {
+                        cache: "no-store"
+                    }
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    "Error actualizando expiración:",
+                    error
+                );
+            }
+
+            mostrarModalAuthenticator(
+                "Solicitud expirada",
+                "Los 30 segundos terminaron. Inicia una nueva solicitud para volver a intentarlo.",
+                null,
+                "error"
+            );
+        }
+                function mostrarModalAuthenticator(
+            titulo,
+            mensaje,
+            numero = null,
+            tipo = "esperando"
+        ) {
+
+            const elemento =
+                document.getElementById(
+                    "modalEsperandoAuthenticator"
+                );
+
+            const tituloElemento =
+                document.getElementById(
+                    "tituloEstadoAuthenticator"
+                );
+
+            const textoElemento =
+                document.getElementById(
+                    "textoEstadoAuthenticator"
+                );
+
+            const numeroElemento =
+                document.getElementById(
+                    "numeroEstadoAuthenticator"
+                );
+
+            const contenedorNumero =
+                document.getElementById(
+                    "contenedorNumeroAuthenticator"
+                );
+
+            const esperando =
+                document.getElementById(
+                    "esperandoEstadoAuthenticator"
+                );
+
+            const botonCerrar =
+                document.getElementById(
+                    "btnCerrarEstadoAuthenticator"
+                );
+                    const botonCancelar =
+        document.getElementById(
+            "btnCancelarEstadoAuthenticator"
+        );
+            const botonReenviar =
+        document.getElementById(
+            "btnReenviarEstadoAuthenticator"
+        );
+                if (botonReenviar) {
+
+            botonReenviar.style.display =
+                (
+                    tipo === "error" ||
+                    tipo === "expirado" ||
+                    tipo === "incorrecto"
+                )
+                    ? "inline-block"
+                    : "none";
+        }
+                if (botonCancelar) {
+
+            botonCancelar.style.display =
+                tipo === "esperando"
+                    ? "inline-block"
+                    : "none";
+        }
+            const icono =
+                document.getElementById(
+                    "iconoEstadoAuthenticator"
+                );
+
+
+            tituloElemento.textContent =
+                titulo;
+
+            textoElemento.textContent =
+                mensaje;
+
+
+            if (numero !== null) {
+
+                numeroElemento.textContent =
+                    numero;
+
+                contenedorNumero.style.display =
+                    "block";
+
+            } else {
+
+                contenedorNumero.style.display =
+                    "none";
+            }
+
+
+        if (tipo === "esperando") {
+
+            esperando.style.setProperty(
+                "display",
+                "flex",
+                "important"
+            );
+
+        } else {
+
+            esperando.style.setProperty(
+                "display",
+                "none",
+                "important"
+            );
+        }
+
+
+            botonCerrar.style.display =
+                tipo === "esperando"
+                    ? "none"
+                    : "inline-block";
+
+
+            if (tipo === "correcto") {
+
+                icono.className =
+                    "bi bi-check-circle-fill";
+
+                icono.style.color =
+                    "#16a34a";
+
+            }
+            else if (tipo === "error") {
+
+                icono.className =
+                    "bi bi-x-circle-fill";
+
+                icono.style.color =
+                    "#dc2626";
+
+            }
+            else {
+
+                icono.className =
+                    "bi bi-phone";
+
+                icono.style.color =
+                    "#2563eb";
+            }
+
+
+            const modal =
+                bootstrap.Modal
+                    .getOrCreateInstance(
+                        elemento
+                    );
+
+            modal.show();
+        }
+                function iniciarContadorSolicitudAuthenticator() {
+
+            if (intervaloSolicitudAuthenticator) {
+
+                clearInterval(
+                    intervaloSolicitudAuthenticator
+                );
+
+                intervaloSolicitudAuthenticator =
+                    null;
+            }
+
+            let segundos = 30;
+
+            const elemento =
+                document.getElementById(
+                    "tiempoSolicitudAuthenticator"
+                );
+
+            if (elemento) {
+                elemento.textContent =
+                    "30 s";
+            }
+
+            intervaloSolicitudAuthenticator =
+                setInterval(
+                    function () {
+
+                        if (
+                            solicitudAuthenticatorTerminada
+                        ) {
+
+                            clearInterval(
+                                intervaloSolicitudAuthenticator
+                            );
+
+                            intervaloSolicitudAuthenticator =
+                                null;
+
+                            return;
+                        }
+
+                        segundos--;
+
+                        if (segundos < 0) {
+                            segundos = 0;
+                        }
+
+                        if (elemento) {
+
+                            elemento.textContent =
+                                segundos + " s";
+
+                            elemento.style.color =
+                                segundos <= 10
+                                    ? "#dc2626"
+                                    : "#2563eb";
+                        }
+
+                        if (segundos <= 0) {
+
+                            clearInterval(
+                                intervaloSolicitudAuthenticator
+                            );
+
+                            intervaloSolicitudAuthenticator =
+                                null;
+                        }
+
+                    },
+                    1000
+                );
+        }
+                async function cancelarSolicitudAuthenticatorDesdeWeb() {
+
+            if (
+                !solicitudAuthenticatorActual ||
+                solicitudAuthenticatorTerminada
+            ) {
+                return;
+            }
+
+            solicitudAuthenticatorTerminada = true;
+
+            if (intervaloSolicitudAuthenticator) {
+
+                clearInterval(
+                    intervaloSolicitudAuthenticator
+                );
+
+                intervaloSolicitudAuthenticator =
+                    null;
+            }
+
+            try {
+
+                const cuerpo =
+                    new URLSearchParams();
+
+                cuerpo.append(
+                    "solicitudId",
+                    solicitudAuthenticatorActual
+                );
+
+                const respuesta =
+                    await fetch(
+                        "/Login/CancelarSolicitudAuthenticator",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/x-www-form-urlencoded"
+                            },
+
+                            body:
+                                cuerpo.toString()
+                        }
+                    );
+
+                const datos =
+                    await respuesta.json();
+
+                if (!datos.ok) {
+
+                    mostrarModalAuthenticator(
+                        "No se pudo cancelar",
+                        "No fue posible cancelar la solicitud.",
+                        null,
+                        "error"
+                    );
+
+                    return;
+                }
+
+                mostrarModalAuthenticator(
+                    "Solicitud cancelada",
+                    "La solicitud fue cancelada correctamente.",
+                    null,
+                    "error"
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    "ERROR CANCELANDO AUTHENTICATOR:",
+                    error
+                );
+
+                mostrarModalAuthenticator(
+                    "Error de conexión",
+                    "No se pudo cancelar la solicitud.",
+                    null,
+                    "error"
+                );
+            }
+        }
+                async function reenviarSolicitudAuthenticator() {
+
+            // ==========================================
+            // LIMPIEZA DEL INTENTO ANTERIOR
+            // ==========================================
+
+            if (intervaloSolicitudAuthenticator) {
+
+                clearInterval(
+                    intervaloSolicitudAuthenticator
+                );
+
+                intervaloSolicitudAuthenticator =
+                    null;
+            }
+
+            solicitudAuthenticatorActual = null;
+            solicitudAuthenticatorTerminada = false;
+
+
+            const tiempo =
+                document.getElementById(
+                    "tiempoSolicitudAuthenticator"
+                );
+
+            if (tiempo) {
+
+                tiempo.textContent = "30 s";
+                tiempo.style.color = "#2563eb";
+            }
+
+
+            const botonReenviar =
+                document.getElementById(
+                    "btnReenviarEstadoAuthenticator"
+                );
+
+            if (botonReenviar) {
+
+                botonReenviar.disabled = true;
+
+                botonReenviar.innerHTML =
+                    '<span class="spinner-border spinner-border-sm me-1"></span>' +
+                    'Enviando...';
+            }
+
+
+            try {
+
+                const respuesta =
+                    await fetch(
+                        "/Login/CrearSolicitudAuthenticator",
+                        {
+                            method: "POST"
+                        }
+                    );
+
+                const resultado =
+                    await respuesta.json();
+
+
+                if (!resultado.ok) {
+
+                    mostrarModalAuthenticator(
+                        "No se pudo reenviar",
+                        resultado.mensaje ||
+                            "No se pudo crear una nueva solicitud.",
+                        null,
+                        "error"
+                    );
+
+                    return;
+                }
+
+
+                if (!resultado.configurado) {
+
+                    mostrarModalAuthenticator(
+                        "Authenticator no disponible",
+                        "No hay un dispositivo vinculado.",
+                        null,
+                        "error"
+                    );
+
+                    return;
+                }
+
+
+                // ==========================================
+                // NUEVA SOLICITUD
+                // ==========================================
+
+                solicitudAuthenticatorActual =
+                    resultado.solicitudId;
+
+                solicitudAuthenticatorTerminada =
+                    false;
+
+
+                iniciarContadorSolicitudAuthenticator();
+
+
+                mostrarModalAuthenticator(
+                    "Confirma el inicio de sesión",
+                    "Abre CrediPlus Authenticator en tu celular e ingresa el número mostrado.",
+                    resultado.numero,
+                    "esperando"
+                );
+
+
+                esperarRespuestaAuthenticator(
+                    resultado.solicitudId
+                );
+
+            }
+            catch (error) {
+
+                console.error(
+                    "ERROR REENVIANDO AUTHENTICATOR:",
+                    error
+                );
+
+                mostrarModalAuthenticator(
+                    "Error de conexión",
+                    "No se pudo reenviar la solicitud.",
+                    null,
+                    "error"
+                );
+            }
+            finally {
+
+                if (botonReenviar) {
+
+                    botonReenviar.disabled =
+                        false;
+
+                    botonReenviar.innerHTML =
+                        '<i class="bi bi-arrow-clockwise me-1"></i>' +
+                        'Reenviar solicitud';
+                }
+            }
+        }
     </script>
 </body>
 </html>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "641720126239",
+    "project_id": "crediplus-authenticator",
+    "storage_bucket": "crediplus-authenticator.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:641720126239:android:7e2431c5614d5ec909be2a",
+        "android_client_info": {
+          "package_name": "com.crediplus.crediplus_authenticator"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDNPg1rnLRN9QP3Yd-TldCRjslvoYmYyNs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
