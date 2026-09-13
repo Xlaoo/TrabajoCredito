@@ -8888,7 +8888,7 @@
                 }
             );
         }
-                function generarQrDescargaAuthenticator() {
+        function generarQrDescargaAuthenticator() {
 
             if (qrDescargaAuthenticatorCreado) {
                 return;
@@ -8903,32 +8903,60 @@
                 return;
             }
 
-
             contenedor.innerHTML = "";
 
+            let urlFinal;
 
-                        let origenDescarga = window.location.origin;
+            // =====================================
+            // LOCALHOST
+            // =====================================
 
-        /*
-            Si estamos trabajando localmente,
-            localhost no sirve desde el celular.
-        */
-        if (
-            window.location.hostname === "localhost" ||
-            window.location.hostname === "127.0.0.1"
-        ) {
-            origenDescarga = "http://192.168.18.127:5280";
-        }
+            if (
+                window.location.hostname === "localhost" ||
+                window.location.hostname === "127.0.0.1"
+            ) {
 
-        const urlApk =
-            origenDescarga +
-            "/Login/DescargarAuthenticator";
+                urlFinal =
+                    "http://192.168.18.127:5280" +
+                    "/Login/DescargarAuthenticator";
 
+            }
+
+            // =====================================
+            // NORTHFLANK / PRODUCCIÓN
+            // =====================================
+
+            else {
+
+                const host =
+                    window.location.host;
+
+                const urlNormal =
+                    "https://" +
+                    host +
+                    "/Login/DescargarAuthenticator";
+
+                urlFinal =
+                    "intent://" +
+                    host +
+                    "/Login/DescargarAuthenticator" +
+                    "#Intent;" +
+                    "scheme=https;" +
+                    "package=com.android.chrome;" +
+                    "S.browser_fallback_url=" +
+                    encodeURIComponent(urlNormal) +
+                    ";end";
+            }
+
+            console.log(
+                "URL QR Authenticator:",
+                urlFinal
+            );
 
             new QRCode(
                 contenedor,
                 {
-                    text: urlApk,
+                    text: urlFinal,
 
                     width: 190,
                     height: 190,
@@ -8940,7 +8968,6 @@
                         QRCode.CorrectLevel.H
                 }
             );
-
 
             qrDescargaAuthenticatorCreado = true;
         }
