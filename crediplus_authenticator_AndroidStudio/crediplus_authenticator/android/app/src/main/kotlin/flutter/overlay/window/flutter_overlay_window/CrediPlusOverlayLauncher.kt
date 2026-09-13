@@ -3,32 +3,74 @@ package flutter.overlay.window.flutter_overlay_window
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
+import io.flutter.embedding.engine.FlutterEngineCache
 
 object CrediPlusOverlayLauncher {
 
     fun abrir(context: Context) {
 
-        // ANCHO: MATCH_PARENT
+        // ==========================================
+        // DESTRUIR ENGINE ANTERIOR
+        // ==========================================
+
+        val engineAnterior =
+            FlutterEngineCache
+                .getInstance()
+                .get("myCachedEngine")
+
+        if (engineAnterior != null) {
+
+            try {
+
+                FlutterEngineCache
+                    .getInstance()
+                    .remove("myCachedEngine")
+
+                engineAnterior.destroy()
+
+                Log.d(
+                    "CrediPlus",
+                    "FlutterEngine anterior destruido"
+                )
+
+            } catch (e: Exception) {
+
+                Log.e(
+                    "CrediPlus",
+                    "Error destruyendo FlutterEngine anterior",
+                    e
+                )
+            }
+        }
+
+
+        // ==========================================
+        // CONFIGURAR OVERLAY
+        // ==========================================
+
         val displayMetrics =
             context.resources.displayMetrics
 
         WindowSetup.width =
             displayMetrics.widthPixels
 
+        // NO CAMBIAR:
+        // esta altura ya está correcta
         WindowSetup.height =
             displayMetrics.heightPixels + 650
-        WindowSetup.gravity = Gravity.FILL
 
-        // Permite que el overlay reciba foco.
-        // Esto es necesario para que salga el teclado.
+        WindowSetup.gravity =
+            Gravity.CENTER
+
         WindowSetup.flag =
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            WindowManager.LayoutParams
+                .FLAG_NOT_TOUCH_MODAL
 
-        WindowSetup.gravity = Gravity.CENTER
-
-        WindowSetup.enableDrag = false
+        WindowSetup.enableDrag =
+            false
 
         WindowSetup.overlayTitle =
             "CrediPlus Authenticator"
@@ -36,7 +78,13 @@ object CrediPlusOverlayLauncher {
         WindowSetup.overlayContent =
             "Solicitud de inicio de sesión"
 
-        WindowSetup.positionGravity = "none"
+        WindowSetup.positionGravity =
+            "none"
+
+
+        // ==========================================
+        // ABRIR OVERLAY NUEVO
+        // ==========================================
 
         val overlayIntent =
             Intent(
@@ -44,11 +92,17 @@ object CrediPlusOverlayLauncher {
                 OverlayService::class.java
             )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.O
+        ) {
+
             context.startForegroundService(
                 overlayIntent
             )
+
         } else {
+
             context.startService(
                 overlayIntent
             )

@@ -32,15 +32,75 @@ class _SolicitudLoginOverlayState
 bool _cerrandoSolicitud = false;
 bool _abriendoSeguridad = false;
 Timer? _temporizadorSolicitud;
-
+StreamSubscription?
+    _overlaySubscription;
 int _segundosRestantes = 30;
 @override
 void initState() {
   super.initState();
 
-  _abrirTecladoAutomaticamente();
+  _reiniciarEstadoCompleto(
+    iniciarTemporizador: true,
+  );
 
-  _iniciarTemporizadorSolicitud();
+  _overlaySubscription =
+      FlutterOverlayWindow
+          .overlayListener
+          .listen(
+    (event) {
+
+      if (!mounted) {
+        return;
+      }
+
+      if (
+          event ==
+          'NUEVA_SOLICITUD'
+      ) {
+
+        _reiniciarEstadoCompleto(
+          iniciarTemporizador: true,
+        );
+
+        _abrirTecladoAutomaticamente();
+      }
+    },
+  );
+
+  _abrirTecladoAutomaticamente();
+}
+void _reiniciarEstadoCompleto({
+  bool iniciarTemporizador = false,
+}) {
+
+  _temporizadorSolicitud?.cancel();
+
+  _numeroController.clear();
+
+  _cerrandoSolicitud = false;
+
+  _abriendoSeguridad = false;
+
+  if (mounted) {
+
+    setState(() {
+      estado = '';
+      _segundosRestantes = 30;
+    });
+
+  } else {
+
+    estado = '';
+    _segundosRestantes = 30;
+  }
+
+  if (
+      iniciarTemporizador &&
+      mounted
+  ) {
+
+    _iniciarTemporizadorSolicitud();
+  }
 }
 Future<void> _abrirTecladoAutomaticamente() async {
   await Future.delayed(
@@ -90,6 +150,12 @@ void _iniciarTemporizadorSolicitud() {
 
   _segundosRestantes = 30;
 
+  if (mounted) {
+    setState(() {
+      _segundosRestantes = 30;
+    });
+  }
+
   _temporizadorSolicitud =
       Timer.periodic(
     const Duration(seconds: 1),
@@ -100,35 +166,66 @@ void _iniciarTemporizadorSolicitud() {
         return;
       }
 
-      if (_abriendoSeguridad ||
-          _cerrandoSolicitud) {
-        timer.cancel();
-        return;
-      }
-
-if (_segundosRestantes <= 1) {
-
-  timer.cancel();
-
-  setState(() {
-    _segundosRestantes = 0;
-    estado = 'expirado';
-  });
-
-  FocusScope.of(context).unfocus();
-
-  await SystemChannels.textInput.invokeMethod(
-    'TextInput.hide',
-  );
-
-  await Future.delayed(
-    const Duration(milliseconds: 700),
-  );
-
-  await FlutterOverlayWindow.closeOverlay();
-
+if (
+    _abriendoSeguridad ||
+    _cerrandoSolicitud
+) {
   return;
 }
+
+      if (_segundosRestantes <= 1) {
+
+        timer.cancel();
+
+        setState(() {
+          _segundosRestantes = 0;
+          estado = 'expirado';
+        });
+
+        _numeroController.clear();
+
+        _cerrandoSolicitud = true;
+
+        FocusScope.of(context).unfocus();
+
+        await SystemChannels
+            .textInput
+            .invokeMethod(
+          'TextInput.hide',
+        );
+
+        final intent =
+            AndroidIntent(
+          action:
+              'com.crediplus.crediplus_authenticator.RESULTADO',
+          componentName:
+              'com.crediplus.crediplus_authenticator.CrediPlusResultReceiver',
+          package:
+              'com.crediplus.crediplus_authenticator',
+          arguments: <String, dynamic>{
+            'resultado': 'EXPIRADO',
+          },
+        );
+
+        await intent.sendBroadcast();
+
+        /*
+         * IMPORTANTE:
+         * dejar estado preparado para
+         * la siguiente solicitud.
+         */
+
+        await Future.delayed(
+          const Duration(
+            milliseconds: 300,
+          ),
+        );
+
+        await FlutterOverlayWindow
+            .closeOverlay();
+
+        return;
+      }
 
       setState(() {
         _segundosRestantes--;
@@ -141,7 +238,10 @@ void dispose() {
 
   _temporizadorSolicitud?.cancel();
 
+  _overlaySubscription?.cancel();
+
   _numeroController.dispose();
+
   _numeroFocusNode.dispose();
 
   super.dispose();
@@ -158,6 +258,7 @@ Future<void> _abrirSeguridadAndroid() async {
 
   await intent.launch();
 }
+
 Future<void> _continuar() async {
 
   if (
@@ -170,7 +271,9 @@ Future<void> _continuar() async {
   final numeroIngresado =
       _numeroController.text.trim();
 
-  if (numeroIngresado.length != 2) {
+  if (
+      numeroIngresado.length != 2
+  ) {
 
     setState(() {
       estado = 'vacio';
@@ -179,15 +282,22 @@ Future<void> _continuar() async {
     return;
   }
 
+  /*
+   * Pausar contador mientras Android
+   * verifica número + biometría.
+   */
   _abriendoSeguridad = true;
 
   FocusScope.of(context).unfocus();
 
-  await SystemChannels.textInput.invokeMethod(
+  await SystemChannels
+      .textInput
+      .invokeMethod(
     'TextInput.hide',
   );
 
-  final intent = AndroidIntent(
+  final intent =
+      AndroidIntent(
     action:
         'com.crediplus.crediplus_authenticator.RESULTADO',
     componentName:
@@ -196,11 +306,17 @@ Future<void> _continuar() async {
         'com.crediplus.crediplus_authenticator',
     arguments: <String, dynamic>{
       'resultado': 'VERIFICAR_NUMERO',
-      'numeroIngresado': numeroIngresado,
+      'numeroIngresado':
+          numeroIngresado,
     },
   );
 
   await intent.sendBroadcast();
+
+  /*
+   * Borrar visualmente el número.
+   */
+  _numeroController.clear();
 }
 
 Future<void> _cerrar() async {
@@ -208,13 +324,26 @@ Future<void> _cerrar() async {
 }
 Future<void> _anularSolicitud() async {
 
-  if (_cerrandoSolicitud) return;
+  if (_cerrandoSolicitud) {
+    return;
+  }
 
   _cerrandoSolicitud = true;
 
+  _temporizadorSolicitud?.cancel();
+
+  _numeroController.clear();
+
   FocusScope.of(context).unfocus();
 
-  const intent = AndroidIntent(
+  await SystemChannels
+      .textInput
+      .invokeMethod(
+    'TextInput.hide',
+  );
+
+  const intent =
+      AndroidIntent(
     action:
         'com.crediplus.crediplus_authenticator.RESULTADO',
     componentName:

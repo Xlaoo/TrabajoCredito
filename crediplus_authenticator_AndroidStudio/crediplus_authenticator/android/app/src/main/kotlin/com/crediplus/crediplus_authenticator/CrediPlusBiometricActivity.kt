@@ -1,13 +1,19 @@
 package com.crediplus.crediplus_authenticator
 
+import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import flutter.overlay.window.flutter_overlay_window.OverlayService
+
 
 class CrediPlusBiometricActivity :
     FragmentActivity() {
@@ -15,14 +21,17 @@ class CrediPlusBiometricActivity :
     private var autenticacionTerminada =
         false
 
-    private var solicitudId =
-        ""
+    private var solicitudId = ""
+    private var numero = ""
+    private var baseUrl = ""
 
-    private var numero =
-        ""
+    private var dialogoCorrecto:
+            AlertDialog? = null
 
-    private var baseUrl =
-        ""
+    private val handler =
+        Handler(
+            Looper.getMainLooper()
+        )
 
 
     override fun onCreate(
@@ -53,6 +62,10 @@ class CrediPlusBiometricActivity :
     }
 
 
+    // ==========================================
+    // SEGURIDAD ANDROID
+    // ==========================================
+
     private fun mostrarSeguridadAndroid() {
 
         val executor =
@@ -70,6 +83,7 @@ class CrediPlusBiometricActivity :
                         result:
                         BiometricPrompt.AuthenticationResult
                     ) {
+
                         super.onAuthenticationSucceeded(
                             result
                         )
@@ -91,6 +105,7 @@ class CrediPlusBiometricActivity :
                         errorCode: Int,
                         errString: CharSequence
                     ) {
+
                         super.onAuthenticationError(
                             errorCode,
                             errString
@@ -110,9 +125,10 @@ class CrediPlusBiometricActivity :
 
 
                     override fun onAuthenticationFailed() {
+
                         super.onAuthenticationFailed()
 
-                        // Huella incorrecta.
+                        // Huella incorrecta:
                         // Android permite volver a intentar.
                     }
                 }
@@ -145,30 +161,76 @@ class CrediPlusBiometricActivity :
     }
 
 
+    // ==========================================
+    // APROBAR
+    // ==========================================
+
     private fun aprobarEnServidor() {
+
+        /*
+         * Guardamos copias porque después
+         * limpiaremos las variables.
+         */
+        val idActual =
+            solicitudId
+
+        val numeroActual =
+            numero
+
+        val urlActual =
+            baseUrl
+
 
         Thread {
 
             val aprobado =
                 CrediPlusBackend.aprobar(
-                    baseUrl,
-                    solicitudId,
-                    numero
+                    urlActual,
+                    idActual,
+                    numeroActual
                 )
+
 
             runOnUiThread {
 
+                if (
+                    isFinishing ||
+                    isDestroyed
+                ) {
+                    return@runOnUiThread
+                }
+
+
                 if (aprobado) {
 
-                    finalizar(
-                        "✓ APROBADO"
+                    /*
+                     * Limpiar datos y cerrar overlay,
+                     * PERO todavía NO cerrar Guardia.
+                     *
+                     * Primero queremos mostrar
+                     * correctamente el modal verde.
+                     */
+                    limpiarTodo(
+                        idSolicitud = idActual,
+                        cerrarGuardiaAhora = false
                     )
+
+                    mostrarModalCorrecto()
 
                 } else {
 
-                    finalizar(
-                        "No se pudo aprobar la solicitud"
+                    limpiarTodo(
+                        idSolicitud = idActual,
+                        cerrarGuardiaAhora = true
                     )
+
+                    Toast.makeText(
+                        applicationContext,
+                        "No se pudo aprobar la solicitud",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    finish()
                 }
             }
 
@@ -176,29 +238,202 @@ class CrediPlusBiometricActivity :
     }
 
 
+    // ==========================================
+    // BIOMETRÍA CANCELADA / RECHAZADA
+    // ==========================================
+
     private fun cancelarEnServidor() {
+
+        val idActual =
+            solicitudId
+
+        val urlActual =
+            baseUrl
+
 
         Thread {
 
-            CrediPlusBackend.cancelar(
-                baseUrl,
-                solicitudId
-            )
+            if (
+                urlActual.isNotBlank() &&
+                idActual.isNotBlank()
+            ) {
+
+                CrediPlusBackend.cancelar(
+                    urlActual,
+                    idActual
+                )
+            }
+
 
             runOnUiThread {
 
-                finalizar(
-                    "✕ ANULADO"
+                if (
+                    isFinishing ||
+                    isDestroyed
+                ) {
+                    return@runOnUiThread
+                }
+
+
+                limpiarTodo(
+                    idSolicitud = idActual,
+                    cerrarGuardiaAhora = true
                 )
+
+
+                Toast.makeText(
+                    applicationContext,
+                    "✕ ANULADO",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+
+                finish()
             }
 
         }.start()
     }
 
 
-    private fun finalizar(
-        mensaje: String
+    // ==========================================
+    // MODAL APROBADO
+    // ==========================================
+
+    private fun mostrarModalCorrecto() {
+
+        if (
+            isFinishing ||
+            isDestroyed
+        ) {
+            return
+        }
+
+
+        dialogoCorrecto =
+            AlertDialog.Builder(this)
+                .setTitle(
+                    "Verificación correcta"
+                )
+                .setMessage(
+                    "Tu identidad fue verificada correctamente."
+                )
+                .setIcon(
+                    android.R.drawable.checkbox_on_background
+                )
+                .setCancelable(false)
+                .create()
+
+
+        dialogoCorrecto?.show()
+
+
+        handler.postDelayed(
+            {
+
+                if (
+                    isFinishing ||
+                    isDestroyed
+                ) {
+                    return@postDelayed
+                }
+
+
+                if (
+                    dialogoCorrecto
+                        ?.isShowing ==
+                    true
+                ) {
+
+                    dialogoCorrecto
+                        ?.dismiss()
+                }
+
+
+                dialogoCorrecto =
+                    null
+
+
+                /*
+                 * AHORA sí cerramos Guardia.
+                 *
+                 * Ya no existe un AlertDialog
+                 * abierto que pueda generar
+                 * WindowLeaked.
+                 */
+                CrediPlusGuardActivity
+                    .cerrarGuardia()
+
+
+                finish()
+
+            },
+            1200
+        )
+    }
+
+
+    // ==========================================
+    // LIMPIEZA TOTAL
+    // ==========================================
+
+    private fun limpiarTodo(
+        idSolicitud: String,
+        cerrarGuardiaAhora: Boolean
     ) {
+
+        val preferencias =
+            getSharedPreferences(
+                "crediplus_authenticator",
+                Context.MODE_PRIVATE
+            )
+
+
+        // ------------------------------------------
+        // LIMPIAR SOLICITUD GUARDADA
+        // ------------------------------------------
+
+        preferencias
+            .edit()
+            .remove(
+                "solicitudId"
+            )
+            .remove(
+                "numeroVerificacion"
+            )
+            .remove(
+                "baseUrl"
+            )
+            .commit()
+
+
+        // ------------------------------------------
+        // QUITAR NOTIFICACIÓN
+        // ------------------------------------------
+
+        if (
+            idSolicitud.isNotBlank()
+        ) {
+
+            NotificationManagerCompat
+                .from(this)
+                .cancel(
+                    idSolicitud.hashCode()
+                )
+        }
+
+
+        // ------------------------------------------
+        // LIMPIAR VARIABLES
+        // ------------------------------------------
+
+        solicitudId = ""
+        numero = ""
+        baseUrl = ""
+
+
+        // ------------------------------------------
+        // REINICIAR ESTADO NATIVO
+        // ------------------------------------------
 
         CrediPlusGuardActivity.finalizado =
             true
@@ -206,22 +441,10 @@ class CrediPlusBiometricActivity :
         CrediPlusGuardActivity.biometriaEnCurso =
             false
 
-        cerrarOverlay()
 
-        Toast.makeText(
-            applicationContext,
-            mensaje,
-            Toast.LENGTH_SHORT
-        ).show()
-
-        CrediPlusGuardActivity
-            .cerrarGuardia()
-
-        finish()
-    }
-
-
-    private fun cerrarOverlay() {
+        // ------------------------------------------
+        // CERRAR OVERLAY
+        // ------------------------------------------
 
         stopService(
             Intent(
@@ -229,5 +452,62 @@ class CrediPlusBiometricActivity :
                 OverlayService::class.java
             )
         )
+
+
+        // ------------------------------------------
+        // CERRAR GUARDIA
+        // ------------------------------------------
+
+        if (
+            cerrarGuardiaAhora
+        ) {
+
+            CrediPlusGuardActivity
+                .cerrarGuardia()
+        }
+    }
+
+
+    // ==========================================
+    // SEGURIDAD AL DESTRUIR ACTIVITY
+    // ==========================================
+
+    override fun onDestroy() {
+
+        /*
+         * Cancelar cualquier cierre
+         * pendiente del Handler.
+         */
+        handler.removeCallbacksAndMessages(
+            null
+        )
+
+
+        /*
+         * Si por cualquier motivo Android
+         * destruye la Activity antes,
+         * cerrar el AlertDialog.
+         */
+        try {
+
+            if (
+                dialogoCorrecto
+                    ?.isShowing ==
+                true
+            ) {
+
+                dialogoCorrecto
+                    ?.dismiss()
+            }
+
+        } catch (_: Exception) {
+        }
+
+
+        dialogoCorrecto =
+            null
+
+
+        super.onDestroy()
     }
 }

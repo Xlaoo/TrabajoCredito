@@ -9754,7 +9754,39 @@
 
                         return;
                     }
+                            // ==============================
+        // NÚMERO INCORRECTO
+        // ==============================
 
+        if (
+            datos.estado ===
+            "Incorrecto"
+        ) {
+
+            solicitudAuthenticatorTerminada =
+                true;
+
+            if (
+                intervaloSolicitudAuthenticator
+            ) {
+
+                clearInterval(
+                    intervaloSolicitudAuthenticator
+                );
+
+                intervaloSolicitudAuthenticator =
+                    null;
+            }
+
+            mostrarModalAuthenticator(
+                "Número incorrecto",
+                "El número ingresado en CrediPlus Authenticator no coincide con el mostrado en esta computadora.",
+                null,
+                "incorrecto"
+            );
+
+            return;
+        }
                     // ==============================
                     // EXPIRADO
                     // ==============================
@@ -9793,30 +9825,44 @@
                     // APROBADO
                     // ==============================
 
-                    if (
-                        datos.aprobado === true
-                    ) {
+        if (
+            datos.aprobado === true
+        ) {
 
-                        solicitudAuthenticatorTerminada =
-                            true;
+            solicitudAuthenticatorTerminada =
+                true;
 
-                        if (
-                            intervaloSolicitudAuthenticator
-                        ) {
+            if (
+                intervaloSolicitudAuthenticator
+            ) {
 
-                            clearInterval(
-                                intervaloSolicitudAuthenticator
-                            );
+                clearInterval(
+                    intervaloSolicitudAuthenticator
+                );
 
-                            intervaloSolicitudAuthenticator =
-                                null;
-                        }
+                intervaloSolicitudAuthenticator =
+                    null;
+            }
 
-                        window.location.href =
-                            datos.redirectUrl;
+            // Limpiar solicitud actual
+            solicitudAuthenticatorActual = null;
 
-                        return;
-                    }
+            mostrarModalAuthenticator(
+                "Verificación correcta",
+                "Tu identidad fue verificada correctamente. Ingresando a CrediPlus...",
+                null,
+                "correcto"
+            );
+
+            setTimeout(function () {
+
+                window.location.href =
+                    datos.redirectUrl;
+
+            }, 1200);
+
+            return;
+        }
 
                 }
                 catch (error) {
@@ -10218,6 +10264,24 @@
 
             solicitudAuthenticatorActual = null;
             solicitudAuthenticatorTerminada = false;
+                    const numeroElemento =
+            document.getElementById(
+                "numeroEstadoAuthenticator"
+            );
+
+        if (numeroElemento) {
+            numeroElemento.textContent = "--";
+        }
+
+        const contenedorNumero =
+            document.getElementById(
+                "contenedorNumeroAuthenticator"
+            );
+
+        if (contenedorNumero) {
+            contenedorNumero.style.display =
+                "none";
+        }
 
 
             const tiempo =

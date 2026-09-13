@@ -4,8 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.core.app.NotificationManagerCompat
 import flutter.overlay.window.flutter_overlay_window.OverlayService
-
 
 class CrediPlusResultReceiver :
     BroadcastReceiver() {
@@ -18,8 +18,7 @@ class CrediPlusResultReceiver :
         val resultado =
             intent.getStringExtra(
                 "resultado"
-            ) ?: "ANULADO"
-
+            ) ?: return
 
         val preferencias =
             context.getSharedPreferences(
@@ -27,13 +26,11 @@ class CrediPlusResultReceiver :
                 Context.MODE_PRIVATE
             )
 
-
         val solicitudId =
             preferencias.getString(
                 "solicitudId",
                 ""
             ) ?: ""
-
 
         val numeroEsperado =
             preferencias.getString(
@@ -41,13 +38,11 @@ class CrediPlusResultReceiver :
                 ""
             ) ?: ""
 
-
         val baseUrl =
             preferencias.getString(
                 "baseUrl",
                 ""
             ) ?: ""
-
 
         // ==========================================
         // VERIFICAR NÚMERO
@@ -63,6 +58,20 @@ class CrediPlusResultReceiver :
                     "numeroIngresado"
                 ) ?: ""
 
+            // Datos inválidos o solicitud vieja.
+            if (
+                solicitudId.isBlank() ||
+                numeroEsperado.isBlank() ||
+                baseUrl.isBlank()
+            ) {
+
+                finalizarFlujo(
+                    context,
+                    solicitudId
+                )
+
+                return
+            }
 
             // ======================================
             // NÚMERO INCORRECTO
@@ -74,20 +83,15 @@ class CrediPlusResultReceiver :
             ) {
 
                 responderNumero(
-                    context = context,
-                    baseUrl = baseUrl,
-                    solicitudId = solicitudId,
-                    numero = numeroIngresado
+                    baseUrl,
+                    solicitudId,
+                    numeroIngresado
                 )
 
-                cerrarTodo(
-                    context
+                finalizarFlujo(
+                    context,
+                    solicitudId
                 )
-
-                limpiarSolicitud(
-                    context
-                )
-
 
                 Toast.makeText(
                     context,
@@ -98,11 +102,13 @@ class CrediPlusResultReceiver :
                 return
             }
 
-
             // ======================================
             // NÚMERO CORRECTO
-            // ABRIR BIOMETRÍA
             // ======================================
+
+            CrediPlusGuardActivity
+                .biometriaEnCurso =
+                true
 
             val biometricIntent =
                 Intent(
@@ -130,7 +136,6 @@ class CrediPlusResultReceiver :
                     )
                 }
 
-
             context.startActivity(
                 biometricIntent
             )
@@ -138,9 +143,25 @@ class CrediPlusResultReceiver :
             return
         }
 
+        // ==========================================
+        // EXPIRADO
+        // ==========================================
+
+        if (
+            resultado ==
+            "EXPIRADO"
+        ) {
+
+            finalizarFlujo(
+                context,
+                solicitudId
+            )
+
+            return
+        }
 
         // ==========================================
-        // USUARIO CANCELÓ
+        // CANCELADO / RECHAZADO
         // ==========================================
 
         if (
@@ -149,35 +170,30 @@ class CrediPlusResultReceiver :
         ) {
 
             cancelarSolicitud(
-                context,
                 baseUrl,
                 solicitudId
             )
 
-            cerrarTodo(
-                context
+            finalizarFlujo(
+                context,
+                solicitudId
             )
-
-            limpiarSolicitud(
-                context
-            )
-
 
             Toast.makeText(
                 context,
                 "✕ ANULADO",
                 Toast.LENGTH_SHORT
             ).show()
+
+            return
         }
     }
 
-
     // ==========================================
-    // ENVIAR NÚMERO AL BACKEND
+    // RESPONDER AL SERVIDOR
     // ==========================================
 
     private fun responderNumero(
-        context: Context,
         baseUrl: String,
         solicitudId: String,
         numero: String
@@ -191,16 +207,14 @@ class CrediPlusResultReceiver :
             return
         }
 
-
         val pendingResult =
             goAsync()
-
 
         Thread {
 
             try {
 
-                CrediPlusBackend.responder(
+                CrediPlusBackend.aprobar(
                     baseUrl,
                     solicitudId,
                     numero
@@ -218,13 +232,11 @@ class CrediPlusResultReceiver :
         }.start()
     }
 
-
     // ==========================================
-    // CANCELAR SOLICITUD
+    // CANCELAR EN SERVIDOR
     // ==========================================
 
     private fun cancelarSolicitud(
-        context: Context,
         baseUrl: String,
         solicitudId: String
     ) {
@@ -236,10 +248,8 @@ class CrediPlusResultReceiver :
             return
         }
 
-
         val pendingResult =
             goAsync()
-
 
         Thread {
 
@@ -262,46 +272,47 @@ class CrediPlusResultReceiver :
         }.start()
     }
 
-
     // ==========================================
-    // LIMPIAR SOLICITUD DEL CELULAR
+    // LIMPIEZA TOTAL
     // ==========================================
 
-    private fun limpiarSolicitud(
-        context: Context
+    private fun finalizarFlujo(
+        context: Context,
+        solicitudId: String
     ) {
 
+        // Borrar preferencias.
         val preferencias =
             context.getSharedPreferences(
                 "crediplus_authenticator",
                 Context.MODE_PRIVATE
             )
 
-
         preferencias
             .edit()
             .remove("solicitudId")
             .remove("numeroVerificacion")
             .remove("baseUrl")
-            .apply()
-    }
+            .commit()
 
+        // Quitar notificación.
+        if (solicitudId.isNotBlank()) {
 
-    // ==========================================
-    // CERRAR MODAL FLOTANTE
-    // ==========================================
+            NotificationManagerCompat
+                .from(context)
+                .cancel(
+                    solicitudId.hashCode()
+                )
+        }
 
-    private fun cerrarTodo(
-        context: Context
-    ) {
-
+        // Reiniciar estados nativos.
         CrediPlusGuardActivity.finalizado =
             true
 
         CrediPlusGuardActivity.biometriaEnCurso =
             false
 
-
+        // Destruir overlay.
         context.stopService(
             Intent(
                 context,
@@ -309,7 +320,7 @@ class CrediPlusResultReceiver :
             )
         )
 
-
+        // Cerrar guardia.
         CrediPlusGuardActivity
             .cerrarGuardia()
     }
