@@ -15,11 +15,28 @@ QuestPDF.Settings.License = LicenseType.Community;
 var builder = WebApplication.CreateBuilder(args);
 if (FirebaseApp.DefaultInstance == null)
 {
+    GoogleCredential credential;
+
+    var firebaseJson = builder.Configuration["FIREBASE_ADMIN_JSON"];
+
+    if (!string.IsNullOrWhiteSpace(firebaseJson))
+    {
+        using var stream = new MemoryStream(
+            System.Text.Encoding.UTF8.GetBytes(firebaseJson)
+        );
+
+        credential = GoogleCredential.FromStream(stream);
+    }
+    else
+    {
+        credential = GoogleCredential.FromFile(
+            @"D:\CrediPlusSecrets\firebase-adminsdk.json"
+        );
+    }
+
     FirebaseApp.Create(new AppOptions
     {
-        Credential = GoogleCredential.FromFile(
-            @"D:\CrediPlusSecrets\firebase-adminsdk.json"
-        )
+        Credential = credential
     });
 }
 // Add services to the container.
