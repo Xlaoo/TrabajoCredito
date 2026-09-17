@@ -30,7 +30,12 @@ if (FirebaseApp.DefaultInstance == null)
     else
     {
         credential = GoogleCredential.FromFile(
-            @"D:\CrediPlusSecrets\firebase-adminsdk.json"
+            Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "..",
+                "CrediPlusSecrets",
+                "firebase-adminsdk.json"
+            )
         );
     }
 
