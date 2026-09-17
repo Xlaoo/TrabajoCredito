@@ -778,6 +778,226 @@ class _AuthenticatorPageState
       'CUENTA SELECCIONADA: ${cuenta.cuenta}',
     );
   }
+  Future<void> _eliminarCuenta(int indice) async {
+    if (indice < 0 || indice >= _cuentas.length) {
+      return;
+    }
+
+    final cuentaEliminar = _cuentas[indice];
+
+    // ==========================================
+    // CONFIRMAR
+    // ==========================================
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            'Eliminar cuenta',
+          ),
+          content: Text(
+            '¿Deseas eliminar ${cuentaEliminar.cuenta} '
+                'de CrediPlus Authenticator?\n\n'
+                'La cuenta tendrá que configurarse nuevamente '
+                'si deseas volver a utilizar Authenticator.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.pop(context, false),
+              child: const Text(
+                'Cancelar',
+              ),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.pop(context, true),
+              child: const Text(
+                'Eliminar',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmar != true) {
+      return;
+    }
+
+    // ==========================================
+    // OBTENER FCM DE ESTE CELULAR
+    // ==========================================
+
+    try {
+      String token = _fcmToken.trim();
+
+      if (token.isEmpty) {
+        final nuevoToken =
+        await FirebaseMessaging.instance.getToken();
+
+        if (nuevoToken == null ||
+            nuevoToken.trim().isEmpty) {
+          throw Exception(
+            'No se pudo identificar este dispositivo.',
+          );
+        }
+
+        token = nuevoToken.trim();
+        _fcmToken = token;
+      }
+
+      // ==========================================
+      // GENERAR TOTP DE LA CUENTA QUE SE ELIMINARÁ
+      // ==========================================
+
+      final codigoTotp =
+      OTP.generateTOTPCodeString(
+        cuentaEliminar.secret,
+        DateTime.now().millisecondsSinceEpoch,
+        interval: 30,
+        length: 6,
+        algorithm: Algorithm.SHA1,
+        isGoogle: true,
+      );
+
+      // ==========================================
+      // PEDIR AL SERVIDOR LA DESVINCULACIÓN
+      // ==========================================
+
+      final respuesta =
+      await http.post(
+        Uri.parse(
+          '$_backendBaseUrl/Login/EliminarCuentaAuthenticator',
+        ),
+        headers: {
+          'Content-Type':
+          'application/x-www-form-urlencoded',
+        },
+        body: {
+          'correo':
+          cuentaEliminar.cuenta.trim(),
+          'codigoTotp':
+          codigoTotp,
+          'fcmToken':
+          token,
+        },
+      );
+
+      debugPrint(
+        'HTTP ELIMINAR AUTHENTICATOR: '
+            '${respuesta.statusCode}',
+      );
+
+      debugPrint(
+        'RESPUESTA ELIMINAR AUTHENTICATOR: '
+            '${respuesta.body}',
+      );
+
+      if (respuesta.statusCode != 200) {
+        throw Exception(
+          'Error HTTP ${respuesta.statusCode}',
+        );
+      }
+
+      final datos =
+      jsonDecode(respuesta.body);
+
+      if (datos['ok'] != true) {
+        throw Exception(
+          datos['mensaje']?.toString() ??
+              'El servidor rechazó la desvinculación.',
+        );
+      }
+
+      // ==========================================
+      // SERVIDOR OK -> AHORA BORRAR LOCALMENTE
+      // ==========================================
+
+      _cuentas.removeAt(indice);
+
+      if (_cuentas.isEmpty) {
+        _indiceCuentaSeleccionada = -1;
+
+        _secretTotp = '';
+        _nombreCuenta = '';
+        _codigoTotp = '------';
+      } else {
+        if (_indiceCuentaSeleccionada == indice) {
+          _indiceCuentaSeleccionada = 0;
+        } else if (_indiceCuentaSeleccionada > indice) {
+          _indiceCuentaSeleccionada--;
+        }
+
+        if (_indiceCuentaSeleccionada < 0) {
+          _indiceCuentaSeleccionada = 0;
+        }
+
+        if (_indiceCuentaSeleccionada >=
+            _cuentas.length) {
+          _indiceCuentaSeleccionada =
+              _cuentas.length - 1;
+        }
+
+        final nuevaCuenta =
+        _cuentas[
+        _indiceCuentaSeleccionada];
+
+        _secretTotp =
+            nuevaCuenta.secret;
+
+        _nombreCuenta =
+            nuevaCuenta.cuenta;
+
+        _codigoTotp =
+        '--- ---';
+
+        _actualizarTiempo();
+      }
+
+      await _guardarListaCuentas();
+
+      if (!mounted) return;
+
+      setState(() {});
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cuenta eliminada y Authenticator '
+                'desvinculado correctamente.',
+          ),
+          behavior:
+          SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      debugPrint(
+        'ERROR ELIMINANDO CUENTA: $e',
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+        SnackBar(
+          content: Text(
+            'No se eliminó la cuenta. $e',
+          ),
+          backgroundColor:
+          Colors.red,
+          behavior:
+          SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
   @override
   void dispose() {
     _timer?.cancel();
@@ -1711,23 +1931,32 @@ class _AuthenticatorPageState
                           ),
                         ),
 
-                        if (seleccionada)
-                          const Icon(
-                            Icons
-                                .check_circle_rounded,
-                            color: Color(
-                              0xFF2F80ED,
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (seleccionada)
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: Color(0xFF2F80ED),
+                                size: 24,
+                              ),
+
+                            if (seleccionada)
+                              const SizedBox(width: 6),
+
+                            IconButton(
+                              tooltip: 'Eliminar cuenta',
+                              onPressed: () async {
+                                await _eliminarCuenta(index);
+                              },
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: Color(0xFFD92D20),
+                                size: 24,
+                              ),
                             ),
-                            size: 24,
-                          )
-                        else
-                          const Icon(
-                            Icons
-                                .chevron_right_rounded,
-                            color: Color(
-                              0xFF98A2B3,
-                            ),
-                          ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

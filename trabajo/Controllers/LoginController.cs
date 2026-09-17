@@ -4165,46 +4165,56 @@ string titularCuenta
                 }
 
                 AutenticadorDispositivo? dispositivo =
-                    await _Context
-                        .AUTENTICADOR_DISPOSITIVO
-                        .FirstOrDefaultAsync(
-                            x => x.UsuarioId == usuario.Id
-                        );
+     await _Context
+         .AUTENTICADOR_DISPOSITIVO
+         .FirstOrDefaultAsync(
+             x => x.UsuarioId == usuario.Id &&
+                  x.Activo
+         );
 
-                if (dispositivo == null)
+                string tokenNuevo = fcmToken.Trim();
+
+                if (dispositivo != null)
                 {
-                    dispositivo =
-                        new AutenticadorDispositivo
+                    // Es el mismo celular ya registrado.
+                    if (dispositivo.FcmToken == tokenNuevo)
+                    {
+                        return Json(new
                         {
-                            UsuarioId = usuario.Id,
-                            FcmToken = fcmToken.Trim(),
-                            NombreDispositivo =
-                                string.IsNullOrWhiteSpace(nombreDispositivo)
-                                    ? "Android"
-                                    : nombreDispositivo.Trim(),
-                            FechaVinculacion = DateTime.Now,
-                            Activo = true
-                        };
+                            ok = true,
+                            mensaje =
+                                "Este dispositivo ya está vinculado con la cuenta."
+                        });
+                    }
 
-                    _Context
-                        .AUTENTICADOR_DISPOSITIVO
-                        .Add(dispositivo);
+                    // Es OTRO celular.
+                    // No permitimos reemplazar el dispositivo existente.
+                    return Json(new
+                    {
+                        ok = false,
+                        codigo = "DISPOSITIVO_YA_VINCULADO",
+                        mensaje =
+                            "Esta cuenta ya está vinculada a otro dispositivo."
+                    });
                 }
-                else
-                {
-                    dispositivo.FcmToken =
-                        fcmToken.Trim();
 
-                    dispositivo.NombreDispositivo =
+                dispositivo = new AutenticadorDispositivo
+                {
+                    UsuarioId = usuario.Id,
+                    FcmToken = tokenNuevo,
+
+                    NombreDispositivo =
                         string.IsNullOrWhiteSpace(nombreDispositivo)
                             ? "Android"
-                            : nombreDispositivo.Trim();
+                            : nombreDispositivo.Trim(),
 
-                    dispositivo.FechaVinculacion =
-                        DateTime.Now;
+                    FechaVinculacion = DateTime.Now,
+                    Activo = true
+                };
 
-                    dispositivo.Activo = true;
-                }
+                _Context
+                    .AUTENTICADOR_DISPOSITIVO
+                    .Add(dispositivo);
 
                 await _Context.SaveChangesAsync();
 
@@ -5376,50 +5386,66 @@ string titularCuenta
                 // REGISTRAR / ACTUALIZAR DISPOSITIVO
                 // =====================================================
 
+                // =====================================================
+                // REGISTRAR DISPOSITIVO - SOLO UNO POR CUENTA
+                // =====================================================
+
                 AutenticadorDispositivo? dispositivo =
                     await _Context
                         .AUTENTICADOR_DISPOSITIVO
                         .FirstOrDefaultAsync(
-                            x => x.UsuarioId == usuario.Id
+                            x => x.UsuarioId == usuario.Id &&
+                                 x.Activo
                         );
 
-                if (dispositivo == null)
+                if (dispositivo != null)
                 {
-                    dispositivo =
-                        new AutenticadorDispositivo
+                    // Si es exactamente el mismo celular, no hay problema.
+                    // Esto permite que la app vuelva a comunicarse con el
+                    // servidor sin crear duplicados.
+                    if (dispositivo.FcmToken == fcmToken)
+                    {
+                        return Json(new
                         {
-                            UsuarioId = usuario.Id,
-                            FcmToken = fcmToken,
-                            NombreDispositivo =
-                                string.IsNullOrWhiteSpace(nombreDispositivo)
-                                    ? "Android"
-                                    : nombreDispositivo.Trim(),
-                            FechaVinculacion = DateTime.Now,
-                            Activo = true
-                        };
+                            ok = true,
+                            mensaje =
+                                "Este dispositivo ya está vinculado con la cuenta."
+                        });
+                    }
 
-                    _Context
-                        .AUTENTICADOR_DISPOSITIVO
-                        .Add(dispositivo);
+                    // Hay otro celular activo para esta cuenta.
+                    return Json(new
+                    {
+                        ok = false,
+                        codigo = "DISPOSITIVO_YA_VINCULADO",
+                        mensaje =
+                            "Esta cuenta ya está vinculada a otro dispositivo. " +
+                            "Debes eliminar la vinculación anterior antes de registrar otro celular."
+                    });
                 }
-                else
-                {
-                    dispositivo.FcmToken = fcmToken;
 
-                    dispositivo.NombreDispositivo =
+                // =====================================================
+                // NO EXISTE DISPOSITIVO: CREARLO
+                // =====================================================
+
+                dispositivo = new AutenticadorDispositivo
+                {
+                    UsuarioId = usuario.Id,
+                    FcmToken = fcmToken,
+                    NombreDispositivo =
                         string.IsNullOrWhiteSpace(nombreDispositivo)
                             ? "Android"
-                            : nombreDispositivo.Trim();
+                            : nombreDispositivo.Trim(),
+                    FechaVinculacion = DateTime.Now,
+                    Activo = true
+                };
 
-                    dispositivo.FechaVinculacion =
-                        DateTime.Now;
-
-                    dispositivo.Activo = true;
-                }
+                _Context
+                    .AUTENTICADOR_DISPOSITIVO
+                    .Add(dispositivo);
 
                 await _Context.SaveChangesAsync();
 
-                // Ya quedó guardada definitivamente.
                 HttpContext.Session.Remove(
                     "TotpSecretPendiente"
                 );
@@ -5443,6 +5469,184 @@ string titularCuenta
                     ok = false,
                     mensaje =
                         "No se pudo vincular el dispositivo."
+                });
+            }
+        }
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> EliminarCuentaAuthenticator(
+    string correo,
+    string codigoTotp,
+    string fcmToken)
+        {
+            await using var transaccion =
+                await _Context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // ==========================================
+                // VALIDAR DATOS
+                // ==========================================
+
+                if (string.IsNullOrWhiteSpace(correo) ||
+                    string.IsNullOrWhiteSpace(codigoTotp) ||
+                    string.IsNullOrWhiteSpace(fcmToken))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Faltan datos para desvincular la cuenta."
+                    });
+                }
+
+                correo = correo.Trim().ToLowerInvariant();
+                codigoTotp = codigoTotp.Trim();
+                fcmToken = fcmToken.Trim();
+
+                // ==========================================
+                // BUSCAR USUARIO
+                // ==========================================
+
+                Usuario? usuario =
+                    await _Context.Usuario
+                        .FirstOrDefaultAsync(
+                            x => x.Correo.ToLower() == correo
+                        );
+
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró la cuenta."
+                    });
+                }
+
+                // ==========================================
+                // COMPROBAR TOTP
+                // ==========================================
+
+                if (!usuario.TotpHabilitado ||
+                    string.IsNullOrWhiteSpace(usuario.TotpSecret))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La cuenta no tiene Authenticator habilitado."
+                    });
+                }
+
+                bool codigoValido =
+                    ValidarCodigoTotp(
+                        usuario.TotpSecret,
+                        codigoTotp
+                    );
+
+                if (!codigoValido)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No se pudo verificar la identidad del Authenticator."
+                    });
+                }
+
+                // ==========================================
+                // COMPROBAR QUE SEA EL CELULAR VINCULADO
+                // ==========================================
+
+                AutenticadorDispositivo? dispositivo =
+                    await _Context
+                        .AUTENTICADOR_DISPOSITIVO
+                        .FirstOrDefaultAsync(
+                            x => x.UsuarioId == usuario.Id &&
+                                 x.Activo
+                        );
+
+                if (dispositivo == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "No existe un dispositivo vinculado para esta cuenta."
+                    });
+                }
+
+                if (dispositivo.FcmToken != fcmToken)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje =
+                            "Este celular no es el dispositivo vinculado a la cuenta."
+                    });
+                }
+
+                // ==========================================
+                // 1. ELIMINAR SOLICITUDES
+                // ==========================================
+
+                var solicitudes =
+                    await _Context
+                        .AUTENTICADOR_SOLICITUD
+                        .Where(
+                            x => x.UsuarioId == usuario.Id
+                        )
+                        .ToListAsync();
+
+                if (solicitudes.Count > 0)
+                {
+                    _Context
+                        .AUTENTICADOR_SOLICITUD
+                        .RemoveRange(solicitudes);
+                }
+
+                // ==========================================
+                // 2. ELIMINAR DISPOSITIVO
+                // ==========================================
+
+                _Context
+                    .AUTENTICADOR_DISPOSITIVO
+                    .Remove(dispositivo);
+
+                // ==========================================
+                // 3. LIMPIAR TOTP DEL USUARIO
+                // ==========================================
+
+                usuario.TotpHabilitado = false;
+                usuario.TotpSecret = null;
+
+                _Context.Usuario.Update(usuario);
+
+                // ==========================================
+                // GUARDAR TODO
+                // ==========================================
+
+                await _Context.SaveChangesAsync();
+                await transaccion.CommitAsync();
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje =
+                        "La cuenta fue desvinculada correctamente."
+                });
+            }
+            catch (Exception ex)
+            {
+                await transaccion.RollbackAsync();
+
+                Console.WriteLine(
+                    "ERROR ELIMINANDO AUTHENTICATOR: " + ex
+                );
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje =
+                        "No se pudo desvincular la cuenta."
                 });
             }
         }
