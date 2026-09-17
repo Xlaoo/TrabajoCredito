@@ -12,8 +12,8 @@ import 'solicitud_login_page.dart';
 import 'package:flutter/services.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(
-  RemoteMessage message,
-) async {
+    RemoteMessage message,
+    ) async {
   await Firebase.initializeApp();
 
   debugPrint(
@@ -80,133 +80,133 @@ class AuthenticatorPage extends StatefulWidget {
 
 class _AuthenticatorPageState
     extends State<AuthenticatorPage> {
-    static const MethodChannel _channel =
-        MethodChannel('crediplus/app_control');
+  static const MethodChannel _channel =
+  MethodChannel('crediplus/app_control');
 
-    Future<void> _mandarAplicacionAlFondo() async {
-      try {
-        await _channel.invokeMethod('moveTaskToBack');
-      } catch (e) {
-        debugPrint('Error enviando app al fondo: $e');
-      }
+  Future<void> _mandarAplicacionAlFondo() async {
+    try {
+      await _channel.invokeMethod('moveTaskToBack');
+    } catch (e) {
+      debugPrint('Error enviando app al fondo: $e');
     }
-    Future<void> _configurarNotificaciones() async {
-      final FirebaseMessaging messaging =
-          FirebaseMessaging.instance;
+  }
+  Future<void> _configurarNotificaciones() async {
+    final FirebaseMessaging messaging =
+        FirebaseMessaging.instance;
 
-      final NotificationSettings settings =
-          await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+    final NotificationSettings settings =
+    await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
-      debugPrint(
-        'Permiso de notificaciones: ${settings.authorizationStatus}',
-      );
+    debugPrint(
+      'Permiso de notificaciones: ${settings.authorizationStatus}',
+    );
 
-final String? token =
+    final String? token =
     await messaging.getToken();
 
-if (token != null &&
-    token.trim().isNotEmpty) {
+    if (token != null &&
+        token.trim().isNotEmpty) {
 
-  _fcmToken = token.trim();
+      _fcmToken = token.trim();
 
-  debugPrint(
-    'FCM TOKEN OBTENIDO: $_fcmToken',
-  );
-}
+      debugPrint(
+        'FCM TOKEN OBTENIDO: $_fcmToken',
+      );
     }
-    Future<void> _configurarPermisoFlotante() async {
+  }
+  Future<void> _configurarPermisoFlotante() async {
 
-      final bool tienePermiso =
-          await FlutterOverlayWindow.isPermissionGranted();
+    final bool tienePermiso =
+    await FlutterOverlayWindow.isPermissionGranted();
 
-      if (!tienePermiso) {
+    if (!tienePermiso) {
 
-        if (!mounted) return;
+      if (!mounted) return;
 
-        final bool? aceptar =
-            await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text(
-                'Permitir ventana flotante',
-              ),
-              content: const Text(
-                'CrediPlus necesita permiso para mostrar las solicitudes '
-                'de inicio de sesión sobre otras aplicaciones.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(
-                      context,
-                      false,
-                    );
-                  },
-                  child: const Text(
-                    'AHORA NO',
-                  ),
+      final bool? aceptar =
+      await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text(
+              'Permitir ventana flotante',
+            ),
+            content: const Text(
+              'CrediPlus necesita permiso para mostrar las solicitudes '
+                  'de inicio de sesión sobre otras aplicaciones.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(
+                    context,
+                    false,
+                  );
+                },
+                child: const Text(
+                  'AHORA NO',
                 ),
-                FilledButton(
-                  onPressed: () {
-                    Navigator.pop(
-                      context,
-                      true,
-                    );
-                  },
-                  child: const Text(
-                    'PERMITIR',
-                  ),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(
+                    context,
+                    true,
+                  );
+                },
+                child: const Text(
+                  'PERMITIR',
                 ),
-              ],
-            );
-          },
-        );
+              ),
+            ],
+          );
+        },
+      );
 
-        if (aceptar == true) {
-          await FlutterOverlayWindow.requestPermission();
-        }
+      if (aceptar == true) {
+        await FlutterOverlayWindow.requestPermission();
       }
     }
-void _escucharNotificaciones() {
-  FirebaseMessaging.onMessageOpenedApp.listen(
-    (RemoteMessage message) async {
-      await _abrirOverlaySolicitud();
+  }
+  void _escucharNotificaciones() {
+    FirebaseMessaging.onMessageOpenedApp.listen(
+          (RemoteMessage message) async {
+        await _abrirOverlaySolicitud();
 
-      await Future.delayed(
-        const Duration(milliseconds: 300),
-      );
+        await Future.delayed(
+          const Duration(milliseconds: 300),
+        );
 
-      await _mandarAplicacionAlFondo();
-    },
-  );
+        await _mandarAplicacionAlFondo();
+      },
+    );
 
-  FirebaseMessaging.instance
-      .getInitialMessage()
-      .then((RemoteMessage? message) async {
-    if (message != null) {
-      await _abrirOverlaySolicitud();
+    FirebaseMessaging.instance
+        .getInitialMessage()
+        .then((RemoteMessage? message) async {
+      if (message != null) {
+        await _abrirOverlaySolicitud();
 
-      await Future.delayed(
-        const Duration(milliseconds: 300),
-      );
+        await Future.delayed(
+          const Duration(milliseconds: 300),
+        );
 
-      await _mandarAplicacionAlFondo();
-    }
-  });
-}
+        await _mandarAplicacionAlFondo();
+      }
+    });
+  }
   Future<void> _abrirOverlaySolicitud() async {
     bool permiso =
-        await FlutterOverlayWindow.isPermissionGranted();
+    await FlutterOverlayWindow.isPermissionGranted();
 
     if (!permiso) {
       final resultado =
-          await FlutterOverlayWindow.requestPermission();
+      await FlutterOverlayWindow.requestPermission();
 
       permiso = resultado ?? false;
     }
@@ -218,15 +218,15 @@ void _escucharNotificaciones() {
       return;
     }
 
-await FlutterOverlayWindow.showOverlay(
-  height: WindowSize.fullCover,
-  width: WindowSize.fullCover,
-  alignment: OverlayAlignment.center,
-  flag: OverlayFlag.focusPointer,
-  enableDrag: false,
-  overlayTitle: 'CrediPlus Authenticator',
-  overlayContent: 'Solicitud de inicio de sesión',
-);
+    await FlutterOverlayWindow.showOverlay(
+      height: WindowSize.fullCover,
+      width: WindowSize.fullCover,
+      alignment: OverlayAlignment.center,
+      flag: OverlayFlag.focusPointer,
+      enableDrag: false,
+      overlayTitle: 'CrediPlus Authenticator',
+      overlayContent: 'Solicitud de inicio de sesión',
+    );
   }
 
   Timer? _timer;
@@ -247,67 +247,73 @@ await FlutterOverlayWindow.showOverlay(
   String _secretTotp = '';
 
   String _nombreCuenta = '';
-    String _fcmToken = '';
+  String _fcmToken = '';
   bool _cargando = true;
-    String get _backendBaseUrl {
+  static const bool _usarBackendLocal = false;
+
+  String get _backendBaseUrl {
+    if (_usarBackendLocal) {
       return 'http://192.168.18.127:5280';
     }
+
+    return 'https://p01--trabajocredito--bg88tvjkmfhg.code.run';
+  }
   bool get _tieneCuenta =>
       _secretTotp.trim().isNotEmpty;
 
-@override
-void initState() {
-  super.initState();
+  @override
+  void initState() {
+    super.initState();
 
-  _inicializarAuthenticator();
+    _inicializarAuthenticator();
 
-  WidgetsBinding.instance.addPostFrameCallback(
-    (_) {
-      _configurarPermisoFlotante();
-    },
-  );
+    WidgetsBinding.instance.addPostFrameCallback(
+          (_) {
+        _configurarPermisoFlotante();
+      },
+    );
 
-  //_escucharNotificaciones();
+    //_escucharNotificaciones();
 
-  _timer = Timer.periodic(
-    const Duration(seconds: 1),
-    (_) => _actualizarTiempo(),
-  );
-}
+    _timer = Timer.periodic(
+      const Duration(seconds: 1),
+          (_) => _actualizarTiempo(),
+    );
+  }
 
-Future<void> _inicializarAuthenticator() async {
+  Future<void> _inicializarAuthenticator() async {
 
-  // 1. Pedir permisos y obtener FCM Token
-  await _configurarNotificaciones();
+    // 1. Pedir permisos y obtener FCM Token
+    await _configurarNotificaciones();
 
-  // 2. Cargar cuenta TOTP guardada
-  await _cargarDatosGuardados();
+    // 2. Cargar cuenta TOTP guardada
+    await _cargarDatosGuardados();
 
-  if (!mounted) return;
+    if (!mounted) return;
 
-  // 3. Si ya existe una cuenta configurada,
-  // registrar automáticamente este celular
-  // en el backend.
-if (_secretTotp.trim().isNotEmpty) {
+    // 3. Si ya existe una cuenta configurada,
+    // registrar automáticamente este celular
+    // en el backend.
+    if (_secretTotp.trim().isNotEmpty) {
 
-  debugPrint(
-    'CUENTA GUARDADA: [$_nombreCuenta]'
-  );
+      debugPrint(
+          'CUENTA GUARDADA: [$_nombreCuenta]'
+      );
 
-  final registrado =
+      final registrado =
       await _registrarDispositivoBackend();
 
-  debugPrint(
-    registrado
-        ? 'DISPOSITIVO VINCULADO AUTOMÁTICAMENTE'
-        : 'NO SE PUDO VINCULAR EL DISPOSITIVO AUTOMÁTICAMENTE',
-  );
-}
+      debugPrint(
+        registrado
+            ? 'DISPOSITIVO VINCULADO AUTOMÁTICAMENTE'
+            : 'NO SE PUDO VINCULAR EL DISPOSITIVO AUTOMÁTICAMENTE',
+      );
+    }
 
-  if (!mounted) return;
+    if (!mounted) return;
 
-  _actualizarTiempo();
-}
+    _actualizarTiempo();
+  }
 
   Future<void> _cargarDatosGuardados() async {
     try {
@@ -508,91 +514,91 @@ if (_secretTotp.trim().isNotEmpty) {
 
     _actualizarTiempo();
   }
-    Future<bool> _registrarDispositivoBackend() async {
-      try {
-        if (_nombreCuenta.trim().isEmpty) {
-          debugPrint(
-            'No existe correo para registrar el dispositivo.',
-          );
-          return false;
-        }
-
-        if (_secretTotp.trim().isEmpty) {
-          debugPrint(
-            'No existe secreto TOTP.',
-          );
-          return false;
-        }
-
-        String token = _fcmToken.trim();
-
-        if (token.isEmpty) {
-          final nuevoToken =
-              await FirebaseMessaging.instance.getToken();
-
-          if (nuevoToken == null ||
-              nuevoToken.trim().isEmpty) {
-            debugPrint(
-              'No se pudo obtener el FCM Token.',
-            );
-            return false;
-          }
-
-          token = nuevoToken.trim();
-          _fcmToken = token;
-        }
-
-        final codigoTotp =
-            OTP.generateTOTPCodeString(
-          _secretTotp,
-          DateTime.now().millisecondsSinceEpoch,
-          interval: 30,
-          length: 6,
-          algorithm: Algorithm.SHA1,
-          isGoogle: true,
-        );
-
-        final respuesta =
-            await http.post(
-          Uri.parse(
-            '$_backendBaseUrl/Login/RegistrarDispositivoAuthenticator',
-          ),
-          headers: {
-            'Content-Type':
-                'application/x-www-form-urlencoded',
-          },
-          body: {
-            'correo': _nombreCuenta.trim(),
-            'codigoTotp': codigoTotp,
-            'fcmToken': token,
-            'nombreDispositivo': 'Android',
-          },
-        );
-
+  Future<bool> _registrarDispositivoBackend() async {
+    try {
+      if (_nombreCuenta.trim().isEmpty) {
         debugPrint(
-          'HTTP REGISTRO DISPOSITIVO: ${respuesta.statusCode}',
+          'No existe correo para registrar el dispositivo.',
         );
-
-        debugPrint(
-          'RESPUESTA REGISTRO: ${respuesta.body}',
-        );
-
-        if (respuesta.statusCode != 200) {
-          return false;
-        }
-
-        final datos =
-            jsonDecode(respuesta.body);
-
-        return datos['ok'] == true;
-      } catch (e) {
-        debugPrint(
-          'ERROR REGISTRANDO DISPOSITIVO: $e',
-        );
-
         return false;
       }
+
+      if (_secretTotp.trim().isEmpty) {
+        debugPrint(
+          'No existe secreto TOTP.',
+        );
+        return false;
+      }
+
+      String token = _fcmToken.trim();
+
+      if (token.isEmpty) {
+        final nuevoToken =
+        await FirebaseMessaging.instance.getToken();
+
+        if (nuevoToken == null ||
+            nuevoToken.trim().isEmpty) {
+          debugPrint(
+            'No se pudo obtener el FCM Token.',
+          );
+          return false;
+        }
+
+        token = nuevoToken.trim();
+        _fcmToken = token;
+      }
+
+      final codigoTotp =
+      OTP.generateTOTPCodeString(
+        _secretTotp,
+        DateTime.now().millisecondsSinceEpoch,
+        interval: 30,
+        length: 6,
+        algorithm: Algorithm.SHA1,
+        isGoogle: true,
+      );
+
+      final respuesta =
+      await http.post(
+        Uri.parse(
+          '$_backendBaseUrl/Login/RegistrarDispositivoAuthenticator',
+        ),
+        headers: {
+          'Content-Type':
+          'application/x-www-form-urlencoded',
+        },
+        body: {
+          'correo': _nombreCuenta.trim(),
+          'codigoTotp': codigoTotp,
+          'fcmToken': token,
+          'nombreDispositivo': 'Android',
+        },
+      );
+
+      debugPrint(
+        'HTTP REGISTRO DISPOSITIVO: ${respuesta.statusCode}',
+      );
+
+      debugPrint(
+        'RESPUESTA REGISTRO: ${respuesta.body}',
+      );
+
+      if (respuesta.statusCode != 200) {
+        return false;
+      }
+
+      final datos =
+      jsonDecode(respuesta.body);
+
+      return datos['ok'] == true;
+    } catch (e) {
+      debugPrint(
+        'ERROR REGISTRANDO DISPOSITIVO: $e',
+      );
+
+      return false;
     }
+  }
   @override
   void dispose() {
     _timer?.cancel();
@@ -706,20 +712,20 @@ if (_secretTotp.trim().isNotEmpty) {
             ),
           ),
 
-IconButton(
-  onPressed: () {},
-  icon: const Icon(
-    Icons.notifications_none_rounded,
-    color: Color(0xFF475467),
-  ),
-),
-IconButton(
-  onPressed: () {},
-  icon: const Icon(
-    Icons.settings_outlined,
-    color: Color(0xFF475467),
-  ),
-),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.notifications_none_rounded,
+              color: Color(0xFF475467),
+            ),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.settings_outlined,
+              color: Color(0xFF475467),
+            ),
+          ),
         ],
       ),
     );
@@ -1055,21 +1061,21 @@ IconButton(
             uri,
           );
 
-await _configurarCuenta(
-  secret: secret,
-  cuenta: cuenta,
-);
+          await _configurarCuenta(
+            secret: secret,
+            cuenta: cuenta,
+          );
 
-final dispositivoRegistrado =
-    await _registrarDispositivoBackend();
+          final dispositivoRegistrado =
+          await _registrarDispositivoBackend();
 
-debugPrint(
-  dispositivoRegistrado
-      ? 'DISPOSITIVO REGISTRADO CORRECTAMENTE'
-      : 'NO SE PUDO REGISTRAR EL DISPOSITIVO',
-);
+          debugPrint(
+            dispositivoRegistrado
+                ? 'DISPOSITIVO REGISTRADO CORRECTAMENTE'
+                : 'NO SE PUDO REGISTRAR EL DISPOSITIVO',
+          );
 
-if (!mounted) return;
+          if (!mounted) return;
 
           ScaffoldMessenger.of(
             context,
@@ -1276,21 +1282,21 @@ if (!mounted) return;
         }
 
         try {
-await _configurarCuenta(
-  secret: secret,
-  cuenta: cuenta,
-);
+          await _configurarCuenta(
+            secret: secret,
+            cuenta: cuenta,
+          );
 
-final dispositivoRegistrado =
-    await _registrarDispositivoBackend();
+          final dispositivoRegistrado =
+          await _registrarDispositivoBackend();
 
-debugPrint(
-  dispositivoRegistrado
-      ? 'DISPOSITIVO REGISTRADO CORRECTAMENTE'
-      : 'NO SE PUDO REGISTRAR EL DISPOSITIVO',
-);
+          debugPrint(
+            dispositivoRegistrado
+                ? 'DISPOSITIVO REGISTRADO CORRECTAMENTE'
+                : 'NO SE PUDO REGISTRAR EL DISPOSITIVO',
+          );
 
-if (!mounted) return;
+          if (!mounted) return;
 
           ScaffoldMessenger.of(
             context,
