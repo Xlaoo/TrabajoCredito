@@ -69,7 +69,31 @@ class CrediPlusAuthenticatorApp extends StatelessWidget {
     );
   }
 }
+class CuentaTotp {
+  final String cuenta;
+  final String secret;
 
+  const CuentaTotp({
+    required this.cuenta,
+    required this.secret,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'cuenta': cuenta,
+      'secret': secret,
+    };
+  }
+
+  factory CuentaTotp.fromJson(
+      Map<String, dynamic> json,
+      ) {
+    return CuentaTotp(
+      cuenta: json['cuenta']?.toString() ?? '',
+      secret: json['secret']?.toString() ?? '',
+    );
+  }
+}
 class AuthenticatorPage extends StatefulWidget {
   const AuthenticatorPage({super.key});
 
@@ -240,6 +264,14 @@ class _AuthenticatorPageState
   static const String _accountStorageKey =
       'crediplus_totp_account';
 
+// NUEVO: aquí se almacenarán TODAS las cuentas.
+  static const String _accountsStorageKey =
+      'crediplus_totp_accounts_v2';
+
+  final List<CuentaTotp> _cuentas = [];
+
+  int _indiceCuentaSeleccionada = -1;
+
   int _segundosRestantes = 30;
 
   String _codigoTotp = '--- ---';
@@ -247,7 +279,9 @@ class _AuthenticatorPageState
   String _secretTotp = '';
 
   String _nombreCuenta = '';
+
   String _fcmToken = '';
+
   bool _cargando = true;
   static const bool _usarBackendLocal = false;
 
@@ -273,7 +307,7 @@ class _AuthenticatorPageState
       },
     );
 
-    //_escucharNotificaciones();
+    _escucharNotificaciones();
 
     _timer = Timer.periodic(
       const Duration(seconds: 1),
@@ -317,46 +351,107 @@ class _AuthenticatorPageState
 
   Future<void> _cargarDatosGuardados() async {
     try {
-      final secretGuardado =
+      _cuentas.clear();
+
+      // ==========================================
+      // 1. INTENTAR CARGAR EL NUEVO FORMATO
+      // ==========================================
+
+      final cuentasJson =
       await _secureStorage.read(
-        key: _secretStorageKey,
+        key: _accountsStorageKey,
       );
 
-      final cuentaGuardada =
-      await _secureStorage.read(
-        key: _accountStorageKey,
-      );
+      if (cuentasJson != null &&
+          cuentasJson.trim().isNotEmpty) {
+        final List<dynamic> lista =
+        jsonDecode(cuentasJson);
+
+        for (final item in lista) {
+          final cuenta = CuentaTotp.fromJson(
+            Map<String, dynamic>.from(item),
+          );
+
+          if (cuenta.secret.trim().isNotEmpty) {
+            _cuentas.add(cuenta);
+          }
+        }
+      }
+
+      // ==========================================
+      // 2. MIGRAR CUENTA ANTIGUA
+      // ==========================================
+
+      if (_cuentas.isEmpty) {
+        final secretGuardado =
+        await _secureStorage.read(
+          key: _secretStorageKey,
+        );
+
+        final cuentaGuardada =
+        await _secureStorage.read(
+          key: _accountStorageKey,
+        );
+
+        if (secretGuardado != null &&
+            secretGuardado.trim().isNotEmpty) {
+          _cuentas.add(
+            CuentaTotp(
+              cuenta:
+              cuentaGuardada?.trim().isNotEmpty ==
+                  true
+                  ? cuentaGuardada!.trim()
+                  : 'Cuenta principal',
+              secret: secretGuardado.trim(),
+            ),
+          );
+
+          await _guardarListaCuentas();
+
+          debugPrint(
+            'Cuenta anterior migrada al sistema multicuenta',
+          );
+        }
+      }
+
+      // ==========================================
+      // 3. SELECCIONAR PRIMERA CUENTA
+      // ==========================================
+
+      if (_cuentas.isNotEmpty) {
+        _indiceCuentaSeleccionada = 0;
+
+        _secretTotp =
+            _cuentas[0].secret;
+
+        _nombreCuenta =
+            _cuentas[0].cuenta;
+      } else {
+        _indiceCuentaSeleccionada = -1;
+        _secretTotp = '';
+        _nombreCuenta = '';
+      }
 
       if (!mounted) return;
 
       setState(() {
-        _secretTotp =
-            secretGuardado?.trim() ?? '';
-
-        _nombreCuenta =
-            cuentaGuardada?.trim() ?? '';
-
         _cargando = false;
       });
 
-      if (_secretTotp.isNotEmpty) {
-        debugPrint(
-          'Secreto TOTP cargado desde almacenamiento seguro',
-        );
-      } else {
-        debugPrint(
-          'No existe una cuenta TOTP configurada',
-        );
-      }
+      debugPrint(
+        'CUENTAS TOTP CARGADAS: ${_cuentas.length}',
+      );
     } catch (e) {
       debugPrint(
-        'Error al cargar los datos TOTP: $e',
+        'Error cargando cuentas TOTP: $e',
       );
 
       if (!mounted) return;
 
       setState(() {
         _cargando = false;
+        _cuentas.clear();
+        _indiceCuentaSeleccionada = -1;
         _secretTotp = '';
         _nombreCuenta = '';
         _codigoTotp = '--- ---';
@@ -364,22 +459,68 @@ class _AuthenticatorPageState
     }
   }
 
+  Future<void> _guardarListaCuentas() async {
+    final lista =
+    _cuentas
+        .map((cuenta) => cuenta.toJson())
+        .toList();
+
+    await _secureStorage.write(
+      key: _accountsStorageKey,
+      value: jsonEncode(lista),
+    );
+
+    debugPrint(
+      'Lista de cuentas guardada: ${_cuentas.length}',
+    );
+  }
+
   Future<void> _guardarCuenta({
     required String secret,
     required String cuenta,
   }) async {
-    await _secureStorage.write(
-      key: _secretStorageKey,
-      value: secret,
+    final secretLimpio =
+    secret.trim().replaceAll(' ', '').toUpperCase();
+
+    final cuentaLimpia =
+    cuenta.trim().isEmpty
+        ? 'Cuenta principal'
+        : cuenta.trim();
+
+    // Evitar duplicar exactamente la misma cuenta.
+    final indiceExistente =
+    _cuentas.indexWhere(
+          (x) =>
+      x.cuenta.toLowerCase() ==
+          cuentaLimpia.toLowerCase() &&
+          x.secret == secretLimpio,
     );
 
-    await _secureStorage.write(
-      key: _accountStorageKey,
-      value: cuenta,
+    if (indiceExistente >= 0) {
+      _indiceCuentaSeleccionada =
+          indiceExistente;
+
+      await _seleccionarCuenta(
+        indiceExistente,
+      );
+
+      return;
+    }
+
+    _cuentas.add(
+      CuentaTotp(
+        cuenta: cuentaLimpia,
+        secret: secretLimpio,
+      ),
     );
+
+    _indiceCuentaSeleccionada =
+        _cuentas.length - 1;
+
+    await _guardarListaCuentas();
 
     debugPrint(
-      'Cuenta TOTP guardada de forma segura',
+      'Nueva cuenta agregada. Total: ${_cuentas.length}',
     );
   }
 
@@ -507,12 +648,9 @@ class _AuthenticatorPageState
 
     if (!mounted) return;
 
-    setState(() {
-      _secretTotp = secretLimpio;
-      _nombreCuenta = cuentaLimpia;
-    });
-
-    _actualizarTiempo();
+    await _seleccionarCuenta(
+      _indiceCuentaSeleccionada,
+    );
   }
   Future<bool> _registrarDispositivoBackend() async {
     try {
@@ -599,6 +737,39 @@ class _AuthenticatorPageState
       return false;
     }
   }
+  Future<void> _seleccionarCuenta(
+      int indice,
+      ) async {
+    if (indice < 0 ||
+        indice >= _cuentas.length) {
+      return;
+    }
+
+    final cuenta =
+    _cuentas[indice];
+
+    if (!mounted) return;
+
+    setState(() {
+      _indiceCuentaSeleccionada =
+          indice;
+
+      _secretTotp =
+          cuenta.secret;
+
+      _nombreCuenta =
+          cuenta.cuenta;
+
+      _codigoTotp =
+      '--- ---';
+    });
+
+    _actualizarTiempo();
+
+    debugPrint(
+      'CUENTA SELECCIONADA: ${cuenta.cuenta}',
+    );
+  }
   @override
   void dispose() {
     _timer?.cancel();
@@ -636,8 +807,17 @@ class _AuthenticatorPageState
                     const SizedBox(height: 22),
                     _buildScanButton(),
                     const SizedBox(height: 12),
+
                     _buildManualButton(),
-                    const SizedBox(height: 28),
+
+                    const SizedBox(height: 24),
+
+                    if (_cuentas.isNotEmpty)
+                      _buildListaCuentas(),
+
+                    if (_cuentas.isNotEmpty)
+                      const SizedBox(height: 28),
+
                     _buildSecurityInfo(),
                   ],
                 ),
@@ -1069,28 +1249,29 @@ class _AuthenticatorPageState
           final dispositivoRegistrado =
           await _registrarDispositivoBackend();
 
-          debugPrint(
-            dispositivoRegistrado
-                ? 'DISPOSITIVO REGISTRADO CORRECTAMENTE'
-                : 'NO SE PUDO REGISTRAR EL DISPOSITIVO',
-          );
-
           if (!mounted) return;
 
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(
+          if (!dispositivoRegistrado) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'La cuenta TOTP se guardó, pero no se pudo vincular este celular con CrediPlus. Verifica tu conexión e inténtalo nuevamente.',
+                ),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.red,
+              ),
+            );
+
+            return;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Authenticator configurado y guardado correctamente',
+                'Authenticator configurado y dispositivo vinculado correctamente',
               ),
-              behavior:
-              SnackBarBehavior
-                  .floating,
-              backgroundColor:
-              Color(
-                0xFF0F4C81,
-              ),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Color(0xFF0F4C81),
             ),
           );
         } catch (e) {
@@ -1374,7 +1555,182 @@ class _AuthenticatorPageState
       ),
     );
   }
+  Widget _buildListaCuentas() {
+    return Column(
+      crossAxisAlignment:
+      CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'MIS CUENTAS',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.1,
+            color: Color(0xFF667085),
+          ),
+        ),
 
+        const SizedBox(height: 12),
+
+        ...List.generate(
+          _cuentas.length,
+              (index) {
+            final cuenta =
+            _cuentas[index];
+
+            final seleccionada =
+                index ==
+                    _indiceCuentaSeleccionada;
+
+            return Padding(
+              padding:
+              const EdgeInsets.only(
+                bottom: 10,
+              ),
+              child: Material(
+                color: Colors.white,
+                borderRadius:
+                BorderRadius.circular(18),
+                child: InkWell(
+                  borderRadius:
+                  BorderRadius.circular(18),
+
+                  onTap: () async {
+                    await _seleccionarCuenta(
+                      index,
+                    );
+                  },
+
+                  child: Container(
+                    padding:
+                    const EdgeInsets.all(16),
+
+                    decoration: BoxDecoration(
+                      borderRadius:
+                      BorderRadius.circular(
+                        18,
+                      ),
+                      border: Border.all(
+                        color: seleccionada
+                            ? const Color(
+                          0xFF2F80ED,
+                        )
+                            : const Color(
+                          0xFFE4E7EC,
+                        ),
+                        width:
+                        seleccionada
+                            ? 2
+                            : 1,
+                      ),
+                    ),
+
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration:
+                          BoxDecoration(
+                            color: seleccionada
+                                ? const Color(
+                              0xFFEAF2FF,
+                            )
+                                : const Color(
+                              0xFFF2F4F7,
+                            ),
+                            borderRadius:
+                            BorderRadius
+                                .circular(
+                              13,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons
+                                .shield_outlined,
+                            color: seleccionada
+                                ? const Color(
+                              0xFF0F4C81,
+                            )
+                                : const Color(
+                              0xFF667085,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(
+                          width: 13,
+                        ),
+
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment:
+                            CrossAxisAlignment
+                                .start,
+                            children: [
+                              const Text(
+                                'CrediPlus',
+                                style:
+                                TextStyle(
+                                  fontSize: 15,
+                                  fontWeight:
+                                  FontWeight
+                                      .w800,
+                                  color: Color(
+                                    0xFF101828,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(
+                                height: 3,
+                              ),
+
+                              Text(
+                                cuenta.cuenta,
+                                overflow:
+                                TextOverflow
+                                    .ellipsis,
+                                style:
+                                const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(
+                                    0xFF667085,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        if (seleccionada)
+                          const Icon(
+                            Icons
+                                .check_circle_rounded,
+                            color: Color(
+                              0xFF2F80ED,
+                            ),
+                            size: 24,
+                          )
+                        else
+                          const Icon(
+                            Icons
+                                .chevron_right_rounded,
+                            color: Color(
+                              0xFF98A2B3,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
   Widget _buildSecurityInfo() {
     return Container(
       padding:
