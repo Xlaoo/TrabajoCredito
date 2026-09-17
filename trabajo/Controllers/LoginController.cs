@@ -4807,29 +4807,38 @@ string titularCuenta
                 }
 
 
-                string? claveTotp =
-     HttpContext.Session.GetString(
-         "TotpSecretPendiente"
-     );
+                // =====================================================
+                // PREPARAR CLAVE TOTP
+                // =====================================================
 
+                string? claveTotp = usuario.TotpSecret;
 
-                // Si todavía no existe una clave pendiente,
-                // generamos una sola vez.
                 if (string.IsNullOrWhiteSpace(claveTotp))
                 {
                     byte[] bytesSecretos =
                         RandomNumberGenerator.GetBytes(20);
 
                     claveTotp =
-                        ConvertirBase32(
-                            bytesSecretos
-                        );
+                        ConvertirBase32(bytesSecretos);
 
-                    HttpContext.Session.SetString(
-                        "TotpSecretPendiente",
-                        claveTotp
-                    );
+                    // IMPORTANTE:
+                    // Guardamos la clave en MySQL para que el APK,
+                    // que hace una petición independiente,
+                    // pueda validarla sin depender de la Session
+                    // del navegador.
+                    usuario.TotpSecret = claveTotp;
+                    usuario.TotpHabilitado = false;
+
+                    _Context.Usuario.Update(usuario);
+                    await _Context.SaveChangesAsync();
                 }
+
+                // La mantenemos también en Session porque tu flujo web
+                // actual todavía la utiliza.
+                HttpContext.Session.SetString(
+                    "TotpSecretPendiente",
+                    claveTotp
+                );
 
 
                 return Json(new
@@ -5316,16 +5325,7 @@ string titularCuenta
                 // Si el usuario está configurando Authenticator por
                 // primera vez, todavía está en Session.
                 // =====================================================
-
                 string? claveTotp = usuario.TotpSecret;
-
-                if (string.IsNullOrWhiteSpace(claveTotp))
-                {
-                    claveTotp =
-                        HttpContext.Session.GetString(
-                            "TotpSecretPendiente"
-                        );
-                }
 
                 if (string.IsNullOrWhiteSpace(claveTotp))
                 {
@@ -5333,7 +5333,7 @@ string titularCuenta
                     {
                         ok = false,
                         mensaje =
-                            "No existe una configuración TOTP pendiente. Genera nuevamente el código QR."
+                            "No existe una configuración TOTP para esta cuenta. Genera nuevamente el código QR."
                     });
                 }
 
