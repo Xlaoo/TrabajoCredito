@@ -5479,9 +5479,6 @@ string titularCuenta
     string codigoTotp,
     string fcmToken)
         {
-            await using var transaccion =
-                await _Context.Database.BeginTransactionAsync();
-
             try
             {
                 // ==========================================
@@ -5523,7 +5520,7 @@ string titularCuenta
                 }
 
                 // ==========================================
-                // COMPROBAR TOTP
+                // VALIDAR TOTP
                 // ==========================================
 
                 if (!usuario.TotpHabilitado ||
@@ -5532,7 +5529,8 @@ string titularCuenta
                     return Json(new
                     {
                         ok = false,
-                        mensaje = "La cuenta no tiene Authenticator habilitado."
+                        mensaje =
+                            "La cuenta no tiene Authenticator habilitado."
                     });
                 }
 
@@ -5553,7 +5551,7 @@ string titularCuenta
                 }
 
                 // ==========================================
-                // COMPROBAR QUE SEA EL CELULAR VINCULADO
+                // VERIFICAR DISPOSITIVO
                 // ==========================================
 
                 AutenticadorDispositivo? dispositivo =
@@ -5585,7 +5583,7 @@ string titularCuenta
                 }
 
                 // ==========================================
-                // 1. ELIMINAR SOLICITUDES
+                // ELIMINAR SOLICITUDES
                 // ==========================================
 
                 var solicitudes =
@@ -5604,7 +5602,7 @@ string titularCuenta
                 }
 
                 // ==========================================
-                // 2. ELIMINAR DISPOSITIVO
+                // ELIMINAR DISPOSITIVO
                 // ==========================================
 
                 _Context
@@ -5612,11 +5610,11 @@ string titularCuenta
                     .Remove(dispositivo);
 
                 // ==========================================
-                // 3. LIMPIAR TOTP DEL USUARIO
+                // LIMPIAR AUTHENTICATOR DEL USUARIO
                 // ==========================================
 
-                usuario.TotpHabilitado = false;
                 usuario.TotpSecret = null;
+                usuario.TotpHabilitado = false;
 
                 _Context.Usuario.Update(usuario);
 
@@ -5625,7 +5623,6 @@ string titularCuenta
                 // ==========================================
 
                 await _Context.SaveChangesAsync();
-                await transaccion.CommitAsync();
 
                 return Json(new
                 {
@@ -5636,8 +5633,6 @@ string titularCuenta
             }
             catch (Exception ex)
             {
-                await transaccion.RollbackAsync();
-
                 Console.WriteLine(
                     "ERROR ELIMINANDO AUTHENTICATOR: " + ex
                 );
