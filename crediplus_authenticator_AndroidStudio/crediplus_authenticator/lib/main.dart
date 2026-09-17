@@ -104,6 +104,7 @@ class AuthenticatorPage extends StatefulWidget {
 
 class _AuthenticatorPageState
     extends State<AuthenticatorPage> {
+  int? _indiceEliminando;
   static const MethodChannel _channel =
   MethodChannel('crediplus/app_control');
 
@@ -779,6 +780,9 @@ class _AuthenticatorPageState
     );
   }
   Future<void> _eliminarCuenta(int indice) async {
+    if (_indiceEliminando != null) {
+      return;
+    }
     if (indice < 0 || indice >= _cuentas.length) {
       return;
     }
@@ -829,7 +833,11 @@ class _AuthenticatorPageState
     if (confirmar != true) {
       return;
     }
+    if (!mounted) return;
 
+    setState(() {
+      _indiceEliminando = indice;
+    });
     // ==========================================
     // OBTENER FCM DE ESTE CELULAR
     // ==========================================
@@ -982,20 +990,24 @@ class _AuthenticatorPageState
         'ERROR ELIMINANDO CUENTA: $e',
       );
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        SnackBar(
-          content: Text(
-            'No se eliminó la cuenta. $e',
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(
+          SnackBar(
+            content: Text(
+              'No se eliminó la cuenta. $e',
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
           ),
-          backgroundColor:
-          Colors.red,
-          behavior:
-          SnackBarBehavior.floating,
-        ),
-      );
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _indiceEliminando = null;
+        });
+      }
     }
   }
   @override
@@ -1945,11 +1957,25 @@ class _AuthenticatorPageState
                               const SizedBox(width: 6),
 
                             IconButton(
-                              tooltip: 'Eliminar cuenta',
-                              onPressed: () async {
+                              tooltip: _indiceEliminando == index
+                                  ? 'Eliminando...'
+                                  : 'Eliminar cuenta',
+
+                              onPressed: _indiceEliminando != null
+                                  ? null
+                                  : () async {
                                 await _eliminarCuenta(index);
                               },
-                              icon: const Icon(
+
+                              icon: _indiceEliminando == index
+                                  ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                                  : const Icon(
                                 Icons.delete_outline_rounded,
                                 color: Color(0xFFD92D20),
                                 size: 24,
