@@ -5288,10 +5288,14 @@ string titularCuenta
                     });
                 }
 
+                correo = correo.Trim().ToLowerInvariant();
+                codigoTotp = codigoTotp.Trim();
+                fcmToken = fcmToken.Trim();
+
                 Usuario? usuario =
                     await _Context.Usuario
                         .FirstOrDefaultAsync(
-                            x => x.Correo == correo
+                            x => x.Correo.ToLower() == correo
                         );
 
                 if (usuario == null)
@@ -5303,19 +5307,43 @@ string titularCuenta
                     });
                 }
 
-                if (!usuario.TotpHabilitado ||
-                    string.IsNullOrWhiteSpace(usuario.TotpSecret))
+                // =====================================================
+                // OBTENER LA CLAVE TOTP
+                // =====================================================
+                // Si la configuración ya fue confirmada, usamos
+                // la clave definitiva de MySQL.
+                //
+                // Si el usuario está configurando Authenticator por
+                // primera vez, todavía está en Session.
+                // =====================================================
+
+                string? claveTotp = usuario.TotpSecret;
+
+                if (string.IsNullOrWhiteSpace(claveTotp))
+                {
+                    claveTotp =
+                        HttpContext.Session.GetString(
+                            "TotpSecretPendiente"
+                        );
+                }
+
+                if (string.IsNullOrWhiteSpace(claveTotp))
                 {
                     return Json(new
                     {
                         ok = false,
-                        mensaje = "El Authenticator todavía no está configurado."
+                        mensaje =
+                            "No existe una configuración TOTP pendiente. Genera nuevamente el código QR."
                     });
                 }
 
+                // =====================================================
+                // VALIDAR EL TOTP GENERADO POR EL CELULAR
+                // =====================================================
+
                 bool codigoValido =
                     ValidarCodigoTotp(
-                        usuario.TotpSecret,
+                        claveTotp,
                         codigoTotp
                     );
 
@@ -5328,8 +5356,29 @@ string titularCuenta
                     });
                 }
 
+                // =====================================================
+                // CONFIRMAR TOTP AUTOMÁTICAMENTE
+                // =====================================================
+                // El APK ya demostró que posee la misma clave del QR
+                // porque generó un TOTP válido.
+                // =====================================================
+
+                if (!usuario.TotpHabilitado ||
+                    string.IsNullOrWhiteSpace(usuario.TotpSecret))
+                {
+                    usuario.TotpSecret = claveTotp;
+                    usuario.TotpHabilitado = true;
+
+                    _Context.Usuario.Update(usuario);
+                }
+
+                // =====================================================
+                // REGISTRAR / ACTUALIZAR DISPOSITIVO
+                // =====================================================
+
                 AutenticadorDispositivo? dispositivo =
-                    await _Context.AUTENTICADOR_DISPOSITIVO
+                    await _Context
+                        .AUTENTICADOR_DISPOSITIVO
                         .FirstOrDefaultAsync(
                             x => x.UsuarioId == usuario.Id
                         );
@@ -5340,7 +5389,7 @@ string titularCuenta
                         new AutenticadorDispositivo
                         {
                             UsuarioId = usuario.Id,
-                            FcmToken = fcmToken.Trim(),
+                            FcmToken = fcmToken,
                             NombreDispositivo =
                                 string.IsNullOrWhiteSpace(nombreDispositivo)
                                     ? "Android"
@@ -5349,14 +5398,13 @@ string titularCuenta
                             Activo = true
                         };
 
-                    _Context.AUTENTICADOR_DISPOSITIVO.Add(
-                        dispositivo
-                    );
+                    _Context
+                        .AUTENTICADOR_DISPOSITIVO
+                        .Add(dispositivo);
                 }
                 else
                 {
-                    dispositivo.FcmToken =
-                        fcmToken.Trim();
+                    dispositivo.FcmToken = fcmToken;
 
                     dispositivo.NombreDispositivo =
                         string.IsNullOrWhiteSpace(nombreDispositivo)
@@ -5371,16 +5419,22 @@ string titularCuenta
 
                 await _Context.SaveChangesAsync();
 
+                // Ya quedó guardada definitivamente.
+                HttpContext.Session.Remove(
+                    "TotpSecretPendiente"
+                );
+
                 return Json(new
                 {
                     ok = true,
-                    mensaje = "Dispositivo vinculado correctamente."
+                    mensaje =
+                        "CrediPlus Authenticator y el dispositivo fueron vinculados correctamente."
                 });
             }
             catch (Exception ex)
             {
                 Console.WriteLine(
-                    "ERROR REGISTRANDO DISPOSITIVO: " +
+                    "ERROR REGISTRANDO DISPOSITIVO AUTHENTICATOR: " +
                     ex
                 );
 
@@ -5388,7 +5442,7 @@ string titularCuenta
                 {
                     ok = false,
                     mensaje =
-                        "No se pudo registrar el dispositivo."
+                        "No se pudo vincular el dispositivo."
                 });
             }
         }

@@ -722,19 +722,27 @@ class _AuthenticatorPageState
       );
 
       if (respuesta.statusCode != 200) {
-        return false;
+        throw Exception(
+          'HTTP ${respuesta.statusCode}: ${respuesta.body}',
+        );
       }
 
-      final datos =
-      jsonDecode(respuesta.body);
+      final datos = jsonDecode(respuesta.body);
 
-      return datos['ok'] == true;
+      if (datos['ok'] != true) {
+        throw Exception(
+          datos['mensaje']?.toString() ??
+              'El servidor rechazó el registro del dispositivo.',
+        );
+      }
+
+      return true;
     } catch (e) {
       debugPrint(
         'ERROR REGISTRANDO DISPOSITIVO: $e',
       );
 
-      return false;
+      rethrow;
     }
   }
   Future<void> _seleccionarCuenta(
