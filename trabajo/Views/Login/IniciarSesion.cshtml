@@ -2889,6 +2889,12 @@
 
                             </div>
 
+                            <div id="btnCancelarRenovacionFormulario" class="text-center mt-3" style="display:none;">
+                                <button type="button" class="btn btn-link text-decoration-none text-muted p-0" style="font-size:13px;" onclick="cancelarRenovacionDesdeFormulario()">
+                                    <i class="bi bi-arrow-left me-1"></i> Cancelar y volver a selección de métodos
+                                </button>
+                            </div>
+
                         </div>
 
                     </div>
@@ -3019,6 +3025,20 @@
                             <span id="radioVoz"></span>
                         </div>
 
+                    </div>
+
+                    <!-- ENLACE DISCRETO PARA ACTUALIZAR BIOMETRÍA DE VOZ -->
+                    <div id="contenedorCambiarBiometria"
+                         class="text-center mt-2 mb-2"
+                         style="display:none;">
+                        <a href="javascript:void(0)"
+                           id="linkCambiarBiometriaVoz"
+                           onclick="abrirModalSolicitarRenovacion()"
+                           class="text-decoration-none fw-semibold"
+                           style="color:#6366f1;font-size:13px;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:10px;background:#f5f3ff;border:1px solid #ddd6fe;transition:all 0.2s ease;">
+                            <i class="bi bi-arrow-repeat fs-6" style="color:#7c3aed;"></i>
+                            <span style="color:#6d28d9;">🔄 ¿Deseas cambiar tu biometría de voz y palabra secreta?</span>
+                        </a>
                     </div>
 
                 </div>
@@ -3310,6 +3330,172 @@
         </div>
 
     </div>
+
+    <!-- =====================================================
+     MODAL ACTUALIZAR BIOMETRÍA DE VOZ (RENOVACIÓN SEGURA)
+     ===================================================== -->
+    <div class="modal fade"
+         id="modalRenovacionBiometria"
+         tabindex="-1"
+         data-bs-backdrop="static"
+         data-bs-keyboard="false"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content modal-auth-filtro" style="border:none;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.22);overflow:hidden;">
+
+                <div class="modal-header border-0 pb-1">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="auth-shield" style="background:#ede9fe;color:#7c3aed;width:50px;height:50px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:24px;">
+                            <i class="bi bi-shield-lock-fill"></i>
+                        </div>
+                        <div>
+                            <h4 class="modal-title auth-titulo fw-bold mb-0" id="tituloRenovacionModal" style="color:#1e293b;font-size:18px;">
+                                🔐 Actualizar biometría de voz
+                            </h4>
+                            <p class="auth-subtitulo text-muted mb-0" id="subtituloRenovacionModal" style="font-size:13px;">
+                                Verificación previa de identidad
+                            </p>
+                        </div>
+                    </div>
+
+                    <button type="button"
+                            class="btn-close"
+                            onclick="cancelarRenovacionBiometria()"
+                            aria-label="Cerrar">
+                    </button>
+                </div>
+
+                <div class="modal-body pt-3 pb-4 px-4">
+
+                    <!-- ========================================== -->
+                    <!-- PANTALLA 1: SOLICITAR CÓDIGO DE SEGURIDAD  -->
+                    <!-- ========================================== -->
+                    <div id="renovacionPaso1">
+                        <div class="auth-info-box p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;">
+                            <div class="d-flex align-items-start gap-3">
+                                <i class="bi bi-shield-check fs-4" style="color:#7c3aed;"></i>
+                                <div>
+                                    <strong style="color:#1e293b;font-size:14px;display:block;" class="mb-1">
+                                        Para proteger tu cuenta, necesitamos verificar tu identidad antes de permitirte cambiar tu biometría de voz y tu palabra secreta.
+                                    </strong>
+                                    <p class="mb-0 text-muted" style="font-size:13px;">
+                                        Enviaremos un código de seguridad al correo electrónico registrado en tu cuenta.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="auth-correo-box p-3 mb-3 d-flex align-items-center justify-content-between" style="background:#f1f5f9;border-radius:14px;border:1px solid #e2e8f0;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="auth-correo-icon" style="background:#e0e7ff;color:#4f46e5;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">
+                                    <i class="bi bi-envelope-check-fill"></i>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Correo registrado</small>
+                                    <strong id="correoOcultoRenovacion" style="color:#1e293b;font-size:14.5px;">
+                                        Cargando...
+                                    </strong>
+                                </div>
+                            </div>
+                            <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 mb-3" style="font-size:12px;color:#64748b;">
+                            <i class="bi bi-info-circle-fill" style="color:#7c3aed;"></i>
+                            <span>El código será de un solo uso y tendrá una vigencia estricta de 60 segundos.</span>
+                        </div>
+
+                        <div id="mensajeRenovacionPaso1" class="alert alert-danger py-2 px-3 mb-3" style="display:none;font-size:13px;border-radius:10px;"></div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="button"
+                                    class="btn btn-light flex-fill py-2 fw-semibold"
+                                    style="border-radius:12px;color:#475569;"
+                                    onclick="cancelarRenovacionBiometria()">
+                                Cancelar
+                            </button>
+                            <button type="button"
+                                    id="btnEnviarCodigoRenovacion"
+                                    class="btn btn-primary flex-fill py-2 fw-semibold shadow-sm"
+                                    style="background:#7c3aed;border-color:#7c3aed;border-radius:12px;"
+                                    onclick="solicitarOtpRenovacion()">
+                                <i class="bi bi-send-fill me-1"></i> Enviar código de verificación
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ========================================== -->
+                    <!-- PANTALLA 2: INTRODUCIR OTP DE 6 CASILLAS    -->
+                    <!-- ========================================== -->
+                    <div id="renovacionPaso2" style="display:none;">
+                        <div class="text-center mb-3">
+                            <div class="mx-auto mb-2" style="background:#ede9fe;color:#7c3aed;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;">
+                                <i class="bi bi-envelope-open-fill"></i>
+                            </div>
+                            <h5 class="fw-bold mb-1" style="color:#1e293b;">
+                                📩 Verifica tu identidad
+                            </h5>
+                            <p class="text-muted mb-1" style="font-size:13px;">
+                                Hemos enviado un código de seguridad a tu correo electrónico. Ingrésalo para continuar con la actualización de tu biometría.
+                            </p>
+                            <strong id="correoOcultoRenovacion2" style="color:#7c3aed;font-size:14px;"></strong>
+                        </div>
+
+                        <!-- SEIS CASILLAS PARA EL CÓDIGO -->
+                        <div class="d-flex justify-content-center gap-2 my-3" id="contenedorCasillasOtp">
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="0" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="1" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="2" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="3" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="4" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="5" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
+                        </div>
+
+                        <!-- CONTADOR REGRESIVO 1 MINUTO -->
+                        <div class="text-center my-2">
+                            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill" style="background:#f1f5f9;font-size:13px;color:#64748b;border:1px solid #e2e8f0;">
+                                <i class="bi bi-clock-fill" id="iconoRelojRenovacion" style="color:#7c3aed;"></i>
+                                <span id="textoContadorRenovacion">El código vence en <strong id="tiempoOtpRenovacion" style="color:#7c3aed;">01:00</strong></span>
+                            </div>
+                        </div>
+
+                        <div class="text-center mb-2">
+                            <button type="button"
+                                    id="btnReenviarOtpRenovacion"
+                                    class="btn btn-link btn-sm text-decoration-none fw-semibold"
+                                    style="color:#7c3aed;"
+                                    onclick="reenviarOtpRenovacion()"
+                                    disabled>
+                                <i class="bi bi-arrow-clockwise me-1"></i> Reenviar código
+                            </button>
+                        </div>
+
+                        <div id="mensajeRenovacionPaso2" class="alert py-2 px-3 mb-3 text-center" style="display:none;font-size:13px;border-radius:10px;"></div>
+
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="button"
+                                    class="btn btn-light flex-fill py-2 fw-semibold"
+                                    style="border-radius:12px;color:#475569;"
+                                    onclick="cancelarRenovacionBiometria()">
+                                Regresar o cancelar
+                            </button>
+                            <button type="button"
+                                    id="btnVerificarOtpRenovacion"
+                                    class="btn btn-success flex-fill py-2 fw-semibold shadow-sm"
+                                    style="background:#16a34a;border-color:#16a34a;border-radius:12px;"
+                                    onclick="verificarOtpRenovacion()">
+                                <i class="bi bi-check-circle-fill me-1"></i> Verificar código
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
     <!-- =====================================================
      MODAL CONFIRMAR IDENTIDAD PARA AUTHENTICATOR
      ===================================================== -->
@@ -5277,9 +5463,14 @@
             let vozHabilitadaLogin = false;
             // NUEVO
             let tieneRegistroVozLogin = false;
-                    let intervaloAuthenticator = null;
-        let segundosAuthenticator = 60;
         let correoAuthenticatorOculto = "";
+
+        // RENOVACIÓN DE BIOMETRÍA DE VOZ Y PALABRA SECRETA
+        let modoRenovacionVoz = false;
+        let tokenRenovacionVozActivo = null;
+        let intervaloOtpRenovacion = null;
+        let segundosOtpRenovacion = 60;
+        let correoUsuarioOcultoRenovacion = "";
             // ==========================================
             // CONTADOR DEL CÓDIGO
             // ==========================================
@@ -5425,6 +5616,9 @@
 
                     bloqueRegistroVoz.style.display = "none";
                     bloqueVerificacionVoz.style.display = "none";
+
+                    const contenedorCambiar = document.getElementById("contenedorCambiarBiometria");
+                    if (contenedorCambiar) contenedorCambiar.style.display = "none";
                 }
 
 
@@ -5444,10 +5638,23 @@
 
                     bloqueRegistroVoz.style.display = "none";
                     bloqueVerificacionVoz.style.display = "none";
+
+                    const contenedorCambiar = document.getElementById("contenedorCambiarBiometria");
+                    if (contenedorCambiar) contenedorCambiar.style.display = "none";
                 }
 
 
                 if (metodo === "voz") {
+
+                    // Mostrar u ocultar enlace de renovar biometría únicamente si tiene biometría previa
+                    const contenedorCambiar = document.getElementById("contenedorCambiarBiometria");
+                    if (contenedorCambiar) {
+                        if (tieneRegistroVozLogin) {
+                            contenedorCambiar.style.display = "block";
+                        } else {
+                            contenedorCambiar.style.display = "none";
+                        }
+                    }
 
                     // ==========================================
                     // TIENE VOZ REGISTRADA PERO TODAVÍA
@@ -5926,6 +6133,514 @@
 
             elemento.innerText =
                 mensaje;
+        }
+
+        // ==========================================
+        // RENOVACIÓN DE BIOMETRÍA DE VOZ Y PALABRA SECRETA
+        // ==========================================
+
+        function enmascararCorreoCliente(correo) {
+            const arr = String.fromCharCode(64);
+            if (!correo || !correo.includes(arr)) return "Correo registrado";
+            try {
+                const partes = correo.split(arr);
+                const u = partes[0];
+                const d = partes[1];
+                if (u.length <= 2) return u[0] + "***" + arr + d;
+                return u.substring(0, 2) + "***" + arr + d;
+            } catch (e) {
+                return "Correo registrado";
+            }
+        }
+
+        function abrirModalSolicitarRenovacion() {
+            if (!tieneRegistroVozLogin) return;
+
+            // Restablecer vistas al Paso 1
+            const paso1 = document.getElementById("renovacionPaso1");
+            const paso2 = document.getElementById("renovacionPaso2");
+            const msgPaso1 = document.getElementById("mensajeRenovacionPaso1");
+            const msgPaso2 = document.getElementById("mensajeRenovacionPaso2");
+
+            if (paso1) paso1.style.display = "block";
+            if (paso2) paso2.style.display = "none";
+            if (msgPaso1) msgPaso1.style.display = "none";
+            if (msgPaso2) msgPaso2.style.display = "none";
+
+            const btnEnviar = document.getElementById("btnEnviarCodigoRenovacion");
+            if (btnEnviar) {
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = '<i class="bi bi-send-fill me-1"></i> Enviar código de verificación';
+            }
+
+            const correoDisplay = correoUsuarioOcultoRenovacion || "Correo registrado";
+            const correoEl = document.getElementById("correoOcultoRenovacion");
+            if (correoEl) correoEl.innerText = correoDisplay;
+
+            limpiarCasillasOtp();
+            detenerContadorRenovacion();
+
+            // Cerrar modal de verificación de seguridad
+            const modalSeguridadEl = document.getElementById("modalVerificacionSeguridad");
+            if (modalSeguridadEl) {
+                const modalSeg = bootstrap.Modal.getInstance(modalSeguridadEl);
+                if (modalSeg) modalSeg.hide();
+            }
+
+            setTimeout(function () {
+                const modalRenovacionEl = document.getElementById("modalRenovacionBiometria");
+                if (modalRenovacionEl) {
+                    const modalRen = bootstrap.Modal.getOrCreateInstance(modalRenovacionEl);
+                    modalRen.show();
+                }
+            }, 200);
+        }
+
+        function cancelarRenovacionBiometria() {
+            detenerContadorRenovacion();
+            limpiarCasillasOtp();
+            modoRenovacionVoz = false;
+            tokenRenovacionVozActivo = null;
+
+            const modalRenovacionEl = document.getElementById("modalRenovacionBiometria");
+            if (modalRenovacionEl) {
+                const modalRen = bootstrap.Modal.getInstance(modalRenovacionEl);
+                if (modalRen) modalRen.hide();
+            }
+
+            setTimeout(function () {
+                const modalSeguridadEl = document.getElementById("modalVerificacionSeguridad");
+                if (modalSeguridadEl) {
+                    const modalSeg = bootstrap.Modal.getOrCreateInstance(modalSeguridadEl);
+                    modalSeg.show();
+                    seleccionarMetodo("voz");
+                }
+            }, 200);
+        }
+
+        async function solicitarOtpRenovacion() {
+            const btnEnviar = document.getElementById("btnEnviarCodigoRenovacion");
+            const msgPaso1 = document.getElementById("mensajeRenovacionPaso1");
+            if (msgPaso1) msgPaso1.style.display = "none";
+
+            if (btnEnviar) {
+                btnEnviar.disabled = true;
+                btnEnviar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enviando código...';
+            }
+
+            try {
+                const respuesta = await fetch("/Login/SolicitarOtpRenovacionVoz", {
+                    method: "POST"
+                });
+                const resultado = await respuesta.json();
+
+                if (!resultado.ok) {
+                    if (msgPaso1) {
+                        msgPaso1.innerText = resultado.mensaje || "No se pudo enviar el código.";
+                        msgPaso1.style.display = "block";
+                    }
+                    if (btnEnviar) {
+                        btnEnviar.disabled = false;
+                        btnEnviar.innerHTML = '<i class="bi bi-send-fill me-1"></i> Enviar código de verificación';
+                    }
+                    return;
+                }
+
+                correoUsuarioOcultoRenovacion = resultado.correo || resultado.correoOculto || "Correo registrado";
+                const c1 = document.getElementById("correoOcultoRenovacion");
+                const c2 = document.getElementById("correoOcultoRenovacion2");
+                if (c1) c1.innerText = correoUsuarioOcultoRenovacion;
+                if (c2) c2.innerText = correoUsuarioOcultoRenovacion;
+
+                // Pasar a Pantalla 2
+                const paso1 = document.getElementById("renovacionPaso1");
+                const paso2 = document.getElementById("renovacionPaso2");
+                if (paso1) paso1.style.display = "none";
+                if (paso2) paso2.style.display = "block";
+
+                limpiarCasillasOtp();
+                iniciarContadorRenovacion(resultado.segundos || resultado.segundosVigencia || 60);
+
+                setTimeout(() => {
+                    const primera = document.querySelector(".casilla-otp-renovacion[data-index='0']");
+                    if (primera) primera.focus();
+                }, 100);
+
+            } catch (err) {
+                console.error(err);
+                if (msgPaso1) {
+                    msgPaso1.innerText = "Error de conexión al enviar el código. Intenta nuevamente.";
+                    msgPaso1.style.display = "block";
+                }
+                if (btnEnviar) {
+                    btnEnviar.disabled = false;
+                    btnEnviar.innerHTML = '<i class="bi bi-send-fill me-1"></i> Enviar código de verificación';
+                }
+            }
+        }
+
+        function iniciarContadorRenovacion(segundos = 60) {
+            detenerContadorRenovacion();
+            segundosOtpRenovacion = segundos;
+
+            const tiempoEl = document.getElementById("tiempoOtpRenovacion");
+            const textoContador = document.getElementById("textoContadorRenovacion");
+            const btnReenviar = document.getElementById("btnReenviarOtpRenovacion");
+            const btnVerificar = document.getElementById("btnVerificarOtpRenovacion");
+            const msgPaso2 = document.getElementById("mensajeRenovacionPaso2");
+
+            if (btnVerificar) btnVerificar.disabled = false;
+            if (btnReenviar) btnReenviar.disabled = true;
+            if (msgPaso2) msgPaso2.style.display = "none";
+
+            const actualizarVisual = () => {
+                const min = Math.floor(segundosOtpRenovacion / 60);
+                const seg = segundosOtpRenovacion % 60;
+                const formateado = String(min).padStart(2, "0") + ":" + String(seg).padStart(2, "0");
+                if (tiempoEl) tiempoEl.innerText = formateado;
+                if (textoContador) textoContador.innerHTML = 'El código vence en <strong style="color:#7c3aed;">' + formateado + '</strong>';
+            };
+
+            actualizarVisual();
+
+            intervaloOtpRenovacion = setInterval(function () {
+                segundosOtpRenovacion--;
+                if (segundosOtpRenovacion > 0) {
+                    actualizarVisual();
+                } else {
+                    detenerContadorRenovacion();
+                    if (tiempoEl) tiempoEl.innerText = "00:00";
+                    if (textoContador) textoContador.innerHTML = '<strong class="text-danger">El código ha expirado</strong>';
+                    if (btnVerificar) btnVerificar.disabled = true;
+                    if (btnReenviar) btnReenviar.disabled = false;
+                    if (msgPaso2) {
+                        msgPaso2.className = "alert alert-warning py-2 px-3 mb-3 text-center";
+                        msgPaso2.innerText = "El código ha expirado. Pulsa «Reenviar código» para recibir uno nuevo.";
+                        msgPaso2.style.display = "block";
+                    }
+                }
+            }, 1000);
+        }
+
+        function detenerContadorRenovacion() {
+            if (intervaloOtpRenovacion) {
+                clearInterval(intervaloOtpRenovacion);
+                intervaloOtpRenovacion = null;
+            }
+        }
+
+        async function reenviarOtpRenovacion() {
+            const btnReenviar = document.getElementById("btnReenviarOtpRenovacion");
+            const msgPaso2 = document.getElementById("mensajeRenovacionPaso2");
+
+            if (btnReenviar) {
+                btnReenviar.disabled = true;
+                btnReenviar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Reenviando...';
+            }
+
+            try {
+                const respuesta = await fetch("/Login/SolicitarOtpRenovacionVoz", {
+                    method: "POST"
+                });
+                const resultado = await respuesta.json();
+
+                if (!resultado.ok) {
+                    if (msgPaso2) {
+                        msgPaso2.className = "alert alert-danger py-2 px-3 mb-3 text-center";
+                        msgPaso2.innerText = resultado.mensaje || "No se pudo reenviar el código.";
+                        msgPaso2.style.display = "block";
+                    }
+                    if (btnReenviar) {
+                        btnReenviar.disabled = false;
+                        btnReenviar.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Reenviar código';
+                    }
+                    return;
+                }
+
+                limpiarCasillasOtp();
+                if (msgPaso2) {
+                    msgPaso2.className = "alert alert-success py-2 px-3 mb-3 text-center";
+                    msgPaso2.innerText = "Nuevo código enviado a tu correo.";
+                    msgPaso2.style.display = "block";
+                }
+
+                iniciarContadorRenovacion(resultado.segundos || resultado.segundosVigencia || 60);
+
+                if (btnReenviar) {
+                    btnReenviar.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Reenviar código';
+                    btnReenviar.disabled = true;
+                }
+
+                const primeraCasilla = document.querySelector(".casilla-otp-renovacion[data-index='0']");
+                if (primeraCasilla) primeraCasilla.focus();
+
+            } catch (err) {
+                console.error(err);
+                if (msgPaso2) {
+                    msgPaso2.className = "alert alert-danger py-2 px-3 mb-3 text-center";
+                    msgPaso2.innerText = "Error de conexión al reenviar el código.";
+                    msgPaso2.style.display = "block";
+                }
+                if (btnReenviar) {
+                    btnReenviar.disabled = false;
+                    btnReenviar.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Reenviar código';
+                }
+            }
+        }
+
+        function configurarCasillasOtpRenovacion() {
+            const casillas = document.querySelectorAll(".casilla-otp-renovacion");
+            casillas.forEach((casilla, idx) => {
+                casilla.addEventListener("input", function () {
+                    const val = this.value.replace(/\D/g, "");
+                    this.value = val ? val[val.length - 1] : "";
+                    if (this.value && idx < casillas.length - 1) {
+                        casillas[idx + 1].focus();
+                    }
+                    if (obtenerCodigoOtp().length === 6) {
+                        verificarOtpRenovacion();
+                    }
+                });
+
+                casilla.addEventListener("keydown", function (e) {
+                    if (e.key === "Backspace" && !this.value && idx > 0) {
+                        casillas[idx - 1].focus();
+                    }
+                });
+
+                casilla.addEventListener("paste", function (e) {
+                    e.preventDefault();
+                    const pegado = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(0, 6);
+                    if (!pegado) return;
+                    for (let i = 0; i < pegado.length; i++) {
+                        if (casillas[i]) casillas[i].value = pegado[i];
+                    }
+                    const proxIndex = Math.min(pegado.length, casillas.length - 1);
+                    if (casillas[proxIndex]) casillas[proxIndex].focus();
+                    if (pegado.length === 6) {
+                        verificarOtpRenovacion();
+                    }
+                });
+
+                casilla.addEventListener("focus", function () {
+                    this.style.borderColor = "#7c3aed";
+                    this.style.boxShadow = "0 0 0 3px rgba(124, 58, 237, 0.15)";
+                });
+
+                casilla.addEventListener("blur", function () {
+                    this.style.borderColor = "#cbd5e1";
+                    this.style.boxShadow = "none";
+                });
+            });
+        }
+
+        function limpiarCasillasOtp() {
+            document.querySelectorAll(".casilla-otp-renovacion").forEach(c => c.value = "");
+        }
+
+        function obtenerCodigoOtp() {
+            let codigo = "";
+            document.querySelectorAll(".casilla-otp-renovacion").forEach(c => codigo += (c.value || ""));
+            return codigo.trim();
+        }
+
+        async function verificarOtpRenovacion() {
+            const codigo = obtenerCodigoOtp();
+            const msgPaso2 = document.getElementById("mensajeRenovacionPaso2");
+            const btnVerificar = document.getElementById("btnVerificarOtpRenovacion");
+
+            if (codigo.length !== 6) {
+                if (msgPaso2) {
+                    msgPaso2.className = "alert alert-danger py-2 px-3 mb-3 text-center";
+                    msgPaso2.innerText = "Ingresa los 6 dígitos del código de seguridad.";
+                    msgPaso2.style.display = "block";
+                }
+                return;
+            }
+
+            if (btnVerificar) {
+                btnVerificar.disabled = true;
+                btnVerificar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verificando...';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append("codigo", codigo);
+
+                const respuesta = await fetch("/Login/VerificarOtpRenovacionVoz", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const resultado = await respuesta.json();
+
+                if (!resultado.ok) {
+                    if (msgPaso2) {
+                        msgPaso2.className = "alert alert-danger py-2 px-3 mb-3 text-center";
+                        msgPaso2.innerText = resultado.mensaje || "El código ingresado es incorrecto.";
+                        msgPaso2.style.display = "block";
+                    }
+                    if (btnVerificar) {
+                        btnVerificar.disabled = false;
+                        btnVerificar.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Verificar código';
+                    }
+                    if (resultado.expirado) {
+                        detenerContadorRenovacion();
+                        const textoContador = document.getElementById("textoContadorRenovacion");
+                        if (textoContador) textoContador.innerHTML = '<strong class="text-danger">El código ha expirado</strong>';
+                        const btnReenviar = document.getElementById("btnReenviarOtpRenovacion");
+                        if (btnReenviar) btnReenviar.disabled = false;
+                        if (btnVerificar) btnVerificar.disabled = true;
+                    } else if (resultado.bloqueado) {
+                        detenerContadorRenovacion();
+                        if (btnVerificar) btnVerificar.disabled = true;
+                        const btnReenviar = document.getElementById("btnReenviarOtpRenovacion");
+                        if (btnReenviar) btnReenviar.disabled = false;
+                    }
+                    return;
+                }
+
+                // OTP VÁLIDO: Guardar token de renovación temporal y activar modo renovación
+                tokenRenovacionVozActivo = resultado.token || resultado.tokenRenovacion;
+                modoRenovacionVoz = true;
+                detenerContadorRenovacion();
+
+                // 1. Cerrar el modal de renovación
+                const modalRenovacionEl = document.getElementById("modalRenovacionBiometria");
+                if (modalRenovacionEl) {
+                    const modalRen = bootstrap.Modal.getInstance(modalRenovacionEl);
+                    if (modalRen) modalRen.hide();
+                }
+
+                // 2. Cerrar modal de confirmación si quedó abierto
+                const modalConfirmarEl = document.getElementById("modalConfirmarRegistroVozLogin");
+                if (modalConfirmarEl) {
+                    const modalConfirmar = bootstrap.Modal.getInstance(modalConfirmarEl);
+                    if (modalConfirmar) modalConfirmar.hide();
+                }
+
+                // 3. Abrir el formulario de registro de voz en modo renovación
+                setTimeout(function () {
+                    abrirFormularioRenovacionVoz();
+                }, 250);
+
+            } catch (err) {
+                console.error(err);
+                if (msgPaso2) {
+                    msgPaso2.className = "alert alert-danger py-2 px-3 mb-3 text-center";
+                    msgPaso2.innerText = "Error de conexión al verificar el código.";
+                    msgPaso2.style.display = "block";
+                }
+                if (btnVerificar) {
+                    btnVerificar.disabled = false;
+                    btnVerificar.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Verificar código';
+                }
+            }
+        }
+
+        function cancelarRenovacionDesdeFormulario() {
+            modoRenovacionVoz = false;
+            tokenRenovacionVozActivo = null;
+            liberarRecursosVoz();
+            const btnCancelarForm = document.getElementById("btnCancelarRenovacionFormulario");
+            if (btnCancelarForm) btnCancelarForm.style.display = "none";
+            restaurarModalMetodosSeguridadTrasRenovacion();
+        }
+
+        function abrirFormularioRenovacionVoz() {
+            const modalSeguridadElemento = document.getElementById("modalVerificacionSeguridad");
+            if (!modalSeguridadElemento) return;
+
+            const opcionCorreo = document.getElementById("opcionCorreo");
+            const opcionAplicacion = document.getElementById("opcionAplicacion");
+            const opcionVoz = document.getElementById("opcionVoz");
+            const contenedorCambiar = document.getElementById("contenedorCambiarBiometria");
+            const bloqueRegistroVoz = document.getElementById("bloqueRegistroVoz");
+            const bloqueVerificacionVoz = document.getElementById("bloqueVerificacionVoz");
+            const botonContinuar = modalSeguridadElemento.querySelector(".btn-continuar-seguridad");
+
+            // Ocultar opciones de selección
+            if (opcionCorreo) opcionCorreo.style.display = "none";
+            if (opcionAplicacion) opcionAplicacion.style.display = "none";
+            if (opcionVoz) opcionVoz.style.display = "none";
+            if (contenedorCambiar) contenedorCambiar.style.display = "none";
+            if (bloqueVerificacionVoz) bloqueVerificacionVoz.style.display = "none";
+            if (botonContinuar) botonContinuar.style.display = "none";
+
+            // Mostrar formulario de registro en modo renovación
+            if (bloqueRegistroVoz) {
+                bloqueRegistroVoz.style.display = "block";
+
+                const tituloRegistro = bloqueRegistroVoz.querySelector("h5");
+                if (tituloRegistro) {
+                    tituloRegistro.innerHTML = "🎤 Registra tu nueva biometría de voz";
+                }
+
+                const descRegistro = bloqueRegistroVoz.querySelector("p");
+                if (descRegistro) {
+                    descRegistro.innerText = "Tu identidad fue verificada correctamente. Ahora puedes registrar una nueva voz y una nueva palabra o frase secreta.";
+                }
+            }
+
+            const modalTitulo = modalSeguridadElemento.querySelector(".modal-title");
+            if (modalTitulo) modalTitulo.innerText = "Actualizar biometría de voz";
+
+            const modalTexto = modalSeguridadElemento.querySelector(".texto-seguridad");
+            if (modalTexto) modalTexto.innerText = "Graba tu nueva palabra o frase secreta para actualizar tu seguridad.";
+
+            // Reiniciar estado del botón de grabación
+            const btnGrabar = document.getElementById("btnGrabarVozLogin");
+            const estadoVoz = document.getElementById("estadoVozLogin");
+            if (btnGrabar) {
+                btnGrabar.disabled = false;
+                btnGrabar.classList.remove("grabando", "btn-danger");
+                btnGrabar.classList.add("btn-primary");
+                btnGrabar.innerHTML = "🎙️ Grabar mi nueva voz";
+            }
+            if (estadoVoz) {
+                estadoVoz.innerText = "⚪ Pulsa para grabar tu nueva voz y palabra secreta";
+            }
+
+            // Reset de variables de audio
+            audioBlobLogin = null;
+            audioChunksLogin = [];
+            fraseRegistroVozLogin = "";
+
+            const btnCancelarForm = document.getElementById("btnCancelarRenovacionFormulario");
+            if (btnCancelarForm) btnCancelarForm.style.display = "block";
+
+            const modalSeguridad = bootstrap.Modal.getOrCreateInstance(modalSeguridadElemento);
+            modalSeguridad.show();
+        }
+
+        function restaurarModalMetodosSeguridadTrasRenovacion() {
+            const bloqueRegistroVoz = document.getElementById("bloqueRegistroVoz");
+            const opcionCorreo = document.getElementById("opcionCorreo");
+            const opcionAplicacion = document.getElementById("opcionAplicacion");
+            const opcionVoz = document.getElementById("opcionVoz");
+            const botonContinuar = document.querySelector(".btn-continuar-seguridad");
+
+            if (bloqueRegistroVoz) {
+                bloqueRegistroVoz.style.display = "none";
+                const h5 = bloqueRegistroVoz.querySelector("h5");
+                if (h5) h5.innerText = "Registro de voz obligatorio";
+                const p = bloqueRegistroVoz.querySelector("p");
+                if (p) p.innerText = "No tienes registrada una voz de seguridad. Debes realizar una grabación para continuar.";
+            }
+
+            if (opcionCorreo) opcionCorreo.style.display = "flex";
+            if (opcionAplicacion) opcionAplicacion.style.display = "flex";
+            if (opcionVoz) opcionVoz.style.display = "flex";
+            if (botonContinuar) botonContinuar.style.display = "inline-block";
+
+            const titulo = document.querySelector("#modalVerificacionSeguridad .modal-title");
+            if (titulo) titulo.innerText = "Verificación de seguridad";
+
+            const texto = document.querySelector("#modalVerificacionSeguridad .texto-seguridad");
+            if (texto) texto.innerText = "Para continuar, selecciona cómo deseas verificar tu identidad.";
+
+            // Seleccionar método voz con el enlace visible
+            seleccionarMetodo("voz");
         }
 
             // ==========================================
@@ -6725,6 +7440,10 @@
                             resultado.vozHabilitada === true;
                         tieneRegistroVozLogin =
                             resultado.tieneRegistroVoz === true;
+
+                        if (resultado.correo) {
+                            correoUsuarioOcultoRenovacion = enmascararCorreoCliente(resultado.correo);
+                        }
                         // ==========================================
                         // DNI / CONTRASEÑA INCORRECTOS
                         // ==========================================
@@ -7323,13 +8042,22 @@
                 formData.append("audio", audioBlobLogin, "audioLogin." + ext);
                 formData.append("fraseVoz", (fraseRegistroVozLogin || "Mi voz protege mi cuenta").trim());
 
+                if (modoRenovacionVoz) {
+                    if (!tokenRenovacionVozActivo) {
+                        if (estado) estado.innerText = "❌ No se encontró una autorización válida para actualizar la biometría.";
+                        return;
+                    }
+                    formData.append("tokenRenovacion", tokenRenovacionVozActivo);
+                }
+
                 try {
                     if (boton) {
                         boton.disabled = true;
                         boton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
                     }
 
-                    const respuesta = await fetch("/Login/RegistrarVozLogin", {
+                    const endpoint = modoRenovacionVoz ? "/Login/RenovarVozLogin" : "/Login/RegistrarVozLogin";
+                    const respuesta = await fetch(endpoint, {
                         method: "POST",
                         body: formData
                     });
@@ -7345,6 +8073,51 @@
                         return;
                     }
 
+                    if (modoRenovacionVoz) {
+                        // Actualizar estado en memoria
+                        tieneRegistroVozLogin = true;
+                        vozHabilitadaLogin = true;
+                        if (resultado.nuevaFrase) {
+                            fraseVozBD = resultado.nuevaFrase;
+                            const elementoFrase = document.getElementById("textoFraseEsperadaVoz");
+                            if (elementoFrase) {
+                                elementoFrase.innerText = fraseVozBD;
+                            }
+                        }
+
+                        if (estado) estado.innerText = "✅ Biometría actualizada correctamente.";
+                        if (boton) {
+                            boton.innerHTML = "✅ Biometría guardada";
+                            boton.disabled = true;
+                        }
+
+                        const btnCancelarForm = document.getElementById("btnCancelarRenovacionFormulario");
+                        if (btnCancelarForm) btnCancelarForm.style.display = "none";
+
+                        // Notificación de éxito requerida
+                        if (typeof Swal !== "undefined") {
+                            Swal.fire({
+                                icon: "success",
+                                title: "✅ Biometría actualizada correctamente",
+                                text: "Tu nueva biometría de voz y palabra secreta se guardaron correctamente. Ya puedes utilizarlas para verificar tu identidad.",
+                                confirmButtonColor: "#3c096c"
+                            });
+                        } else {
+                            alert("✅ Biometría actualizada correctamente\nTu nueva biometría de voz y palabra secreta se guardaron correctamente. Ya puedes utilizarlas para verificar tu identidad.");
+                        }
+
+                        // Limpiar modo renovación
+                        modoRenovacionVoz = false;
+                        tokenRenovacionVozActivo = null;
+
+                        // Regresar al modal de selección de métodos de seguridad
+                        setTimeout(function() {
+                            restaurarModalMetodosSeguridadTrasRenovacion();
+                        }, 1200);
+                        return;
+                    }
+
+                    // Flujo de registro inicial
                     if (estado) estado.innerText = "🟢 Voz registrada correctamente.";
                     if (boton) {
                         boton.innerHTML = "✅ Voz registrada";
@@ -7703,6 +8476,12 @@
                 if (bloqueRegistroVoz) bloqueRegistroVoz.style.display = "none";
                 if (bloqueVerificacionVoz) bloqueVerificacionVoz.style.display = "none";
 
+                const contenedorCambiar = document.getElementById("contenedorCambiarBiometria");
+                if (contenedorCambiar) contenedorCambiar.style.display = "none";
+
+                const btnCancelarForm = document.getElementById("btnCancelarRenovacionFormulario");
+                if (btnCancelarForm) btnCancelarForm.style.display = "none";
+
                 if (titulo) titulo.innerText = "Verificación de seguridad";
                 if (texto) texto.innerText = "Para continuar, selecciona cómo deseas recibir tu código de seguridad.";
 
@@ -7732,6 +8511,9 @@
                         liberarRecursosVoz();
                     });
                 }
+
+                // Configurar eventos para casillas OTP de renovación
+                configurarCasillasOtpRenovacion();
             });
 
             // ==========================================

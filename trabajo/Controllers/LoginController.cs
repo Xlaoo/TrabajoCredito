@@ -19,6 +19,7 @@ using System.Globalization;
 using Vosk;
 using Xabe.FFmpeg;
 using Xabe.FFmpeg.Downloader;
+using System.Diagnostics;
 namespace trabajo.Controllers
 {
     [Authorize]
@@ -93,6 +94,7 @@ namespace trabajo.Controllers
         private const int MINUTOS_BLOQUEO_VOZ = 5;
         // Hora en la que vence el código de inicio de sesión
         private static DateTime codigoLoginExpira = DateTime.MinValue;
+        private static readonly object _lockRenovacionVoz = new object();
 
         private readonly IConfiguration _configuration;
 
@@ -880,6 +882,10 @@ namespace trabajo.Controllers
                 });
             }
         }
+
+        // ==========================================
+        // MODELO VOSK Y TRANSCRIPCIÓN LOCAL
+
                 // ==========================================
         // MODELO VOSK Y TRANSCRIPCIÓN LOCAL
         // ==========================================
@@ -935,62 +941,101 @@ namespace trabajo.Controllers
             }
         }
 
-        private static async Task<byte[]> ConvertirAudioAWavPcm16k(IFormFile audio)
+        private async Task<byte[]> ConvertirAudioAWavPcm16k(IFormFile audio)
         {
-            string carpetaTemporal = Path.Combine(Path.GetTempPath(), "CrediPlusVoz");
-            Directory.CreateDirectory(carpetaTemporal);
-
-            string nombreTemp = Guid.NewGuid().ToString();
-            string extension = Path.GetExtension(audio.FileName ?? ".webm");
-            if (string.IsNullOrWhiteSpace(extension)) extension = ".webm";
-
-            string rutaEntrada = Path.Combine(carpetaTemporal, nombreTemp + extension);
-            string rutaSalida = Path.Combine(carpetaTemporal, nombreTemp + "_vosk.wav");
-
+            string ruta = await _ServicioEmbeddingVoz.ConvertirAudioAWavPcm16k(audio);
             try
             {
-                using (var stream = new System.IO.FileStream(rutaEntrada, FileMode.Create))
-                {
-                    await audio.CopyToAsync(stream);
-                }
-
-                if (OperatingSystem.IsWindows())
-                {
-                    string carpetaFFmpeg = Path.Combine(carpetaTemporal, "ffmpeg");
-                    Directory.CreateDirectory(carpetaFFmpeg);
-                    await FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official, carpetaFFmpeg);
-                    FFmpeg.SetExecutablesPath(carpetaFFmpeg);
-                }
-                else
-                {
-                    FFmpeg.SetExecutablesPath("/usr/bin");
-                }
-
-                var conversion = FFmpeg.Conversions.New()
-                    .AddParameter($"-i \"{rutaEntrada}\"")
-                    .AddParameter("-ac 1")
-                    .AddParameter("-ar 16000")
-                    .AddParameter("-c:a pcm_s16le")
-                    .SetOutput(rutaSalida);
-
-                await conversion.Start();
-
-                if (System.IO.File.Exists(rutaSalida))
-                {
-                    return await System.IO.File.ReadAllBytesAsync(rutaSalida);
-                }
-                return Array.Empty<byte>();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Aviso: Error convirtiendo audio para Vosk: " + ex.Message);
-                return Array.Empty<byte>();
+                return await System.IO.File.ReadAllBytesAsync(ruta);
             }
             finally
             {
-                try { if (System.IO.File.Exists(rutaEntrada)) System.IO.File.Delete(rutaEntrada); } catch { }
-                try { if (System.IO.File.Exists(rutaSalida)) System.IO.File.Delete(rutaSalida); } catch { }
+                try { if (System.IO.File.Exists(ruta)) System.IO.File.Delete(ruta); } catch { }
             }
+        }
+
+        private static string TranscribirAudioConVosk(string rutaWav)
+        {
+            if (string.IsNullOrWhiteSpace(rutaWav) || !System.IO.File.Exists(rutaWav)) return "";
+            try
+            {
+                var model = ObtenerModeloVosk();
+                if (model == null) return "";
+
+                using var fs = new FileStream(rutaWav, FileMode.Open, FileAccess.Read, FileShare.Read);
+                if (fs.Length < 12) return "";
+
+                // Parsear encabezado RIFF/WAV para localizar el bloque "data" sin asumir tamaño fijo
+                byte[] header = new byte[12];
+                if (fs.Read(header, 0, 12) < 12) return "";
+
+                long pcmStart = 0;
+                long pcmLength = fs.Length;
+
+                if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F' &&
+                    header[8] == 'W' && header[9] == 'A' && header[10] == 'V' && header[11] == 'E')
+                {
+                    byte[] chunkHeader = new byte[8];
+                    while (fs.Position + 8 <= fs.Length)
+                    {
+                        if (fs.Read(chunkHeader, 0, 8) < 8) break;
+                        string chunkId = Encoding.ASCII.GetString(chunkHeader, 0, 4);
+                        int subChunkSize = BitConverter.ToInt32(chunkHeader, 4);
+                        if (subChunkSize < 0) break;
+
+                        if (chunkId == "data")
+                        {
+                            pcmStart = fs.Position;
+                            pcmLength = Math.Min(subChunkSize, fs.Length - pcmStart);
+                            break;
+                        }
+
+                        fs.Position += subChunkSize + ((subChunkSize & 1) == 1 ? 1 : 0);
+                    }
+                }
+
+                fs.Position = pcmStart;
+                using var rec = new VoskRecognizer(model, 16000.0f);
+                var sb = new StringBuilder();
+
+                const int chunkSize = 4096;
+                byte[] buffer = new byte[chunkSize];
+                long totalLeido = 0;
+
+                while (totalLeido < pcmLength)
+                {
+                    int porLeer = (int)Math.Min(chunkSize, pcmLength - totalLeido);
+                    int leidos = fs.Read(buffer, 0, porLeer);
+                    if (leidos <= 0) break;
+                    totalLeido += leidos;
+
+                    if (rec.AcceptWaveform(buffer, leidos))
+                    {
+                        string resJson = rec.Result();
+                        string seg = ExtraerTextoDeJsonVosk(resJson);
+                        if (!string.IsNullOrWhiteSpace(seg))
+                        {
+                            if (sb.Length > 0) sb.Append(" ");
+                            sb.Append(seg.Trim());
+                        }
+                    }
+                }
+
+                string finalJson = rec.FinalResult();
+                string segFinal = ExtraerTextoDeJsonVosk(finalJson);
+                if (!string.IsNullOrWhiteSpace(segFinal))
+                {
+                    if (sb.Length > 0) sb.Append(" ");
+                    sb.Append(segFinal.Trim());
+                }
+
+                return Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Aviso: Error durante transcripción Vosk desde archivo: " + ex.Message);
+            }
+            return "";
         }
 
         private static ReadOnlyMemory<byte> ExtraerPcmDeWav(byte[] wavBytes)
@@ -1284,83 +1329,117 @@ namespace trabajo.Controllers
                     usuario.EmbeddingVoz.Length
                 );
 
-                // ==========================================
-                // VALIDACIÓN A: BIOMETRÍA ECAPA-TDNN (ONNX)
-                // ==========================================
-                List<float[]> embeddingsActuales;
+                string? rutaWavCompartida = null;
+                var cronometroTotal = Stopwatch.StartNew();
+                long heapInicioTotal = GC.GetTotalMemory(forceFullCollection: false);
+                long ramInicioTotal = Process.GetCurrentProcess().WorkingSet64;
+
                 try
                 {
-                    embeddingsActuales = await _ServicioEmbeddingVoz.GenerarEmbeddingsCandidatos(audio);
-                }
-                catch (InvalidOperationException exNivel)
-                {
-                    // No se detectó nivel de voz suficiente (micrófono mudo/silencio)
-                    // No penalizar con intentos fallidos
-                    return Json(new
+                    // ==========================================
+                    // CONVERSIÓN ÚNICA FFMPEG (Compartida entre ECAPA y Vosk)
+                    // ==========================================
+                    try
                     {
-                        ok = false,
-                        esErrorAudio = true,
-                        mensaje = exNivel.Message
-                    });
-                }
-
-                if (embeddingsActuales == null || embeddingsActuales.Count == 0)
-                {
-                    return Json(new
+                        rutaWavCompartida = await _ServicioEmbeddingVoz.ConvertirAudioAWavPcm16k(audio);
+                    }
+                    catch (Exception exConv)
                     {
-                        ok = false,
-                        esErrorAudio = true,
-                        mensaje = "No se pudo analizar correctamente la voz. Inténtalo nuevamente."
-                    });
-                }
-
-                double similitud = 0;
-                foreach (float[] embActual in embeddingsActuales)
-                {
-                    if (embActual != null && embActual.Length == 192)
-                    {
-                        double sim = CalcularSimilitudCoseno(embeddingRegistrado, embActual);
-                        if (sim > similitud)
+                        Console.WriteLine("Aviso: Error en conversión FFmpeg: " + exConv.Message);
+                        return Json(new
                         {
-                            similitud = sim;
+                            ok = false,
+                            esErrorAudio = true,
+                            mensaje = "No se pudo procesar el formato del audio grabado. Por favor, verifica el micrófono e inténtalo nuevamente."
+                        });
+                    }
+
+                    bool ffmpegOk = !string.IsNullOrWhiteSpace(rutaWavCompartida) && System.IO.File.Exists(rutaWavCompartida);
+                    if (!ffmpegOk)
+                    {
+                        return Json(new
+                        {
+                            ok = false,
+                            esErrorAudio = true,
+                            mensaje = "No se pudo procesar el formato del audio grabado."
+                        });
+                    }
+
+                    // ==========================================
+                    // VALIDACIÓN A: BIOMETRÍA ECAPA-TDNN (ONNX)
+                    // ==========================================
+                    List<float[]> embeddingsActuales;
+                    try
+                    {
+                        embeddingsActuales = await _ServicioEmbeddingVoz.GenerarEmbeddingsCandidatos(rutaWavCompartida);
+                    }
+                    catch (InvalidOperationException exNivel)
+                    {
+                        // No se detectó nivel de voz suficiente (micrófono mudo/silencio)
+                        // No penalizar con intentos fallidos
+                        return Json(new
+                        {
+                            ok = false,
+                            esErrorAudio = true,
+                            mensaje = exNivel.Message
+                        });
+                    }
+
+                    if (embeddingsActuales == null || embeddingsActuales.Count == 0)
+                    {
+                        return Json(new
+                        {
+                            ok = false,
+                            esErrorAudio = true,
+                            mensaje = "No se pudo analizar correctamente la voz. Inténtalo nuevamente."
+                        });
+                    }
+
+                    double similitud = 0;
+                    foreach (float[] embActual in embeddingsActuales)
+                    {
+                        if (embActual != null && embActual.Length == 192)
+                        {
+                            double sim = CalcularSimilitudCoseno(embeddingRegistrado, embActual);
+                            if (sim > similitud)
+                            {
+                                similitud = sim;
+                            }
                         }
                     }
-                }
 
-                const double UMBRAL_VOZ = 0.65;
-                bool biometriaValida = similitud >= UMBRAL_VOZ;
+                    const double UMBRAL_VOZ = 0.65;
+                    bool biometriaValida = similitud >= UMBRAL_VOZ;
 
-                // ==========================================
-                // VALIDACIÓN B: PALABRA CLAVE (EXCLUSIVAMENTE VOSK EN SERVIDOR)
-                // ==========================================
-                byte[] wavBytes = await ConvertirAudioAWavPcm16k(audio);
-                bool ffmpegOk = wavBytes != null && wavBytes.Length > 0;
+                    // ==========================================
+                    // VALIDACIÓN B: PALABRA CLAVE (EXCLUSIVAMENTE VOSK EN SERVIDOR)
+                    // (Reutiliza el archivo WAV compartido sin ejecutar FFmpeg de nuevo)
+                    // ==========================================
+                    Model? modeloVosk = ObtenerModeloVosk();
+                    bool modeloCargado = modeloVosk != null;
 
-                Model? modeloVosk = ObtenerModeloVosk();
-                bool modeloCargado = modeloVosk != null;
+                    string transcripcionServidor = TranscribirAudioConVosk(rutaWavCompartida);
+                    bool transcripcionVacia = string.IsNullOrWhiteSpace(transcripcionServidor);
 
-                string transcripcionServidor = TranscribirAudioConVosk(wavBytes);
-                bool transcripcionVacia = string.IsNullOrWhiteSpace(transcripcionServidor);
+                    bool palabraValida = VerificarCoincidenciaPalabraClave(transcripcionServidor, usuario.FraseVoz);
 
-                bool palabraValida = VerificarCoincidenciaPalabraClave(transcripcionServidor, usuario.FraseVoz);
-
-                // ==========================================
-                // LOGS SEGUROS (Sin datos sensibles ni palabras secretas)
-                // ==========================================
-                Console.WriteLine("==========================================");
-                Console.WriteLine("VERIFICACIÓN INDEPENDIENTE DE VOZ");
-                Console.WriteLine($"BIOMETRÍA ECAPA-TDNN: {(biometriaValida ? "CORRECTA" : "RECHAZADA")} (Similitud: {similitud:F4})");
-                Console.WriteLine($"PALABRA CLAVE: {(palabraValida ? "CORRECTA" : "INCORRECTA")}");
-                Console.WriteLine("--- DIAGNÓSTICO TÉCNICO SEGURO ---");
-                Console.WriteLine("Usuario localizado: SÍ");
-                Console.WriteLine($"FraseVoz recuperada: {(usuario.FraseVoz != null ? "SÍ" : "NO")}");
-                Console.WriteLine($"FraseVoz vacía o NULL: {(string.IsNullOrWhiteSpace(usuario.FraseVoz) ? "SÍ" : "NO")}");
-                Console.WriteLine($"Modelo Vosk cargado: {(modeloCargado ? "SÍ" : "NO")}");
-                Console.WriteLine($"FFmpeg ejecutado correctamente: {(ffmpegOk ? "SÍ" : "NO")}");
-                Console.WriteLine($"Transcripción Vosk vacía: {(transcripcionVacia ? "SÍ" : "NO")}");
-                Console.WriteLine($"Coincidencia exacta después de normalizar: {(palabraValida ? "SÍ" : "NO")}");
-                Console.WriteLine($"RESULTADO GENERAL: {(biometriaValida && palabraValida ? "ACCESO CONCEDIDO" : "ACCESO DENEGADO")}");
-                Console.WriteLine("==========================================");
+                    // ==========================================
+                    // LOGS SEGUROS (Sin datos sensibles ni palabras secretas)
+                    // ==========================================
+                    Console.WriteLine("==========================================");
+                    Console.WriteLine("VERIFICACIÓN INDEPENDIENTE DE VOZ (FFMPEG ÚNICO)");
+                    Console.WriteLine($"BIOMETRÍA ECAPA-TDNN: {(biometriaValida ? "CORRECTA" : "RECHAZADA")} (Similitud: {similitud:F4})");
+                    Console.WriteLine($"PALABRA CLAVE: {(palabraValida ? "CORRECTA" : "INCORRECTA")}");
+                    Console.WriteLine("--- DIAGNÓSTICO TÉCNICO SEGURO ---");
+                    Console.WriteLine("Usuario localizado: SÍ");
+                    Console.WriteLine($"FraseVoz recuperada: {(usuario.FraseVoz != null ? "SÍ" : "NO")}");
+                    Console.WriteLine($"FraseVoz vacía o NULL: {(string.IsNullOrWhiteSpace(usuario.FraseVoz) ? "SÍ" : "NO")}");
+                    Console.WriteLine($"Modelo Vosk cargado: {(modeloCargado ? "SÍ" : "NO")}");
+                    Console.WriteLine($"FFmpeg ejecutado correctamente: {(ffmpegOk ? "SÍ" : "NO")}");
+                    Console.WriteLine($"Transcripción Vosk vacía: {(transcripcionVacia ? "SÍ" : "NO")}");
+                    Console.WriteLine($"Coincidencia exacta después de normalizar: {(palabraValida ? "SÍ" : "NO")}");
+                    Console.WriteLine($"RESULTADO GENERAL: {(biometriaValida && palabraValida ? "ACCESO CONCEDIDO" : "ACCESO DENEGADO")}");
+                    Console.WriteLine("==========================================");
 
                 // ==========================================
                 // EVALUACIÓN COMBINADA: AMBAS DEBEN SER CORRECTAS
@@ -1494,6 +1573,23 @@ namespace trabajo.Controllers
                     mensaje = "Voz y palabra clave verificadas correctamente.",
                     redirectUrl = url
                 });
+                }
+                finally
+                {
+                    // ==========================================
+                    // LIMPIEZA DEL ARCHIVO WAV COMPARTIDO
+                    // ==========================================
+                    if (!string.IsNullOrWhiteSpace(rutaWavCompartida) && System.IO.File.Exists(rutaWavCompartida))
+                    {
+                        try { System.IO.File.Delete(rutaWavCompartida); } catch { }
+                    }
+
+                    cronometroTotal.Stop();
+                    long heapFinTotal = GC.GetTotalMemory(forceFullCollection: false);
+                    long ramFinTotal = Process.GetCurrentProcess().WorkingSet64;
+
+                    Console.WriteLine($"[DIAGNÓSTICO LOGIN TOTAL] Duración: {cronometroTotal.ElapsedMilliseconds} ms | Heap .NET: {heapInicioTotal / 1048576.0:F1} MB -> {heapFinTotal / 1048576.0:F1} MB | RAM Proceso (WorkingSet): {ramInicioTotal / 1048576.0:F1} MB -> {ramFinTotal / 1048576.0:F1} MB");
+                }
             }
             catch (Exception ex)
             {
@@ -2764,6 +2860,491 @@ namespace trabajo.Controllers
                 });
             }
         }
+
+        // =========================================================================
+        // RENOVACIÓN SEGURA DE BIOMETRÍA Y PALABRA SECRETA DESDE EL LOGIN
+        // =========================================================================
+
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> SolicitarOtpRenovacionVoz()
+        {
+            try
+            {
+                string? dniLoginPendiente = HttpContext.Session.GetString("DniLoginPendiente");
+                if (string.IsNullOrWhiteSpace(dniLoginPendiente))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La sesión de seguridad ha expirado. Por favor, inicia sesión nuevamente."
+                    });
+                }
+
+                Usuario usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dniLoginPendiente);
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró el usuario en el sistema."
+                    });
+                }
+
+                // Verificar que el usuario tenga una biometría previamente registrada
+                bool tieneVozPrevia = !string.IsNullOrWhiteSpace(usuario.AudioRegistro) &&
+                                      usuario.EmbeddingVoz != null &&
+                                      usuario.EmbeddingVoz.Length == 192 * sizeof(float);
+
+                if (!tieneVozPrevia)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No tienes una biometría registrada previamente para actualizar."
+                    });
+                }
+
+                // Límite de solicitudes (Rate limiting): mínimo 15 segundos entre solicitudes
+                string? ultimaSolicitudStr = HttpContext.Session.GetString("RenovacionVoz_UltimaSolicitud");
+                if (!string.IsNullOrWhiteSpace(ultimaSolicitudStr) &&
+                    DateTime.TryParse(ultimaSolicitudStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime ultimaSol))
+                {
+                    double segundosTranscurridos = (DateTime.UtcNow - ultimaSol).TotalSeconds;
+                    if (segundosTranscurridos < 15)
+                    {
+                        int esperar = (int)Math.Ceiling(15 - segundosTranscurridos);
+                        return Json(new
+                        {
+                            ok = false,
+                            mensaje = $"Por favor espera {esperar} segundos antes de solicitar otro código."
+                        });
+                    }
+                }
+
+                // Generar código OTP criptográficamente seguro de 6 dígitos
+                string otp = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+
+                // Asociar exclusivamente a la operación RenovacionBiometriaVoz en sesión
+                HttpContext.Session.SetString("RenovacionVoz_Otp", otp);
+                HttpContext.Session.SetString("RenovacionVoz_OtpExpira", DateTime.UtcNow.AddSeconds(60).ToString("o"));
+                HttpContext.Session.SetInt32("RenovacionVoz_OtpIntentos", 0);
+                HttpContext.Session.SetString("RenovacionVoz_UltimaSolicitud", DateTime.UtcNow.ToString("o"));
+
+                // Correo enmascarado para confirmación visual sin revelar datos sensibles
+                string correoEnmascarado = EnmascararCorreoSeguro(usuario.Correo);
+
+                // Enviar el correo mediante el servicio existente
+                string cuerpoHtml = $@"
+<div style='font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;'>
+    <div style='text-align: center; margin-bottom: 20px;'>
+        <h2 style='color: #4338ca; margin: 0;'>CrediPlus Seguridad</h2>
+        <p style='color: #64748b; font-size: 14px; margin-top: 4px;'>Actualización de Biometría de Voz</p>
+    </div>
+    <div style='background-color: #f8fafc; border-radius: 8px; padding: 20px; text-align: center; border: 1px dashed #cbd5e1;'>
+        <p style='color: #334155; font-size: 15px; margin: 0 0 12px 0;'>Has solicitado actualizar tu biometría de voz y palabra secreta. Usa el siguiente código para verificar tu identidad:</p>
+        <div style='font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #1e1b4b; background: #ede9fe; padding: 12px 24px; border-radius: 8px; display: inline-block;'>
+            {otp}
+        </div>
+        <p style='color: #dc2626; font-size: 13px; font-weight: bold; margin-top: 14px; margin-bottom: 0;'>
+            ⏳ Este código es válido exclusivamente durante 60 segundos.
+        </p>
+    </div>
+    <p style='color: #94a3b8; font-size: 12px; margin-top: 20px; text-align: center;'>
+        Si no realizaste esta solicitud, ignora este mensaje. Tu cuenta permanece protegida.
+    </p>
+</div>";
+
+                await _emailService.EnviarCorreoAsync(
+                    usuario.Correo,
+                    "🔐 CrediPlus — Código de verificación para actualizar biometría de voz",
+                    cuerpoHtml
+                );
+
+                return Json(new
+                {
+                    ok = true,
+                    correo = correoEnmascarado,
+                    segundosVigencia = 60,
+                    mensaje = "Código de seguridad enviado a tu correo electrónico."
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "No se pudo enviar el código de verificación: " + ex.Message
+                });
+            }
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult VerificarOtpRenovacionVoz(string? codigo)
+        {
+            try
+            {
+                string? dniLoginPendiente = HttpContext.Session.GetString("DniLoginPendiente");
+                if (string.IsNullOrWhiteSpace(dniLoginPendiente))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La sesión de seguridad ha expirado. Inicia sesión nuevamente."
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(codigo))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Debes ingresar el código de seguridad de 6 dígitos."
+                    });
+                }
+
+                string? otpGuardado = HttpContext.Session.GetString("RenovacionVoz_Otp");
+                string? expiraStr = HttpContext.Session.GetString("RenovacionVoz_OtpExpira");
+
+                if (string.IsNullOrWhiteSpace(otpGuardado) || string.IsNullOrWhiteSpace(expiraStr))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No hay un código activo. Solicita un nuevo código."
+                    });
+                }
+
+                // Validar vigencia real en el servidor (60 segundos)
+                if (DateTime.TryParse(expiraStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime expira))
+                {
+                    if (DateTime.UtcNow > expira)
+                    {
+                        HttpContext.Session.Remove("RenovacionVoz_Otp");
+                        HttpContext.Session.Remove("RenovacionVoz_OtpExpira");
+                        return Json(new
+                        {
+                            ok = false,
+                            expirado = true,
+                            mensaje = "El código de seguridad ha expirado. Solicita un nuevo código."
+                        });
+                    }
+                }
+
+                // Control estricto de intentos fallidos (máximo 3 intentos)
+                int intentos = HttpContext.Session.GetInt32("RenovacionVoz_OtpIntentos") ?? 0;
+                if (intentos >= 3)
+                {
+                    HttpContext.Session.Remove("RenovacionVoz_Otp");
+                    HttpContext.Session.Remove("RenovacionVoz_OtpExpira");
+                    return Json(new
+                    {
+                        ok = false,
+                        bloqueado = true,
+                        mensaje = "Has superado el número máximo de intentos. Solicita un nuevo código."
+                    });
+                }
+
+                // Comparación estricta del código
+                if (codigo.Trim() != otpGuardado.Trim())
+                {
+                    intentos++;
+                    HttpContext.Session.SetInt32("RenovacionVoz_OtpIntentos", intentos);
+                    int restantes = Math.Max(0, 3 - intentos);
+                    if (restantes == 0)
+                    {
+                        HttpContext.Session.Remove("RenovacionVoz_Otp");
+                        HttpContext.Session.Remove("RenovacionVoz_OtpExpira");
+                        return Json(new
+                        {
+                            ok = false,
+                            bloqueado = true,
+                            mensaje = "Código incorrecto. Has superado el límite de intentos. Solicita un nuevo código."
+                        });
+                    }
+
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = $"Código incorrecto. Te quedan {restantes} intento(s)."
+                    });
+                }
+
+                // Código correcto: invalidar el OTP utilizado
+                HttpContext.Session.Remove("RenovacionVoz_Otp");
+                HttpContext.Session.Remove("RenovacionVoz_OtpExpira");
+                HttpContext.Session.Remove("RenovacionVoz_OtpIntentos");
+
+                // Crear una autorización temporal exclusiva para renovación (un solo uso, 10 min de validez)
+                string tokenAutorizado = Guid.NewGuid().ToString("N");
+                HttpContext.Session.SetString("RenovacionVoz_TokenAutorizado", tokenAutorizado);
+                HttpContext.Session.SetString("RenovacionVoz_TokenExpira", DateTime.UtcNow.AddMinutes(10).ToString("o"));
+
+                return Json(new
+                {
+                    ok = true,
+                    token = tokenAutorizado,
+                    mensaje = "Identidad verificada exitosamente. Procede a registrar tu nueva voz."
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "Error al verificar el código: " + ex.Message
+                });
+            }
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> RenovarVozLogin(
+            IFormFile? audio,
+            string? fraseVoz,
+            string? tokenRenovacion)
+        {
+            string? nuevaRutaAudio = null;
+            try
+            {
+                string? dniLoginPendiente = HttpContext.Session.GetString("DniLoginPendiente");
+                if (string.IsNullOrWhiteSpace(dniLoginPendiente))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La sesión de seguridad ha expirado. Inicia sesión nuevamente."
+                    });
+                }
+
+                // ==========================================
+                // CONSUMO ATÓMICO Y ESTRICTO DEL TOKEN (UN SOLO USO Y ANTI-CONCURRENCIA)
+                // ==========================================
+                bool tokenAutorizadoValido = false;
+                lock (_lockRenovacionVoz)
+                {
+                    string? tokenEsperado = HttpContext.Session.GetString("RenovacionVoz_TokenAutorizado");
+                    string? tokenExpiraStr = HttpContext.Session.GetString("RenovacionVoz_TokenExpira");
+
+                    if (!string.IsNullOrWhiteSpace(tokenEsperado) &&
+                        !string.IsNullOrWhiteSpace(tokenRenovacion) &&
+                        tokenRenovacion == tokenEsperado)
+                    {
+                        if (DateTime.TryParse(tokenExpiraStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime expiraToken) && DateTime.UtcNow <= expiraToken)
+                        {
+                            tokenAutorizadoValido = true;
+                            // Invalidar inmediatamente de la sesión para impedir cualquier reintento o solicitud concurrente
+                            HttpContext.Session.Remove("RenovacionVoz_TokenAutorizado");
+                            HttpContext.Session.Remove("RenovacionVoz_TokenExpira");
+                        }
+                    }
+                }
+
+                if (!tokenAutorizadoValido)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No tienes una autorización válida para actualizar la biometría o el token ya ha sido utilizado. Verifica tu identidad nuevamente."
+                    });
+                }
+
+                if (audio == null || audio.Length == 0)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Debes realizar una grabación de voz."
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(fraseVoz))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Debes indicar tu nueva palabra o frase secreta."
+                    });
+                }
+
+                if (audio.Length > 5 * 1024 * 1024)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El audio no puede superar los 5 MB."
+                    });
+                }
+
+                var tiposAudioPermitidos = new[]
+                {
+                    "audio/webm",
+                    "audio/wav",
+                    "audio/mpeg",
+                    "audio/mp4",
+                    "audio/ogg"
+                };
+
+                bool audioValido = tiposAudioPermitidos.Any(tipo =>
+                    audio.ContentType.StartsWith(tipo, StringComparison.OrdinalIgnoreCase)
+                );
+
+                if (!audioValido)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El archivo enviado no es un formato de audio válido."
+                    });
+                }
+
+                Usuario usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dniLoginPendiente);
+                if (usuario == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró el usuario en el sistema."
+                    });
+                }
+
+                // 1. GENERAR EL NUEVO EMBEDDING BIOMÉTRICO MODERNO CON VAD DINÁMICO
+                float[] embedding = await _ServicioEmbeddingVoz.GenerarEmbeddingDesdeAudio(audio);
+
+                if (embedding == null || embedding.Length != 192)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se pudo generar correctamente la identificación biométrica de la nueva voz."
+                    });
+                }
+
+                // Validar que los valores sean finitos y tengan norma válida
+                double normaCheck = 0;
+                for (int i = 0; i < embedding.Length; i++)
+                {
+                    if (float.IsNaN(embedding[i]) || float.IsInfinity(embedding[i]))
+                    {
+                        return Json(new
+                        {
+                            ok = false,
+                            mensaje = "La grabación produjo un vector biométrico inestable. Por favor, graba nuevamente."
+                        });
+                    }
+                    normaCheck += embedding[i] * embedding[i];
+                }
+                if (normaCheck < 1e-6)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Nivel de audio insuficiente para generar la biometría. Habla claramente cerca del micrófono."
+                    });
+                }
+
+                // 2. PREPARAR EL NUEVO ARCHIVO DE AUDIO EN WWWROOT
+                string carpetaAudio = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "audiosRegistro");
+                if (!Directory.Exists(carpetaAudio))
+                {
+                    Directory.CreateDirectory(carpetaAudio);
+                }
+
+                string nuevoNombreAudio = Guid.NewGuid().ToString() + ".webm";
+                nuevaRutaAudio = Path.Combine(carpetaAudio, nuevoNombreAudio);
+
+                byte[] bytesAudio;
+                using (var ms = new MemoryStream())
+                {
+                    await audio.CopyToAsync(ms);
+                    bytesAudio = ms.ToArray();
+                }
+
+                await System.IO.File.WriteAllBytesAsync(nuevaRutaAudio, bytesAudio);
+
+                // Recordar la ruta del audio anterior para eliminarlo de forma segura tras guardar en MySQL
+                string? rutaAudioAnterior = usuario.AudioRegistro;
+
+                // 3. ACTUALIZAR EXCLUSIVAMENTE LOS CUATRO CAMPOS BIOMÉTRICOS EN MYSQL
+                usuario.FraseVoz = fraseVoz.Trim();
+                usuario.AudioRegistro = "/audiosRegistro/" + nuevoNombreAudio;
+
+                usuario.EmbeddingVoz = new byte[embedding.Length * sizeof(float)];
+                Buffer.BlockCopy(embedding, 0, usuario.EmbeddingVoz, 0, usuario.EmbeddingVoz.Length);
+
+                // Como ya se validó el OTP de renovación antes de grabar, se habilita directamente la voz
+                usuario.VozHabilitadaLogin = true;
+
+                // Configurar ChangeTracker de EF Core para actualizar ÚNICAMENTE las 4 columnas requeridas
+                var entry = _Context.Entry(usuario);
+                entry.State = EntityState.Unchanged;
+                entry.Property(u => u.FraseVoz).IsModified = true;
+                entry.Property(u => u.EmbeddingVoz).IsModified = true;
+                entry.Property(u => u.AudioRegistro).IsModified = true;
+                entry.Property(u => u.VozHabilitadaLogin).IsModified = true;
+
+                await _Context.SaveChangesAsync();
+
+                // 4. ELIMINAR EL ARCHIVO BIOMÉTRICO ANTERIOR SOLO TRAS CONFIRMAR EL GUARDADO EN MYSQL
+                if (!string.IsNullOrWhiteSpace(rutaAudioAnterior))
+                {
+                    try
+                    {
+                        string rutaFisicaAnterior = Path.Combine(
+                            Directory.GetCurrentDirectory(),
+                            "wwwroot",
+                            rutaAudioAnterior.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+                        );
+
+                        if (System.IO.File.Exists(rutaFisicaAnterior) && !rutaFisicaAnterior.EndsWith(nuevoNombreAudio, StringComparison.OrdinalIgnoreCase))
+                        {
+                            System.IO.File.Delete(rutaFisicaAnterior);
+                        }
+                    }
+                    catch { }
+                }
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = "Biometría y palabra secreta actualizadas correctamente.",
+                    nuevaFrase = usuario.FraseVoz
+                });
+            }
+            catch (Exception ex)
+            {
+                // Si ocurrió un fallo en MySQL o en el procesamiento, eliminar el nuevo archivo temporalmente creado
+                if (!string.IsNullOrWhiteSpace(nuevaRutaAudio) && System.IO.File.Exists(nuevaRutaAudio))
+                {
+                    try { System.IO.File.Delete(nuevaRutaAudio); } catch { }
+                }
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "Ocurrió un error al actualizar la biometría: " + ex.Message
+                });
+            }
+        }
+
+        private static string EnmascararCorreoSeguro(string? correo)
+        {
+            if (string.IsNullOrWhiteSpace(correo) || !correo.Contains('@'))
+                return "***@***.com";
+
+            var partes = correo.Split('@');
+            var usuario = partes[0];
+            var dominio = partes[1];
+
+            if (usuario.Length <= 2)
+            {
+                return $"{usuario[0]}***@{dominio}";
+            }
+
+            return $"{usuario.Substring(0, 2)}***{usuario[^1]}@{dominio}";
+        }
+
         public IActionResult DashboardCliente()
         {
             string dni = User.FindFirst("Dni")?.Value;

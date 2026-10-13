@@ -1,9 +1,10 @@
-﻿using Microsoft.ML.OnnxRuntime;
+using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using NAudio.Wave;
 using Xabe.FFmpeg;
 using Xabe.FFmpeg.Downloader;
 using System.Numerics;
+using System.Diagnostics;
 namespace trabajo.Service
 {
     public class ServicioEmbeddingVoz
@@ -39,7 +40,7 @@ namespace trabajo.Service
             return candidatos[0];
         }
 
-        public async Task<List<float[]>> GenerarEmbeddingsCandidatos(IFormFile audio)
+        public async Task<string> ConvertirAudioAWavPcm16k(IFormFile audio)
         {
             if (audio == null || audio.Length == 0)
                 throw new Exception("No se recibió ningún audio.");
@@ -53,9 +54,12 @@ namespace trabajo.Service
 
             string nombreTemporal = Guid.NewGuid().ToString();
 
+            string extension = Path.GetExtension(audio.FileName ?? ".webm");
+            if (string.IsNullOrWhiteSpace(extension)) extension = ".webm";
+
             string rutaWebM = Path.Combine(
                 carpetaTemporal,
-                nombreTemporal + ".webm"
+                nombreTemporal + extension
             );
 
             string rutaAudio = Path.Combine(
@@ -65,20 +69,12 @@ namespace trabajo.Service
 
             try
             {
-                // ==========================================
-                // GUARDAR AUDIO WEBM
-                // ==========================================
-
                 using (var archivo = new FileStream(
                     rutaWebM,
                     FileMode.Create))
                 {
                     await audio.CopyToAsync(archivo);
                 }
-
-                // ==========================================
-                // CONFIGURAR FFmpeg
-                // ==========================================
 
                 if (OperatingSystem.IsWindows())
                 {
@@ -101,10 +97,6 @@ namespace trabajo.Service
                     FFmpeg.SetExecutablesPath("/usr/bin");
                 }
 
-                // ==========================================
-                // CONVERTIR WEBM → WAV (16 kHz, Mono, PCM)
-                // ==========================================
-
                 var conversion =
                     FFmpeg.Conversions.New()
                         .AddParameter($"-i \"{rutaWebM}\"")
@@ -115,28 +107,76 @@ namespace trabajo.Service
 
                 await conversion.Start();
 
+                if (!File.Exists(rutaAudio))
+                {
+                    throw new Exception("FFmpeg no generó el archivo de audio convertido.");
+                }
+
+                return rutaAudio;
+            }
+            finally
+            {
+                if (File.Exists(rutaWebM))
+                {
+                    try { File.Delete(rutaWebM); } catch { }
+                }
+            }
+        }
+
+        public async Task<List<float[]>> GenerarEmbeddingsCandidatos(IFormFile audio)
+        {
+            string rutaWav = await ConvertirAudioAWavPcm16k(audio);
+            try
+            {
+                return await GenerarEmbeddingsCandidatos(rutaWav);
+            }
+            finally
+            {
+                if (File.Exists(rutaWav))
+                {
+                    try { File.Delete(rutaWav); } catch { }
+                }
+            }
+        }
+
+        public async Task<List<float[]>> GenerarEmbeddingsCandidatos(string rutaAudio)
+        {
+            if (string.IsNullOrWhiteSpace(rutaAudio) || !File.Exists(rutaAudio))
+                throw new FileNotFoundException("No se encontró el archivo de audio WAV.", rutaAudio);
+
+            var cronometro = Stopwatch.StartNew();
+            long heapInicio = GC.GetTotalMemory(forceFullCollection: false);
+            long ramInicio = Process.GetCurrentProcess().WorkingSet64;
+
+            try
+            {
                 // ==========================================
                 // LEER WAV
                 // ==========================================
 
-                using var reader = new WaveFileReader(rutaAudio);
+                int sampleRate;
+                int canales;
+                short[] muestras;
 
-                if (reader.WaveFormat.Encoding != WaveFormatEncoding.Pcm)
+                using (var reader = new WaveFileReader(rutaAudio))
                 {
-                    throw new Exception("El audio convertido no está en formato WAV PCM.");
+                    if (reader.WaveFormat.Encoding != WaveFormatEncoding.Pcm)
+                    {
+                        throw new Exception("El audio convertido no está en formato WAV PCM.");
+                    }
+
+                    sampleRate = reader.WaveFormat.SampleRate;
+                    canales = reader.WaveFormat.Channels;
+
+                    byte[] bytes = new byte[reader.Length];
+                    int leidos = reader.Read(bytes, 0, bytes.Length);
+
+                    if (leidos == 0)
+                        throw new Exception("El audio está vacío.");
+
+                    muestras = new short[leidos / 2];
+                    Buffer.BlockCopy(bytes, 0, muestras, 0, leidos);
                 }
-
-                int sampleRate = reader.WaveFormat.SampleRate;
-                int canales = reader.WaveFormat.Channels;
-
-                byte[] bytes = new byte[reader.Length];
-                int leidos = reader.Read(bytes, 0, bytes.Length);
-
-                if (leidos == 0)
-                    throw new Exception("El audio está vacío.");
-
-                short[] muestras = new short[leidos / 2];
-                Buffer.BlockCopy(bytes, 0, muestras, 0, leidos);
 
                 // ==========================================
                 // CONVERTIR A MONO NORMALIZADO [-1.0, 1.0]
@@ -230,18 +270,13 @@ namespace trabajo.Service
             finally
             {
                 // ==========================================
-                // ELIMINAR ARCHIVOS TEMPORALES
+                // MEDICIÓN TÉCNICA SEGURA DE MEMORIA Y TIEMPO
                 // ==========================================
+                cronometro.Stop();
+                long heapFin = GC.GetTotalMemory(forceFullCollection: false);
+                long ramFin = Process.GetCurrentProcess().WorkingSet64;
 
-                if (File.Exists(rutaAudio))
-                {
-                    try { File.Delete(rutaAudio); } catch {}
-                }
-
-                if (File.Exists(rutaWebM))
-                {
-                    try { File.Delete(rutaWebM); } catch {}
-                }
+                Console.WriteLine($"[DIAGNÓSTICO MEMORIA ECAPA] Duración: {cronometro.ElapsedMilliseconds} ms | Heap .NET: {heapInicio / 1048576.0:F1} MB -> {heapFin / 1048576.0:F1} MB | RAM Proceso (WorkingSet): {ramInicio / 1048576.0:F1} MB -> {ramFin / 1048576.0:F1} MB");
             }
         }
 
