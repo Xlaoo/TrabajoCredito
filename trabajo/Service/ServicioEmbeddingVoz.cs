@@ -31,6 +31,16 @@ namespace trabajo.Service
 
         public async Task<float[]> GenerarEmbeddingDesdeAudio(IFormFile audio)
         {
+            var candidatos = await GenerarEmbeddingsCandidatos(audio);
+            if (candidatos == null || candidatos.Count == 0)
+            {
+                throw new Exception("No se pudo generar el embedding de voz.");
+            }
+            return candidatos[0];
+        }
+
+        public async Task<List<float[]>> GenerarEmbeddingsCandidatos(IFormFile audio)
+        {
             if (audio == null || audio.Length == 0)
                 throw new Exception("No se recibió ningún audio.");
 
@@ -88,13 +98,11 @@ namespace trabajo.Service
                 }
                 else
                 {
-                    // Northflank usa Linux.
-                    // FFmpeg estará instalado desde el Dockerfile.
                     FFmpeg.SetExecutablesPath("/usr/bin");
                 }
 
                 // ==========================================
-                // CONVERTIR WEBM → WAV
+                // CONVERTIR WEBM → WAV (16 kHz, Mono, PCM)
                 // ==========================================
 
                 var conversion =
@@ -111,279 +119,113 @@ namespace trabajo.Service
                 // LEER WAV
                 // ==========================================
 
-                using var reader =
-                    new WaveFileReader(rutaAudio);
+                using var reader = new WaveFileReader(rutaAudio);
 
                 if (reader.WaveFormat.Encoding != WaveFormatEncoding.Pcm)
                 {
-                    throw new Exception(
-                        "El audio convertido no está en formato WAV PCM."
-                    );
+                    throw new Exception("El audio convertido no está en formato WAV PCM.");
                 }
 
-                int sampleRate =
-                    reader.WaveFormat.SampleRate;
+                int sampleRate = reader.WaveFormat.SampleRate;
+                int canales = reader.WaveFormat.Channels;
 
-                int canales =
-                    reader.WaveFormat.Channels;
-
-                byte[] bytes =
-                    new byte[reader.Length];
-
-                int leidos =
-                    reader.Read(
-                        bytes,
-                        0,
-                        bytes.Length
-                    );
+                byte[] bytes = new byte[reader.Length];
+                int leidos = reader.Read(bytes, 0, bytes.Length);
 
                 if (leidos == 0)
-                    throw new Exception(
-                        "El audio está vacío."
-                    );
+                    throw new Exception("El audio está vacío.");
 
-                short[] muestras =
-                    new short[leidos / 2];
-
-                Buffer.BlockCopy(
-                    bytes,
-                    0,
-                    muestras,
-                    0,
-                    leidos
-                );
+                short[] muestras = new short[leidos / 2];
+                Buffer.BlockCopy(bytes, 0, muestras, 0, leidos);
 
                 // ==========================================
-                // CONVERTIR A MONO
+                // CONVERTIR A MONO NORMALIZADO [-1.0, 1.0]
                 // ==========================================
 
                 float[] mono;
-
                 if (canales > 1)
                 {
-                    int cantidadMuestras =
-                        muestras.Length / canales;
-
-                    mono =
-                        new float[cantidadMuestras];
-
-                    for (
-                        int i = 0;
-                        i < cantidadMuestras;
-                        i++
-                    )
+                    int cantidadMuestras = muestras.Length / canales;
+                    mono = new float[cantidadMuestras];
+                    for (int i = 0; i < cantidadMuestras; i++)
                     {
                         float suma = 0;
-
-                        for (
-                            int c = 0;
-                            c < canales;
-                            c++
-                        )
+                        for (int c = 0; c < canales; c++)
                         {
-                            suma +=
-                                muestras[
-                                    i * canales + c
-                                ];
+                            suma += muestras[i * canales + c];
                         }
-
-                        mono[i] =
-                            (suma / canales) /
-                            32768f;
+                        mono[i] = (suma / canales) / 32768f;
                     }
                 }
                 else
                 {
-                    mono =
-                        new float[muestras.Length];
-
-                    for (
-                        int i = 0;
-                        i < muestras.Length;
-                        i++
-                    )
+                    mono = new float[muestras.Length];
+                    for (int i = 0; i < muestras.Length; i++)
                     {
-                        mono[i] =
-                            muestras[i] /
-                            32768f;
+                        mono[i] = muestras[i] / 32768f;
                     }
                 }
-
-                // ==========================================
-                // SAMPLE RATE 16 kHz
-                // ==========================================
 
                 if (sampleRate != 16000)
                 {
-                    mono =
-                        CambiarSampleRate(
-                            mono,
-                            sampleRate,
-                            16000
-                        );
+                    mono = CambiarSampleRate(mono, sampleRate, 16000);
                 }
 
                 // ==========================================
-                // GENERAR FBANK
+                // VALIDACIÓN DE ENERGÍA Y NIVEL DE VOZ
                 // ==========================================
 
-                float[,] fbank =
-                    GenerarFbank(
-                        mono,
-                        16000,
-                        80,
-                        201
-                    );
-
-                float[] datos =
-                    new float[80 * 201];
-
-                for (
-                    int tiempo = 0;
-                    tiempo < 201;
-                    tiempo++
-                )
+                double sumaCuadrados = 0;
+                float maxAmplitud = 0;
+                for (int i = 0; i < mono.Length; i++)
                 {
-                    for (
-                        int frecuencia = 0;
-                        frecuencia < 80;
-                        frecuencia++
-                    )
-                    {
-                        datos[
-                            tiempo * 80 + frecuencia
-                        ] =
-                            fbank[
-                                frecuencia,
-                                tiempo
-                            ];
-                    }
+                    float absVal = Math.Abs(mono[i]);
+                    if (absVal > maxAmplitud) maxAmplitud = absVal;
+                    sumaCuadrados += mono[i] * mono[i];
                 }
+                double rms = Math.Sqrt(sumaCuadrados / Math.Max(1, mono.Length));
 
-                // ==========================================
-                // TENSOR
-                // ==========================================
-
-                var tensorFeatures =
-                    new DenseTensor<float>(
-                        datos,
-                        new int[]
-                        {
-                            1,
-                            201,
-                            80
-                        }
-                    );
-
-                var tensorLens =
-                    new DenseTensor<float>(
-                        new float[]
-                        {
-                            201
-                        },
-                        new int[]
-                        {
-                            1
-                        }
-                    );
-
-                var entradas =
-                    new NamedOnnxValue[]
-                    {
-                        NamedOnnxValue.CreateFromTensor(
-                            "features",
-                            tensorFeatures
-                        ),
-
-                        NamedOnnxValue.CreateFromTensor(
-                            "feature_lens",
-                            tensorLens
-                        )
-                    };
-
-                // ==========================================
-                // EJECUTAR ECAPA
-                // ==========================================
-
-                using IDisposableReadOnlyCollection
-                    <DisposableNamedOnnxValue> resultados =
-                    _sesion.Run(entradas);
-
-                var salida =
-                    resultados
-                        .First(x => x.Name == "embedding")
-                        .AsTensor<float>();
-
-                float[] embedding =
-    salida.ToArray();
-
-                if (embedding.Length != 192)
+                if (maxAmplitud < 0.015f || rms < 0.0015)
                 {
-                    throw new Exception(
-                        $"El modelo devolvió {embedding.Length} valores. Se esperaban 192."
-                    );
+                    throw new InvalidOperationException("No se detectó nivel de voz suficiente en la grabación. Asegúrate de hablar claramente cerca del micrófono.");
                 }
 
+                // ==========================================
+                // RECORTE DE SILENCIOS INICIALES Y FINALES
+                // (VAD - Voice Activity Detection adaptativo)
+                // ==========================================
+
+                float[] monoUtil = RecortarSilencios(mono);
 
                 // ==========================================
-                // NORMALIZACIÓN L2 DEL EMBEDDING
+                // GENERACIÓN DE EMBEDDINGS CANDIDATOS
+                // Permite compatibilidad 100% tanto con registros
+                // dinámicos nuevos como con registros anteriores de 201 frames
                 // ==========================================
 
-                double norma = 0;
+                var listaCandidatos = new List<float[]>();
 
-                for (int i = 0;
-                     i < embedding.Length;
-                     i++)
+                // Candidato 1: Voz útil con longitud dinámica completa
+                int framesDinamicos = Math.Clamp((monoUtil.Length - 400) / 160 + 1, 50, 450);
+                float[] embDinamico = CalcularEmbeddingParaMuestras(monoUtil, framesDinamicos);
+                listaCandidatos.Add(embDinamico);
+
+                // Candidato 2: Voz útil alineada a 201 frames (para comparar con registros fijos de 201 frames)
+                if (framesDinamicos != 201)
                 {
-                    norma +=
-                        embedding[i] *
-                        embedding[i];
+                    float[] emb201Util = CalcularEmbeddingParaMuestras(monoUtil, 201);
+                    listaCandidatos.Add(emb201Util);
                 }
 
-                norma =
-                    Math.Sqrt(norma);
-
-                if (norma <= 1e-12)
+                // Candidato 3: Audio original sin recortar con 201 frames (patrón legado estricto)
+                if (mono.Length >= 32560)
                 {
-                    throw new Exception(
-                        "El modelo generó un embedding inválido."
-                    );
+                    float[] embLegado201 = CalcularEmbeddingParaMuestras(mono, 201);
+                    listaCandidatos.Add(embLegado201);
                 }
 
-                for (int i = 0;
-                     i < embedding.Length;
-                     i++)
-                {
-                    embedding[i] =
-                        (float)(
-                            embedding[i] /
-                            norma
-                        );
-                }
-
-
-                // ==========================================
-                // DEBUG
-                // ==========================================
-
-                Console.WriteLine(
-                    "Embedding generado correctamente."
-                );
-
-                Console.WriteLine(
-                    $"Tamaño embedding: {embedding.Length}"
-                );
-
-                Console.WriteLine(
-                    $"Primeros valores: " +
-                    $"{embedding[0]:F4}, " +
-                    $"{embedding[1]:F4}, " +
-                    $"{embedding[2]:F4}, " +
-                    $"{embedding[3]:F4}, " +
-                    $"{embedding[4]:F4}"
-                );
-
-                return embedding;
+                Console.WriteLine($"Embeddings generados correctamente. Candidatos: {listaCandidatos.Count}, Frames dinámicos: {framesDinamicos}");
+                return listaCandidatos;
             }
             finally
             {
@@ -393,14 +235,132 @@ namespace trabajo.Service
 
                 if (File.Exists(rutaAudio))
                 {
-                    File.Delete(rutaAudio);
+                    try { File.Delete(rutaAudio); } catch {}
                 }
 
                 if (File.Exists(rutaWebM))
                 {
-                    File.Delete(rutaWebM);
+                    try { File.Delete(rutaWebM); } catch {}
                 }
             }
+        }
+
+        private float[] RecortarSilencios(float[] audio)
+        {
+            const int tamanoVentana = 320; // 20 ms a 16 kHz
+            int totalVentanas = audio.Length / tamanoVentana;
+            if (totalVentanas <= 10) return audio;
+
+            double[] energias = new double[totalVentanas];
+            double energiaMax = 0;
+
+            for (int v = 0; v < totalVentanas; v++)
+            {
+                double suma = 0;
+                int inicio = v * tamanoVentana;
+                for (int i = 0; i < tamanoVentana; i++)
+                {
+                    suma += audio[inicio + i] * audio[inicio + i];
+                }
+                energias[v] = suma / tamanoVentana;
+                if (energias[v] > energiaMax)
+                {
+                    energiaMax = energias[v];
+                }
+            }
+
+            if (energiaMax < 1e-5) return audio;
+
+            // Umbral adaptativo: 1.5% de la energía máxima del audio o piso de ruido
+            double umbral = Math.Max(energiaMax * 0.015, 0.00004);
+
+            int primerFrame = -1;
+            int ultimoFrame = -1;
+
+            for (int v = 0; v < totalVentanas; v++)
+            {
+                if (energias[v] >= umbral)
+                {
+                    if (primerFrame == -1) primerFrame = v;
+                    ultimoFrame = v;
+                }
+            }
+
+            if (primerFrame == -1 || ultimoFrame == -1) return audio;
+
+            // Margen de seguridad: 150 ms antes y 200 ms después para no cortar consonantes
+            int margenAntes = 150 * 16;  // 2400 muestras
+            int margenDespues = 200 * 16; // 3200 muestras
+
+            int inicioMuestra = Math.Max(0, (primerFrame * tamanoVentana) - margenAntes);
+            int finMuestra = Math.Min(audio.Length, ((ultimoFrame + 1) * tamanoVentana) + margenDespues);
+
+            int longitudRecortada = finMuestra - inicioMuestra;
+            if (longitudRecortada < 8000) // Al menos 0.5 s de audio
+            {
+                return audio;
+            }
+
+            float[] recortado = new float[longitudRecortada];
+            Array.Copy(audio, inicioMuestra, recortado, 0, longitudRecortada);
+            return recortado;
+        }
+
+        private float[] CalcularEmbeddingParaMuestras(float[] muestras, int cantidadFrames)
+        {
+            float[,] fbank = GenerarFbank(muestras, 16000, 80, cantidadFrames);
+
+            float[] datos = new float[80 * cantidadFrames];
+            for (int tiempo = 0; tiempo < cantidadFrames; tiempo++)
+            {
+                for (int frecuencia = 0; frecuencia < 80; frecuencia++)
+                {
+                    datos[tiempo * 80 + frecuencia] = fbank[frecuencia, tiempo];
+                }
+            }
+
+            var tensorFeatures = new DenseTensor<float>(
+                datos,
+                new int[] { 1, cantidadFrames, 80 }
+            );
+
+            var tensorLens = new DenseTensor<float>(
+                new float[] { 1.0f },
+                new int[] { 1 }
+            );
+
+            var entradas = new NamedOnnxValue[]
+            {
+                NamedOnnxValue.CreateFromTensor("features", tensorFeatures),
+                NamedOnnxValue.CreateFromTensor("feature_lens", tensorLens)
+            };
+
+            using var resultados = _sesion.Run(entradas);
+            var salida = resultados.First(x => x.Name == "embedding").AsTensor<float>();
+            float[] embedding = salida.ToArray();
+
+            if (embedding.Length != 192)
+            {
+                throw new Exception($"El modelo devolvió {embedding.Length} valores. Se esperaban 192.");
+            }
+
+            // Normalización L2
+            double norma = 0;
+            for (int i = 0; i < embedding.Length; i++)
+            {
+                norma += embedding[i] * embedding[i];
+            }
+            norma = Math.Sqrt(norma);
+
+            if (norma > 1e-12)
+            {
+                for (int i = 0; i < embedding.Length; i++)
+                {
+                    embedding[i] = (float)(embedding[i] / norma);
+                }
+            }
+
+            return embedding;
         }
 
         private float[] CambiarSampleRate(

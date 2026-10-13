@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = null;
 }
 
@@ -2865,11 +2865,11 @@
                         <div class="seguridad-voz-box">
 
                             <p style="font-weight:700;color:#3c096c;">
-                                🎙️ Di la siguiente frase:
+                                🎙️ Palabra o frase clave registrada:
                             </p>
 
                             <div class="alert alert-light text-center">
-                                <strong>Mi voz protege mi cuenta</strong>
+                                <strong id="textoFraseEsperadaVoz">Di tu palabra o frase de seguridad registrada</strong>
                             </div>
 
                             <button type="button"
@@ -2919,11 +2919,11 @@
                         <div class="seguridad-voz-box">
 
                             <p style="font-weight:700;color:#3c096c;">
-                                🎙️ Di la siguiente frase:
+                                🎙️ Palabra o frase clave registrada:
                             </p>
 
                             <div class="alert alert-light text-center">
-                                <strong>Mi voz protege mi cuenta</strong>
+                                <strong id="textoFraseEsperadaVoz">Di tu palabra o frase de seguridad registrada</strong>
                             </div>
 
                             <button type="button"
@@ -6707,9 +6707,13 @@
                         const resultado = await respuesta.json();
                         if (resultado.fraseVoz) {
                             fraseVozBD = resultado.fraseVoz;
+                            const elementoFrase = document.getElementById("textoFraseEsperadaVoz");
+                            if (elementoFrase) {
+                                elementoFrase.innerText = fraseVozBD;
+                            }
 
                             console.log(
-                                "Frase de seguridad recibida desde BD:",
+                                "Frase de seguridad configurada para verificación:",
                                 fraseVozBD
                             );
                         }
@@ -6951,6 +6955,7 @@
             let audioChunksVerificacion = [];
             let grabandoVerificacionVoz = false;
             let streamActualVerificacion = null;
+            let verificacionCancelada = false;
 
             let reconocimientoVoz = null;
             let fraseReconocida = "";
@@ -6963,6 +6968,9 @@
             // ==========================================
 
             function liberarRecursosVoz() {
+                // Marcar cancelación explícita para evitar que onstop envíe audio incompleto
+                verificacionCancelada = true;
+
                 // 1. Liberar pistas del micrófono de registro
                 if (streamActualLogin) {
                     try {
@@ -7175,7 +7183,7 @@
                     boton.classList.add("grabando", "btn-danger");
                     boton.innerHTML = "⏹️ Detener grabación";
 
-                    estado.innerText = "🔴 Grabando... Di: «Mi voz protege mi cuenta»";
+                    estado.innerText = "🔴 Grabando... Di tu palabra o frase clave registrada";
 
                     // Temporizador de seguridad: finalizar grabación tras 4.5 segundos si no se pulsa detener
                     temporizadorRegistroLogin = setTimeout(function() {
@@ -7414,6 +7422,7 @@
 
                     streamActualVerificacion = stream;
 
+                    verificacionCancelada = false;
                     fraseReconocida = "";
                     audioChunksVerificacion = [];
                     procesandoVoz = false;
@@ -7439,12 +7448,15 @@
                             streamActualVerificacion = null;
                         }
 
-                        if (reconocimientoVoz) {
-                            try { reconocimientoVoz.stop(); } catch (e) {}
+                        if (verificacionCancelada) {
+                            console.log("🛑 Grabación cancelada: no se envía.");
+                            audioChunksVerificacion = [];
+                            return;
                         }
 
                         const tipoFinal = (mediaRecorderVerificacion && mediaRecorderVerificacion.mimeType) || mimeType || "audio/webm";
                         const audio = new Blob(audioChunksVerificacion, { type: tipoFinal });
+                        audioChunksVerificacion = [];
 
                         console.log("🎙️ Audio creado:", audio.size, "bytes");
                         estado.innerText = "⏳ Procesando grabación...";
@@ -7452,44 +7464,12 @@
                         await enviarVerificacionVoz(audio);
                     };
 
-                    // Reconocimiento opcional asistido
-                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    if (SpeechRecognition) {
-                        try {
-                            reconocimientoVoz = new SpeechRecognition();
-                            reconocimientoVoz.lang = "es-PE";
-                            reconocimientoVoz.continuous = false;
-                            reconocimientoVoz.interimResults = false;
+                    // NOTA: NO ejecutar SpeechRecognition simultáneamente con MediaRecorder.
+                    // En Android Chrome, SpeechRecognition toma bloqueo exclusivo del hardware de audio,
+                    // silenciando por completo la pista de MediaRecorder (lo que provocaba similitud 0.3193).
+                    // La autenticación biométrica es 100% realizada por el modelo ECAPA-TDNN en el servidor.
 
-                            reconocimientoVoz.onresult = function(event) {
-                                let textoDetectado = "";
-                                for (let i = event.resultIndex; i < event.results.length; i++) {
-                                    if (event.results[i].isFinal) {
-                                        textoDetectado += " " + event.results[i][0].transcript;
-                                    }
-                                }
-                                if (textoDetectado.trim()) {
-                                    fraseReconocida += " " + textoDetectado;
-                                    const fraseActual = normalizarTextoVoz(fraseReconocida);
-                                    const fraseEsperada = normalizarTextoVoz(fraseVozBD || "Mi voz protege mi cuenta");
-                                    if (fraseActual.includes(fraseEsperada)) {
-                                        console.log("✅ Frase esperada detectada por SpeechRecognition.");
-                                        detenerVerificacionVoz();
-                                    }
-                                }
-                            };
-
-                            reconocimientoVoz.onerror = function(event) {
-                                console.log("SpeechRecognition aviso en verificación:", event.error);
-                            };
-
-                            try {
-                                reconocimientoVoz.start();
-                            } catch (e) {}
-                        } catch (e) {}
-                    }
-
-                    mediaRecorderVerificacion.start();
+                    mediaRecorderVerificacion.start(250);
                     grabandoVerificacionVoz = true;
 
                     boton.disabled = false;
@@ -7497,7 +7477,7 @@
                     boton.classList.add("grabando", "btn-danger");
                     boton.innerHTML = "⏹️ Detener y verificar";
 
-                    estado.innerText = "🔴 Grabando... Di: «Mi voz protege mi cuenta»";
+                    estado.innerText = "🔴 Grabando... Di tu palabra o frase clave registrada";
 
                     temporizadorVoz = setTimeout(function() {
                         if (grabandoVerificacionVoz && !procesandoVoz) {
@@ -7553,8 +7533,8 @@
                 const boton = document.getElementById("btnVerificarVoz");
                 const estado = document.getElementById("estadoVerificacionVoz");
 
-                if (!audioBlob || audioBlob.size === 0) {
-                    if (estado) estado.innerText = "❌ No se obtuvo la grabación.";
+                if (!audioBlob || audioBlob.size < 2000) {
+                    if (estado) estado.innerText = "❌ No se detectó audio del micrófono. Habla claramente e inténtalo nuevamente.";
                     if (boton) {
                         boton.disabled = false;
                         boton.classList.remove("grabando", "btn-danger");
@@ -7566,26 +7546,7 @@
                     return;
                 }
 
-                // Validación de frase solo si SpeechRecognition detectó texto de forma concluyente
-                if (fraseReconocida && fraseReconocida.trim().length > 0 && fraseVozBD) {
-                    const frase = normalizarTextoVoz(fraseReconocida);
-                    const fraseEsperada = normalizarTextoVoz(fraseVozBD);
-                    if (!frase.includes(fraseEsperada)) {
-                        console.log("❌ Frase distinta detectada por SpeechRecognition");
-                        if (estado) estado.innerText = "❌ La frase de seguridad no coincide. Recuerda decir: «Mi voz protege mi cuenta».";
-                        if (boton) {
-                            boton.disabled = false;
-                            boton.classList.remove("grabando", "btn-danger");
-                            boton.classList.add("btn-success");
-                            boton.innerHTML = "🎙️ Intentar nuevamente";
-                        }
-                        grabandoVerificacionVoz = false;
-                        procesandoVoz = false;
-                        return;
-                    }
-                }
-
-                if (estado) estado.innerText = "✅ Audio capturado. Verificando patrón biométrico...";
+                if (estado) estado.innerText = "✅ Grabación capturada. Verificando identidad y palabra clave...";
 
                 const ext = obtenerExtensionAudio(audioBlob.type);
                 const formData = new FormData();
@@ -7622,6 +7583,19 @@
                             return;
                         }
 
+                        if (resultado.esErrorAudio) {
+                            if (estado) estado.innerText = "⚠️ " + resultado.mensaje;
+                            if (boton) {
+                                boton.disabled = false;
+                                boton.classList.remove("grabando", "btn-danger");
+                                boton.classList.add("btn-success");
+                                boton.innerHTML = "🎙️ Hablar palabra clave";
+                            }
+                            grabandoVerificacionVoz = false;
+                            procesandoVoz = false;
+                            return;
+                        }
+
                         if (estado) {
                             estado.innerText = "❌ " + (resultado.mensaje || "No se pudo verificar la voz.");
                         }
@@ -7634,7 +7608,7 @@
                         return;
                     }
 
-                    if (estado) estado.innerText = "🟢 Voz verificada correctamente. Ingresando...";
+                    if (estado) estado.innerText = "🟢 Voz y palabra clave verificadas correctamente. Ingresando...";
                     if (boton) {
                         boton.innerHTML = "✅ Verificación correcta";
                         boton.disabled = true;
@@ -7758,7 +7732,8 @@
                         liberarRecursosVoz();
                     });
                 }
-            });
+            });
+
             // ==========================================
             // BLOQUEAR OPCIÓN DE VOZ
             // ==========================================
