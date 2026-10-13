@@ -116,30 +116,48 @@ class _AuthenticatorPageState
     }
   }
   Future<void> _configurarNotificaciones() async {
-    final FirebaseMessaging messaging =
-        FirebaseMessaging.instance;
+    try {
+      final FirebaseMessaging messaging =
+          FirebaseMessaging.instance;
 
-    final NotificationSettings settings =
-    await messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+      try {
+        final NotificationSettings settings =
+            await messaging.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        ).timeout(const Duration(seconds: 3));
 
-    debugPrint(
-      'Permiso de notificaciones: ${settings.authorizationStatus}',
-    );
+        debugPrint(
+          'Permiso de notificaciones: ${settings.authorizationStatus}',
+        );
+      } catch (e) {
+        debugPrint(
+          'Aviso: no se pudo obtener respuesta del permiso de notificaciones: $e',
+        );
+      }
 
-    final String? token =
-    await messaging.getToken();
+      try {
+        final String? token = await messaging
+            .getToken()
+            .timeout(const Duration(seconds: 3));
 
-    if (token != null &&
-        token.trim().isNotEmpty) {
+        if (token != null &&
+            token.trim().isNotEmpty) {
+          _fcmToken = token.trim();
 
-      _fcmToken = token.trim();
-
+          debugPrint(
+            'FCM TOKEN OBTENIDO: $_fcmToken',
+          );
+        }
+      } catch (e) {
+        debugPrint(
+          'Aviso: no se pudo obtener FCM Token: $e',
+        );
+      }
+    } catch (e) {
       debugPrint(
-        'FCM TOKEN OBTENIDO: $_fcmToken',
+        'Aviso general en _configurarNotificaciones: $e',
       );
     }
   }
@@ -284,6 +302,7 @@ class _AuthenticatorPageState
   String _fcmToken = '';
 
   bool _cargando = true;
+  String? _errorAlmacenamiento;
   static const bool _usarBackendLocal = false;
 
   String get _backendBaseUrl {
@@ -317,37 +336,55 @@ class _AuthenticatorPageState
   }
 
   Future<void> _inicializarAuthenticator() async {
-
-    // 1. Pedir permisos y obtener FCM Token
-    await _configurarNotificaciones();
-
-    // 2. Cargar cuenta TOTP guardada
-    await _cargarDatosGuardados();
-
-    if (!mounted) return;
-
-    // 3. Si ya existe una cuenta configurada,
-    // registrar automáticamente este celular
-    // en el backend.
-    if (_secretTotp.trim().isNotEmpty) {
-
+    // 1. CARGA INMEDIATA: Cargar cuentas TOTP guardadas localmente.
+    // Se ejecuta antes de cualquier operación de red o Firebase
+    // para que la app cargue de inmediato incluso sin conexión a Internet.
+    try {
+      await _cargarDatosGuardados();
+    } catch (e) {
       debugPrint(
-          'CUENTA GUARDADA: [$_nombreCuenta]'
+        'Error inesperado en _cargarDatosGuardados(): $e',
       );
-
-      final registrado =
-      await _registrarDispositivoBackend();
-
-      debugPrint(
-        registrado
-            ? 'DISPOSITIVO VINCULADO AUTOMÁTICAMENTE'
-            : 'NO SE PUDO VINCULAR EL DISPOSITIVO AUTOMÁTICAMENTE',
-      );
+    } finally {
+      if (mounted && _cargando) {
+        setState(() {
+          _cargando = false;
+        });
+      }
     }
 
     if (!mounted) return;
 
+    // Calcular de inmediato el código TOTP con la cuenta seleccionada
     _actualizarTiempo();
+
+    // 2. OPERACIONES REMOTAS EN SEGUNDO PLANO:
+    // Configurar notificaciones y registrar dispositivo si hay conexión.
+    // No bloquean la interfaz ni la generación de códigos locales.
+    try {
+      await _configurarNotificaciones();
+
+      if (!mounted) return;
+
+      if (_secretTotp.trim().isNotEmpty && _fcmToken.trim().isNotEmpty) {
+        debugPrint(
+          'CUENTA GUARDADA: [$_nombreCuenta]',
+        );
+
+        final registrado =
+            await _registrarDispositivoBackend();
+
+        debugPrint(
+          registrado
+              ? 'DISPOSITIVO VINCULADO AUTOMÁTICAMENTE'
+              : 'NO SE PUDO VINCULAR EL DISPOSITIVO AUTOMÁTICAMENTE',
+        );
+      }
+    } catch (e) {
+      debugPrint(
+        'Aviso en inicialización remota (Firebase/Backend): $e',
+      );
+    }
   }
 
   Future<void> _cargarDatosGuardados() async {
@@ -437,6 +474,7 @@ class _AuthenticatorPageState
 
       setState(() {
         _cargando = false;
+        _errorAlmacenamiento = null;
       });
 
       debugPrint(
@@ -451,12 +489,15 @@ class _AuthenticatorPageState
 
       setState(() {
         _cargando = false;
-        _cuentas.clear();
-        _indiceCuentaSeleccionada = -1;
-        _secretTotp = '';
-        _nombreCuenta = '';
-        _codigoTotp = '--- ---';
+        _errorAlmacenamiento =
+            'Error al acceder al almacenamiento seguro ($e). Tus cuentas no han sido borradas. Toca "Reintentar lectura" o reinicia la app.';
       });
+    } finally {
+      if (mounted && _cargando) {
+        setState(() {
+          _cargando = false;
+        });
+      }
     }
   }
 
@@ -672,19 +713,28 @@ class _AuthenticatorPageState
       String token = _fcmToken.trim();
 
       if (token.isEmpty) {
-        final nuevoToken =
-        await FirebaseMessaging.instance.getToken();
+        try {
+          final nuevoToken = await FirebaseMessaging.instance
+              .getToken()
+              .timeout(const Duration(seconds: 3));
 
-        if (nuevoToken == null ||
-            nuevoToken.trim().isEmpty) {
+          if (nuevoToken != null &&
+              nuevoToken.trim().isNotEmpty) {
+            token = nuevoToken.trim();
+            _fcmToken = token;
+          }
+        } catch (e) {
+          debugPrint(
+            'Aviso obteniendo token en _registrarDispositivoBackend: $e',
+          );
+        }
+
+        if (token.isEmpty) {
           debugPrint(
             'No se pudo obtener el FCM Token.',
           );
           return false;
         }
-
-        token = nuevoToken.trim();
-        _fcmToken = token;
       }
 
       final codigoTotp =
@@ -712,7 +762,7 @@ class _AuthenticatorPageState
           'fcmToken': token,
           'nombreDispositivo': 'Android',
         },
-      );
+      ).timeout(const Duration(seconds: 5));
 
       debugPrint(
         'HTTP REGISTRO DISPOSITIVO: ${respuesta.statusCode}',
@@ -723,18 +773,20 @@ class _AuthenticatorPageState
       );
 
       if (respuesta.statusCode != 200) {
-        throw Exception(
+        debugPrint(
           'HTTP ${respuesta.statusCode}: ${respuesta.body}',
         );
+        return false;
       }
 
       final datos = jsonDecode(respuesta.body);
 
       if (datos['ok'] != true) {
-        throw Exception(
+        debugPrint(
           datos['mensaje']?.toString() ??
               'El servidor rechazó el registro del dispositivo.',
         );
+        return false;
       }
 
       return true;
@@ -743,7 +795,7 @@ class _AuthenticatorPageState
         'ERROR REGISTRANDO DISPOSITIVO: $e',
       );
 
-      rethrow;
+      return false;
     }
   }
   Future<void> _seleccionarCuenta(
@@ -1043,6 +1095,10 @@ class _AuthenticatorPageState
                   children: [
                     _buildWelcome(),
                     const SizedBox(height: 24),
+                    if (_errorAlmacenamiento != null) ...[
+                      _buildErrorAlmacenamiento(),
+                      const SizedBox(height: 16),
+                    ],
                     _buildCodeCard(progreso),
                     const SizedBox(height: 22),
                     _buildScanButton(),
@@ -1180,6 +1236,79 @@ class _AuthenticatorPageState
     );
   }
 
+  Widget _buildErrorAlmacenamiento() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3F2),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: const Color(0xFFFECDCA),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: Color(0xFFD92D20),
+                size: 22,
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Aviso de almacenamiento seguro',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFB42318),
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _errorAlmacenamiento ?? '',
+            style: const TextStyle(
+              color: Color(0xFF531109),
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _cargando = true;
+                  _errorAlmacenamiento = null;
+                });
+                _cargarDatosGuardados();
+              },
+              icon: const Icon(
+                Icons.refresh_rounded,
+                size: 18,
+                color: Color(0xFFB42318),
+              ),
+              label: const Text(
+                'Reintentar lectura',
+                style: TextStyle(
+                  color: Color(0xFFB42318),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCodeCard(
       double progreso,
       ) {
@@ -1257,6 +1386,8 @@ class _AuthenticatorPageState
                     Text(
                       _cargando
                           ? 'Cargando...'
+                          : _errorAlmacenamiento != null
+                          ? 'Error al leer almacenamiento'
                           : _tieneCuenta
                           ? (_nombreCuenta
                           .isEmpty
@@ -1306,7 +1437,9 @@ class _AuthenticatorPageState
                       width: 5,
                     ),
                     Text(
-                      _tieneCuenta
+                      _errorAlmacenamiento != null
+                          ? 'Error de lectura'
+                          : _tieneCuenta
                           ? 'Protegido'
                           : 'Sin configurar',
                       style:
@@ -1397,6 +1530,8 @@ class _AuthenticatorPageState
                   child: Text(
                     _cargando
                         ? 'Cargando cuenta...'
+                        : _errorAlmacenamiento != null
+                        ? 'Error de almacenamiento seguro'
                         : _tieneCuenta
                         ? 'Nuevo código en $_segundosRestantes segundos'
                         : 'Agrega una cuenta para comenzar',
