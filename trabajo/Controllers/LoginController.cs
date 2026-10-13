@@ -896,20 +896,39 @@ namespace trabajo.Controllers
 
                 try
                 {
-                    string rutaModelo = Path.Combine(Directory.GetCurrentDirectory(), "ModelosVoz", "vosk-model-small-es-0.42");
-                    if (!Directory.Exists(rutaModelo))
+                    string[] rutasCandidatas = new[]
                     {
-                        rutaModelo = Path.Combine(AppContext.BaseDirectory, "ModelosVoz", "vosk-model-small-es-0.42");
+                        Path.Combine(Directory.GetCurrentDirectory(), "ModelosVoz", "vosk-model-small-es-0.42"),
+                        Path.Combine(AppContext.BaseDirectory, "ModelosVoz", "vosk-model-small-es-0.42"),
+                        Path.Combine("/app", "ModelosVoz", "vosk-model-small-es-0.42"),
+                        Path.Combine("/src", "trabajo", "ModelosVoz", "vosk-model-small-es-0.42"),
+                        Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "trabajo", "ModelosVoz", "vosk-model-small-es-0.42")),
+                        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "ModelosVoz", "vosk-model-small-es-0.42"))
+                    };
+
+                    string? rutaValida = null;
+                    foreach (var ruta in rutasCandidatas)
+                    {
+                        if (Directory.Exists(ruta))
+                        {
+                            rutaValida = ruta;
+                            break;
+                        }
                     }
 
-                    if (Directory.Exists(rutaModelo))
+                    if (rutaValida != null)
                     {
-                        _modeloVosk = new Model(rutaModelo);
+                        _modeloVosk = new Model(rutaValida);
+                        Console.WriteLine("Diagnóstico técnico Vosk: Modelo cargado correctamente desde carpeta existente.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Aviso técnico Vosk: No se encontró la carpeta del modelo 'vosk-model-small-es-0.42' en las rutas del servidor/contenedor.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Aviso: No se pudo cargar el modelo Vosk: " + ex.Message);
+                    Console.WriteLine("Aviso técnico Vosk: Error cargando el modelo: " + ex.Message);
                 }
 
                 return _modeloVosk;
@@ -1121,6 +1140,7 @@ namespace trabajo.Controllers
                 Usuario usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dniLoginPendiente);
                 if (usuario == null)
                 {
+                    Console.WriteLine("Usuario localizado: NO");
                     return Json(new
                     {
                         ok = false,
@@ -1235,7 +1255,13 @@ namespace trabajo.Controllers
                 // VALIDACIÓN B: PALABRA CLAVE (EXCLUSIVAMENTE VOSK EN SERVIDOR)
                 // ==========================================
                 byte[] wavBytes = await ConvertirAudioAWavPcm16k(audio);
+                bool ffmpegOk = wavBytes != null && wavBytes.Length > 0;
+
+                Model? modeloVosk = ObtenerModeloVosk();
+                bool modeloCargado = modeloVosk != null;
+
                 string transcripcionServidor = TranscribirAudioConVosk(wavBytes);
+                bool transcripcionVacia = string.IsNullOrWhiteSpace(transcripcionServidor);
 
                 bool palabraValida = VerificarCoincidenciaPalabraClave(transcripcionServidor, usuario.FraseVoz);
 
@@ -1246,6 +1272,14 @@ namespace trabajo.Controllers
                 Console.WriteLine("VERIFICACIÓN INDEPENDIENTE DE VOZ");
                 Console.WriteLine($"BIOMETRÍA ECAPA-TDNN: {(biometriaValida ? "CORRECTA" : "RECHAZADA")} (Similitud: {similitud:F4})");
                 Console.WriteLine($"PALABRA CLAVE: {(palabraValida ? "CORRECTA" : "INCORRECTA")}");
+                Console.WriteLine("--- DIAGNÓSTICO TÉCNICO SEGURO ---");
+                Console.WriteLine("Usuario localizado: SÍ");
+                Console.WriteLine($"FraseVoz recuperada: {(usuario.FraseVoz != null ? "SÍ" : "NO")}");
+                Console.WriteLine($"FraseVoz vacía o NULL: {(string.IsNullOrWhiteSpace(usuario.FraseVoz) ? "SÍ" : "NO")}");
+                Console.WriteLine($"Modelo Vosk cargado: {(modeloCargado ? "SÍ" : "NO")}");
+                Console.WriteLine($"FFmpeg ejecutado correctamente: {(ffmpegOk ? "SÍ" : "NO")}");
+                Console.WriteLine($"Transcripción Vosk vacía: {(transcripcionVacia ? "SÍ" : "NO")}");
+                Console.WriteLine($"Coincidencia exacta después de normalizar: {(palabraValida ? "SÍ" : "NO")}");
                 Console.WriteLine($"RESULTADO GENERAL: {(biometriaValida && palabraValida ? "ACCESO CONCEDIDO" : "ACCESO DENEGADO")}");
                 Console.WriteLine("==========================================");
 
