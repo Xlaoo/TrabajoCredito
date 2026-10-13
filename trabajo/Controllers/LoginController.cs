@@ -993,6 +993,57 @@ namespace trabajo.Controllers
             }
         }
 
+        private static ReadOnlyMemory<byte> ExtraerPcmDeWav(byte[] wavBytes)
+        {
+            if (wavBytes == null || wavBytes.Length < 12)
+                return ReadOnlyMemory<byte>.Empty;
+
+            // Analizar la estructura RIFF/WAV para localizar el bloque "data" sin asumir tamaño fijo de encabezado
+            if (wavBytes[0] == 'R' && wavBytes[1] == 'I' && wavBytes[2] == 'F' && wavBytes[3] == 'F' &&
+                wavBytes[8] == 'W' && wavBytes[9] == 'A' && wavBytes[10] == 'V' && wavBytes[11] == 'E')
+            {
+                int offset = 12;
+                while (offset + 8 <= wavBytes.Length)
+                {
+                    string chunkId = Encoding.ASCII.GetString(wavBytes, offset, 4);
+                    int chunkSize = BitConverter.ToInt32(wavBytes, offset + 4);
+
+                    if (chunkSize < 0) break;
+
+                    if (chunkId == "data")
+                    {
+                        int dataStart = offset + 8;
+                        int dataLen = Math.Min(chunkSize, wavBytes.Length - dataStart);
+                        if (dataLen > 0)
+                        {
+                            return new ReadOnlyMemory<byte>(wavBytes, dataStart, dataLen);
+                        }
+                        break;
+                    }
+
+                    offset += 8 + chunkSize;
+                    if ((chunkSize & 1) == 1) offset++; // Alinear a word si es impar
+                }
+            }
+
+            return new ReadOnlyMemory<byte>(wavBytes);
+        }
+
+        private static string ExtraerTextoDeJsonVosk(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return "";
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("text", out var textProp))
+                {
+                    return textProp.GetString() ?? "";
+                }
+            }
+            catch { }
+            return "";
+        }
+
         private static string TranscribirAudioConVosk(byte[] wavBytes)
         {
             if (wavBytes == null || wavBytes.Length == 0) return "";
@@ -1001,14 +1052,42 @@ namespace trabajo.Controllers
                 var model = ObtenerModeloVosk();
                 if (model == null) return "";
 
+                ReadOnlyMemory<byte> pcmData = ExtraerPcmDeWav(wavBytes);
+                if (pcmData.Length == 0) return "";
+
                 using var rec = new VoskRecognizer(model, 16000.0f);
-                rec.AcceptWaveform(wavBytes, wavBytes.Length);
-                string json = rec.FinalResult();
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("text", out var textProp))
+                var sb = new StringBuilder();
+
+                const int chunkSize = 4096;
+                ReadOnlySpan<byte> pcmSpan = pcmData.Span;
+                byte[] buffer = new byte[chunkSize];
+
+                for (int i = 0; i < pcmSpan.Length; i += chunkSize)
                 {
-                    return textProp.GetString() ?? "";
+                    int len = Math.Min(chunkSize, pcmSpan.Length - i);
+                    pcmSpan.Slice(i, len).CopyTo(buffer);
+
+                    if (rec.AcceptWaveform(buffer, len))
+                    {
+                        string resJson = rec.Result();
+                        string seg = ExtraerTextoDeJsonVosk(resJson);
+                        if (!string.IsNullOrWhiteSpace(seg))
+                        {
+                            if (sb.Length > 0) sb.Append(" ");
+                            sb.Append(seg.Trim());
+                        }
+                    }
                 }
+
+                string finalJson = rec.FinalResult();
+                string segFinal = ExtraerTextoDeJsonVosk(finalJson);
+                if (!string.IsNullOrWhiteSpace(segFinal))
+                {
+                    if (sb.Length > 0) sb.Append(" ");
+                    sb.Append(segFinal.Trim());
+                }
+
+                return Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
             }
             catch (Exception ex)
             {

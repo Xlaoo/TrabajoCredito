@@ -145,6 +145,9 @@ app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Endpoint público y ligero de Liveness Health Check para Northflank
+app.MapGet("/health", () => Results.Text("Healthy", "text/plain", statusCode: StatusCodes.Status200OK)).AllowAnonymous();
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Login}/{action=PantallaPrincipal}/{id?}");
