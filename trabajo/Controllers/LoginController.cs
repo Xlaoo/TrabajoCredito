@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +13,7 @@ using trabajo.Service;
 using System.Text;
 using System.Security.Cryptography;
 using FirebaseAdmin.Messaging;
+using System.Collections.Concurrent;
 namespace trabajo.Controllers
 {
     [Authorize]
@@ -23,6 +24,52 @@ namespace trabajo.Controllers
         private readonly ServicioEmbeddingVoz _ServicioEmbeddingVoz;
         private readonly EmailService _emailService = new EmailService();
         private static string codigoLogin = "";
+
+        // ==========================================
+        // SEGURIDAD - ALERTAS DE ACCESO (RATE LIMIT 5 MIN)
+        // ==========================================
+        private static readonly ConcurrentDictionary<string, (DateTime UltimoEnvio, int ContadorFallos)> _alertasFallidasCache = new();
+
+        // ==========================================
+        // COMPATIBILIDAD CON GMAIL, HOTMAIL, OUTLOOK
+        // ==========================================
+        private static readonly Regex _regexCorreoValido = new(
+            @"^[A-Za-z0-9._%+-]+@(gmail\.com|hotmail\.com|hotmail\.es|outlook\.com|outlook\.es|live\.com)$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static bool EsCorreoValidoDominio(string? correo)
+        {
+            if (string.IsNullOrWhiteSpace(correo)) return false;
+            return _regexCorreoValido.IsMatch(correo.Trim());
+        }
+
+        private string ObtenerDispositivoCliente()
+        {
+            try
+            {
+                string userAgent = Request.Headers["User-Agent"].ToString();
+                if (string.IsNullOrWhiteSpace(userAgent)) return "Dispositivo no identificado";
+
+                string so = "Sistema desconocido";
+                if (userAgent.Contains("Windows")) so = "Windows";
+                else if (userAgent.Contains("Android")) so = "Android";
+                else if (userAgent.Contains("iPhone") || userAgent.Contains("iPad")) so = "iOS";
+                else if (userAgent.Contains("Macintosh") || userAgent.Contains("Mac OS")) so = "macOS";
+                else if (userAgent.Contains("Linux")) so = "Linux";
+
+                string navegador = "Navegador web";
+                if (userAgent.Contains("Edg/")) navegador = "Microsoft Edge";
+                else if (userAgent.Contains("Chrome/") && !userAgent.Contains("Edg/")) navegador = "Google Chrome";
+                else if (userAgent.Contains("Firefox/")) navegador = "Mozilla Firefox";
+                else if (userAgent.Contains("Safari/") && !userAgent.Contains("Chrome/")) navegador = "Safari";
+
+                return $"{navegador} en {so}";
+            }
+            catch
+            {
+                return "Navegador web";
+            }
+        }
         // ==========================================
         // RECUPERACIÓN DE CONTRASEÑA
         // ==========================================
@@ -142,15 +189,13 @@ namespace trabajo.Controllers
             // ==========================================
 
             if (string.IsNullOrWhiteSpace(usuario.Correo) ||
-                !Regex.IsMatch(
-                    usuario.Correo,
-                    @"^[A-Za-z0-9._%+-]+@gmail\.com$"))
+                !EsCorreoValidoDominio(usuario.Correo))
             {
                 return Json(new
                 {
                     ok = false,
                     campo = "correoRegistro",
-                    mensaje = "El correo debe ser Gmail."
+                    mensaje = "Ingresa un correo válido (Gmail, Hotmail o Outlook)."
                 });
             }
 
@@ -246,325 +291,65 @@ namespace trabajo.Controllers
             }
 
             // ==========================================
-            // AUDIO
+            // VERIFICACIÓN DE CORREO
             // ==========================================
 
-            if (audio == null || audio.Length == 0)
-            {
-                return Json(new
-                {
-                    ok = false,
-                    campo = "btnGrabarVoz",
-                    mensaje =
-                        "Debes grabar y confirmar tu voz antes de registrarte."
-                });
-            }
+            string verificadoSesion =
+                HttpContext.Session.GetString("CodigoRegistroVerificado");
 
-            if (audio.Length > 5 * 1024 * 1024)
-            {
-                return Json(new
-                {
-                    ok = false,
-                    campo = "btnGrabarVoz",
-                    mensaje = "El audio no puede superar los 5 MB."
-                });
-            }
+            string correoVerificadoSesion =
+                HttpContext.Session.GetString("CorreoRegistroVerificado");
 
-            var tiposAudioPermitidos = new[]
-            {
-        "audio/webm",
-        "audio/wav",
-        "audio/mpeg",
-        "audio/mp4",
-        "audio/ogg"
-    };
-
-            bool audioValido =
-                tiposAudioPermitidos.Any(tipo =>
-                    audio.ContentType.StartsWith(
-                        tipo,
-                        StringComparison.OrdinalIgnoreCase));
-
-            if (!audioValido)
-            {
-                return Json(new
-                {
-                    ok = false,
-                    campo = "btnGrabarVoz",
-                    mensaje = "El archivo enviado no es un audio válido."
-                });
-            }
-
-            // ==========================================
-            // CÓDIGO
-            // ==========================================
-
-            // ==========================================
-            // CÓDIGO DE VERIFICACIÓN
-            // ==========================================
-
-            if (string.IsNullOrWhiteSpace(codigoVerificacion))
-            {
-                return Json(new
-                {
-                    ok = false,
-                    campo = "codigoRegistro",
-                    mensaje =
-                        "Ingresa el código de verificación."
-                });
-            }
-
-
-            string codigoGuardado =
-                HttpContext.Session.GetString(
-                    "CodigoRegistro"
-                );
-
-            string correoCodigo =
-                HttpContext.Session.GetString(
-                    "CodigoRegistroCorreo"
-                );
-
-            string expiracionTexto =
-                HttpContext.Session.GetString(
-                    "CodigoRegistroExpira"
-                );
-
-
-            // ==========================================
-            // NO SE SOLICITÓ CÓDIGO
-            // ==========================================
-
-            if (string.IsNullOrWhiteSpace(codigoGuardado))
-            {
-                return Json(new
-                {
-                    ok = false,
-                    campo = "codigoRegistro",
-                    mensaje =
-                        "Primero debes solicitar un código de verificación."
-                });
-            }
-
-
-            // ==========================================
-            // VERIFICAR EXPIRACIÓN
-            // ==========================================
-
-            if (!long.TryParse(
-                    expiracionTexto,
-                    out long expiracionUnix))
-            {
-                HttpContext.Session.Remove(
-                    "CodigoRegistro"
-                );
-
-                HttpContext.Session.Remove(
-                    "CodigoRegistroCorreo"
-                );
-
-                HttpContext.Session.Remove(
-                    "CodigoRegistroExpira"
-                );
-
-                return Json(new
-                {
-                    ok = false,
-                    campo = "codigoRegistro",
-                    codigoExpirado = true,
-
-                    mensaje =
-                        "El código ya no es válido. Solicita uno nuevo."
-                });
-            }
-
-
-            // ==========================================
-            // OBTENER HORA ACTUAL
-            // ==========================================
-
-            long ahoraUnix =
-                DateTimeOffset.UtcNow
-                    .ToUnixTimeSeconds();
-
-
-            // ==========================================
-            // CÓDIGO REALMENTE EXPIRADO
-            // ==========================================
-
-            if (ahoraUnix >= expiracionUnix)
-            {
-                HttpContext.Session.Remove(
-                    "CodigoRegistro"
-                );
-
-                HttpContext.Session.Remove(
-                    "CodigoRegistroCorreo"
-                );
-
-                HttpContext.Session.Remove(
-                    "CodigoRegistroExpira"
-                );
-
-                return Json(new
-                {
-                    ok = false,
-                    campo = "codigoRegistro",
-                    codigoExpirado = true,
-
-                    mensaje =
-                        "El código de verificación ha expirado. Pulsa «Enviar nuevamente el código»."
-                });
-            }
-
-
-            // ==========================================
-            // CORREO DEBE SER EL MISMO
-            // ==========================================
-
-            if (!string.Equals(
+            bool correoValidado =
+                verificadoSesion == "true" &&
+                string.Equals(
                     usuario.Correo?.Trim(),
-                    correoCodigo,
-                    StringComparison.OrdinalIgnoreCase))
+                    correoVerificadoSesion,
+                    StringComparison.OrdinalIgnoreCase);
+
+            if (!correoValidado)
+            {
+                // Si aún no está verificado en sesión mediante el modal, verificar si se envió el código directamente
+                if (!string.IsNullOrWhiteSpace(codigoVerificacion))
+                {
+                    string hashGuardado =
+                        HttpContext.Session.GetString("HashCodigoRegistro");
+
+                    string correoCodigo =
+                        HttpContext.Session.GetString("CodigoRegistroCorreo");
+
+                    string expiracionTexto =
+                        HttpContext.Session.GetString("CodigoRegistroExpira");
+
+                    if (!string.IsNullOrWhiteSpace(hashGuardado) &&
+                        long.TryParse(expiracionTexto, out long expUnix) &&
+                        DateTimeOffset.UtcNow.ToUnixTimeSeconds() < expUnix &&
+                        string.Equals(usuario.Correo?.Trim(), correoCodigo, StringComparison.OrdinalIgnoreCase))
+                    {
+                        string hashIngresado = utilidades.EncriptarClave(codigoVerificacion.Trim());
+                        byte[] hashIngresadoBytes = Encoding.UTF8.GetBytes(hashIngresado);
+                        byte[] hashGuardadoBytes = Encoding.UTF8.GetBytes(hashGuardado);
+
+                        if (CryptographicOperations.FixedTimeEquals(hashIngresadoBytes, hashGuardadoBytes))
+                        {
+                            correoValidado = true;
+                        }
+                    }
+                }
+            }
+
+            if (!correoValidado)
             {
                 return Json(new
                 {
                     ok = false,
                     campo = "correoRegistro",
-                    mensaje =
-                        "El correo cambió después de enviar el código. Debes solicitar un nuevo código para este correo."
-                });
-            }
-            if (codigoVerificacion.Trim().Length != 6)
-            {
-                return Json(new
-                {
-                    ok = false,
-                    campo = "codigoRegistro",
-
-                    mensaje =
-                        "El código de verificación debe tener 6 caracteres."
+                    mensaje = "Debes verificar tu correo electrónico antes de registrarte."
                 });
             }
 
             // ==========================================
-            // NORMALIZAR CÓDIGO INGRESADO
-            // ==========================================
-
-            string codigoIngresado =
-                codigoVerificacion
-                    .Trim()
-                    .ToUpperInvariant();
-
-            string codigoCorrecto =
-                codigoGuardado
-                    .Trim()
-                    .ToUpperInvariant();
-
-
-            // ==========================================
-            // COMPROBAR CÓDIGO
-            // ==========================================
-
-            if (!string.Equals(
-                    codigoIngresado,
-                    codigoCorrecto,
-                    StringComparison.Ordinal))
-            {
-                Console.WriteLine(
-                    "CÓDIGO INGRESADO: [" +
-                    codigoIngresado +
-                    "]"
-                );
-
-                Console.WriteLine(
-                    "CÓDIGO GUARDADO: [" +
-                    codigoCorrecto +
-                    "]"
-                );
-
-                return Json(new
-                {
-                    ok = false,
-                    campo = "codigoRegistro",
-
-                    mensaje =
-                        "El código de verificación es incorrecto. Revisa el código enviado a tu correo."
-                });
-            }
-
-            // ==========================================
-            // GUARDAR AUDIO
-            // ==========================================
-
-            string carpetaAudio =
-                Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    "wwwroot",
-                    "audiosRegistro"
-                );
-
-            if (!Directory.Exists(carpetaAudio))
-            {
-                Directory.CreateDirectory(carpetaAudio);
-            }
-
-            string nombreAudio =
-                Guid.NewGuid().ToString() +
-                Path.GetExtension(audio.FileName);
-
-            string rutaAudio =
-                Path.Combine(
-                    carpetaAudio,
-                    nombreAudio
-                );
-
-            using (var stream =
-                new FileStream(
-                    rutaAudio,
-                    FileMode.Create))
-            {
-                await audio.CopyToAsync(stream);
-            }
-
-            usuario.AudioRegistro =
-                "/audiosRegistro/" + nombreAudio;
-
-            // ==========================================
-            // EMBEDDING
-            // ==========================================
-
-            float[] embedding =
-                await _ServicioEmbeddingVoz
-                    .GenerarEmbeddingDesdeAudio(audio);
-
-            if (embedding == null ||
-                embedding.Length != 192)
-            {
-                return Json(new
-                {
-                    ok = false,
-                    mensaje =
-                        "No se pudo generar correctamente la identificación de voz."
-                });
-            }
-
-            usuario.EmbeddingVoz =
-                new byte[
-                    embedding.Length *
-                    sizeof(float)
-                ];
-
-            Buffer.BlockCopy(
-                embedding,
-                0,
-                usuario.EmbeddingVoz,
-                0,
-                usuario.EmbeddingVoz.Length
-            );
-
-            // ==========================================
-            // CREAR USUARIO
+            // CREAR USUARIO (SIN BIOMETRÍA EN REGISTRO GENERAL)
             // ==========================================
 
             usuario.clave =
@@ -577,13 +362,12 @@ namespace trabajo.Controllers
             usuario.EstadoActivo = false;
             usuario.UltimaConexion = DateTime.Now;
 
-            // ==========================================
-            // VOZ HABILITADA DESDE EL REGISTRO
-            // ==========================================
-            // El usuario ya verificó su correo
-            // y confirmó su propia grabación de voz.
+            // Valores de voz nulos para nuevos registros
+            usuario.AudioRegistro = null;
+            usuario.EmbeddingVoz = null;
+            usuario.FraseVoz = null;
+            usuario.VozHabilitadaLogin = false;
 
-            usuario.VozHabilitadaLogin = true;
             Usuario usuarioCreado =
                 await _UsuarioService
                     .SaveUsuario(usuario);
@@ -591,20 +375,16 @@ namespace trabajo.Controllers
             if (usuarioCreado.Id > 0)
             {
                 // ==========================================
-                // ELIMINAR CÓDIGO YA UTILIZADO
+                // ELIMINAR CÓDIGO Y ESTADO DE REGISTRO
                 // ==========================================
 
-                HttpContext.Session.Remove(
-                    "CodigoRegistro"
-                );
-
-                HttpContext.Session.Remove(
-                    "CodigoRegistroCorreo"
-                );
-
-                HttpContext.Session.Remove(
-                    "CodigoRegistroExpira"
-                );
+                HttpContext.Session.Remove("HashCodigoRegistro");
+                HttpContext.Session.Remove("CodigoRegistro");
+                HttpContext.Session.Remove("CodigoRegistroCorreo");
+                HttpContext.Session.Remove("CodigoRegistroExpira");
+                HttpContext.Session.Remove("CodigoRegistroVerificado");
+                HttpContext.Session.Remove("CorreoRegistroVerificado");
+                HttpContext.Session.Remove("IntentosCodigoRegistro");
 
 
                 TempData["Mensaje"] =
@@ -647,7 +427,7 @@ namespace trabajo.Controllers
         }
         [HttpPost]
         [AllowAnonymous]
-        public IActionResult IniciarSesion(string dni, string clave)
+        public async Task<IActionResult> IniciarSesion(string dni, string clave)
         {
             try
             {
@@ -669,10 +449,10 @@ namespace trabajo.Controllers
                 // VERIFICAR SI EL DNI EXISTE
                 // ==========================================
 
-                bool dniExiste =
-                    _Context.Usuario.Any(x => x.Dni == dni);
+                var usuarioRegistrado =
+                    await _Context.Usuario.FirstOrDefaultAsync(x => x.Dni == dni);
 
-                if (!dniExiste)
+                if (usuarioRegistrado == null)
                 {
                     return Json(new
                     {
@@ -688,20 +468,87 @@ namespace trabajo.Controllers
                 string claveEncriptada =
                     utilidades.EncriptarClave(clave);
 
-                Usuario usuarioEncontrado =
-                    _Context.Usuario.FirstOrDefault(x =>
-                        x.Dni == dni &&
-                        x.clave == claveEncriptada
-                    );
-
-                if (usuarioEncontrado == null)
+                if (usuarioRegistrado.clave != claveEncriptada)
                 {
+                    // Alerta de seguridad preventiva: Intento de acceso fallido (Cooldown 5 min por DNI)
+                    try
+                    {
+                        DateTime ahora = DateTime.Now;
+                        bool enviarAlerta = false;
+
+                        _alertasFallidasCache.AddOrUpdate(dni,
+                            (ahora, 1),
+                            (key, anterior) =>
+                            {
+                                if ((ahora - anterior.UltimoEnvio).TotalMinutes >= 5)
+                                {
+                                    enviarAlerta = true;
+                                    return (ahora, anterior.ContadorFallos + 1);
+                                }
+                                return (anterior.UltimoEnvio, anterior.ContadorFallos + 1);
+                            });
+
+                        if (_alertasFallidasCache.TryGetValue(dni, out var registroAlerta) && registroAlerta.ContadorFallos == 1)
+                        {
+                            enviarAlerta = true;
+                        }
+
+                        if (enviarAlerta && !string.IsNullOrWhiteSpace(usuarioRegistrado.Correo))
+                        {
+                            string correoDestino = usuarioRegistrado.Correo;
+                            string nombreDestino = $"{usuarioRegistrado.Nombre} {usuarioRegistrado.Apellido}".Trim();
+                            string fechaHoraStr = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    await _emailService.EnviarAlertaIntentoFallidoAsync(correoDestino, nombreDestino, fechaHoraStr);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"[CrediPlus] Error enviando alerta de acceso fallido: {ex.Message}");
+                                }
+                            });
+                        }
+                    }
+                    catch (Exception exAlerta)
+                    {
+                        Console.WriteLine($"[CrediPlus] Error en caché de alertas fallidas: {exAlerta.Message}");
+                    }
+
                     return Json(new
                     {
                         ok = false,
                         mensaje = "La contraseña es incorrecta."
                     });
                 }
+
+                // Credenciales correctas: limpiar registro de intentos fallidos
+                _alertasFallidasCache.TryRemove(dni, out _);
+
+                // Alerta de seguridad preventiva: Detectamos acceso correcto con DNI y contraseña
+                if (!string.IsNullOrWhiteSpace(usuarioRegistrado.Correo))
+                {
+                    string correoDestino = usuarioRegistrado.Correo;
+                    string nombreDestino = $"{usuarioRegistrado.Nombre} {usuarioRegistrado.Apellido}".Trim();
+                    string dispositivoInfo = ObtenerDispositivoCliente();
+                    string fechaHoraStr = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _emailService.EnviarAlertaAccesoCorrectoAsync(correoDestino, nombreDestino, dispositivoInfo, fechaHoraStr);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[CrediPlus] Error enviando alerta de acceso correcto: {ex.Message}");
+                        }
+                    });
+                }
+
+                Usuario usuarioEncontrado = usuarioRegistrado;
 
                 // ==========================================
                 // GUARDAR USUARIO PENDIENTE
@@ -1633,15 +1480,13 @@ namespace trabajo.Controllers
                 // ==========================================
 
                 if (string.IsNullOrWhiteSpace(correo) ||
-                    !Regex.IsMatch(
-                        correo,
-                        @"^[A-Za-z0-9._%+-]+@gmail\.com$"))
+                    !EsCorreoValidoDominio(correo))
                 {
                     return Json(new
                     {
                         ok = false,
                         mensaje =
-                            "Ingresa un correo Gmail válido."
+                            "Ingresa un correo válido (Gmail, Hotmail o Outlook)."
                     });
                 }
 
@@ -2344,188 +2189,241 @@ namespace trabajo.Controllers
                     return Json(new
                     {
                         ok = false,
-                        mensaje =
-                            "Primero debes ingresar tu correo."
+                        mensaje = "Primero debes ingresar tu correo."
                     });
                 }
 
-                correo =
-                    correo.Trim().ToLowerInvariant();
+                correo = correo.Trim().ToLowerInvariant();
 
-                if (!Regex.IsMatch(
-                        correo,
-                        @"^[A-Za-z0-9._%+-]+@gmail\.com$"))
+                if (!EsCorreoValidoDominio(correo))
                 {
                     return Json(new
                     {
                         ok = false,
-                        mensaje =
-                            "Ingresa un correo Gmail válido."
+                        mensaje = "Ingresa un correo válido (Gmail, Hotmail o Outlook)."
                     });
                 }
 
+                // ==========================================
+                // VERIFICAR SI EL CORREO YA ESTÁ REGISTRADO
+                // ==========================================
+
+                bool correoExiste = await _Context.Usuario.AnyAsync(x => x.Correo == correo);
+                if (correoExiste)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Este correo electrónico ya está registrado en CrediPlus."
+                    });
+                }
 
                 // ==========================================
-                // VERIFICAR SI TODAVÍA HAY
-                // UN CÓDIGO VÁLIDO
+                // VERIFICAR SI TODAVÍA HAY UN CÓDIGO VÁLIDO (COOLDOWN 60s)
                 // ==========================================
 
                 string expiracionTexto =
-                    HttpContext.Session.GetString(
-                        "CodigoRegistroExpira"
-                    );
+                    HttpContext.Session.GetString("CodigoRegistroExpira");
 
-                if (long.TryParse(
-                        expiracionTexto,
-                        out long expiracionUnix))
+                if (long.TryParse(expiracionTexto, out long expiracionUnix))
                 {
-                    long ahoraUnix =
-                        DateTimeOffset.UtcNow
-                            .ToUnixTimeSeconds();
+                    long ahoraUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
                     if (ahoraUnix < expiracionUnix)
                     {
-                        int segundosRestantes =
-                            (int)(
-                                expiracionUnix -
-                                ahoraUnix
-                            );
+                        int segundosRestantes = (int)(expiracionUnix - ahoraUnix);
 
                         return Json(new
                         {
                             ok = false,
                             esperando = true,
-                            segundosRestantes =
-                                segundosRestantes,
-
-                            mensaje =
-                                $"Ya enviamos un código. Espera {segundosRestantes} segundos para solicitar otro."
+                            segundosRestantes = segundosRestantes,
+                            mensaje = $"Ya enviamos un código. Espera {segundosRestantes} segundos para solicitar otro."
                         });
                     }
                 }
 
-
                 // ==========================================
-                // GENERAR CÓDIGO:
-                // LETRAS + NÚMEROS
+                // GENERAR CÓDIGO OTP DE 6 DÍGITOS NUMÉRICOS
                 // ==========================================
 
-                const string caracteres =
-                    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-                char[] codigoArray =
-                    new char[6];
-
-                for (int i = 0;
-                     i < codigoArray.Length;
-                     i++)
-                {
-                    int posicion =
-                        RandomNumberGenerator.GetInt32(
-                            caracteres.Length
-                        );
-
-                    codigoArray[i] =
-                        caracteres[posicion];
-                }
-
-                string codigo =
-                    new string(codigoArray);
-
+                int otpNum = RandomNumberGenerator.GetInt32(100000, 1000000);
+                string codigoOtp = otpNum.ToString("D6");
 
                 // ==========================================
-                // EXPIRA EN 60 SEGUNDOS
-                // USAMOS UNIX PARA EVITAR PROBLEMAS
-                // DE ZONA HORARIA
+                // SEGURIDAD: NO ALMACENAR EN TEXTO PLANO
+                // SE GUARDA EL HASH CRIPTOGRÁFICO SHA-256
                 // ==========================================
 
-                long expiracion =
-                    DateTimeOffset.UtcNow
-                        .AddMinutes(1)
-                        .ToUnixTimeSeconds();
-
+                string hashCodigo = utilidades.EncriptarClave(codigoOtp);
 
                 // ==========================================
-                // GUARDAR TODO EN SESSION
+                // EXPIRA ESTRICTAMENTE EN 60 SEGUNDOS
                 // ==========================================
 
-                HttpContext.Session.SetString(
-                    "CodigoRegistro",
-                    codigo
-                );
-
-                HttpContext.Session.SetString(
-                    "CodigoRegistroCorreo",
-                    correo
-                );
-
-                HttpContext.Session.SetString(
-                    "CodigoRegistroExpira",
-                    expiracion.ToString()
-                );
-
+                long expiracion = DateTimeOffset.UtcNow
+                    .AddSeconds(60)
+                    .ToUnixTimeSeconds();
 
                 // ==========================================
-                // DEBUG
+                // GUARDAR EN SESSION
                 // ==========================================
 
-                Console.WriteLine(
-                    "===================================="
-                );
-
-                Console.WriteLine(
-                    "CÓDIGO REGISTRO GENERADO: " +
-                    codigo
-                );
-
-                Console.WriteLine(
-                    "CORREO: " +
-                    correo
-                );
-
-                Console.WriteLine(
-                    "EXPIRA UNIX: " +
-                    expiracion
-                );
-
-                Console.WriteLine(
-                    "===================================="
-                );
-
+                HttpContext.Session.SetString("HashCodigoRegistro", hashCodigo);
+                HttpContext.Session.SetString("CodigoRegistroCorreo", correo);
+                HttpContext.Session.SetString("CodigoRegistroExpira", expiracion.ToString());
+                HttpContext.Session.SetInt32("IntentosCodigoRegistro", 0);
+                HttpContext.Session.Remove("CodigoRegistroVerificado");
+                HttpContext.Session.Remove("CorreoRegistroVerificado");
+                HttpContext.Session.Remove("CodigoRegistro");
 
                 // ==========================================
-                // ENVIAR CORREO
+                // ENVIAR CORREO CON PLANTILLA PROFESIONAL
                 // ==========================================
 
-                await _emailService
-                    .EnviarCodigoAsync(
-                        correo,
-                        codigo
-                    );
-
+                await _emailService.EnviarCodigoRegistroOtpAsync(correo, codigoOtp);
 
                 return Json(new
                 {
                     ok = true,
-
-                    mensaje =
-                        "Código enviado correctamente. Tienes 1 minuto para utilizarlo.",
-
+                    mensaje = "Código enviado correctamente. Tienes 60 segundos para utilizarlo.",
                     segundos = 60
                 });
             }
             catch (Exception ex)
             {
-                Console.WriteLine(
-                    "ERROR ENVIANDO CÓDIGO: " +
-                    ex
-                );
+                Console.WriteLine("ERROR ENVIANDO CÓDIGO: " + ex.Message);
 
                 return Json(new
                 {
                     ok = false,
-                    mensaje =
-                        "No se pudo enviar el código de verificación."
+                    mensaje = "No se pudo enviar el código de verificación al correo."
+                });
+            }
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        public IActionResult ConfirmarCodigoRegistro(string correo, string codigo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(correo) || string.IsNullOrWhiteSpace(codigo))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Debes ingresar el correo y el código de 6 dígitos."
+                    });
+                }
+
+                correo = correo.Trim().ToLowerInvariant();
+                codigo = codigo.Trim();
+
+                if (codigo.Length != 6 || !Regex.IsMatch(codigo, @"^\d{6}$"))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El código debe tener exactamente 6 dígitos numéricos."
+                    });
+                }
+
+                string hashGuardado = HttpContext.Session.GetString("HashCodigoRegistro");
+                string correoGuardado = HttpContext.Session.GetString("CodigoRegistroCorreo");
+                string expiracionTexto = HttpContext.Session.GetString("CodigoRegistroExpira");
+                int intentos = HttpContext.Session.GetInt32("IntentosCodigoRegistro") ?? 0;
+
+                if (string.IsNullOrWhiteSpace(hashGuardado) || string.IsNullOrWhiteSpace(correoGuardado))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No hay un código pendiente. Solicita uno nuevo."
+                    });
+                }
+
+                if (!string.Equals(correo, correoGuardado, StringComparison.OrdinalIgnoreCase))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El correo ingresado no coincide con el que solicitó el código."
+                    });
+                }
+
+                if (intentos >= 3)
+                {
+                    HttpContext.Session.Remove("HashCodigoRegistro");
+                    HttpContext.Session.Remove("CodigoRegistroCorreo");
+                    HttpContext.Session.Remove("CodigoRegistroExpira");
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = true,
+                        mensaje = "Has superado el límite de 3 intentos fallidos. Solicita un nuevo código."
+                    });
+                }
+
+                if (!long.TryParse(expiracionTexto, out long expiracionUnix) ||
+                    DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= expiracionUnix)
+                {
+                    HttpContext.Session.Remove("HashCodigoRegistro");
+                    HttpContext.Session.Remove("CodigoRegistroCorreo");
+                    HttpContext.Session.Remove("CodigoRegistroExpira");
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = true,
+                        mensaje = "El código de verificación ha expirado (límite 60s). Solicita uno nuevo."
+                    });
+                }
+
+                // ==========================================
+                // COMPARACIÓN SEGURA EN TIEMPO CONSTANTE
+                // ==========================================
+
+                string hashIngresado = utilidades.EncriptarClave(codigo);
+                byte[] a = Encoding.UTF8.GetBytes(hashIngresado);
+                byte[] b = Encoding.UTF8.GetBytes(hashGuardado);
+
+                if (!CryptographicOperations.FixedTimeEquals(a, b))
+                {
+                    intentos++;
+                    HttpContext.Session.SetInt32("IntentosCodigoRegistro", intentos);
+                    int restantes = 3 - intentos;
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = restantes > 0
+                            ? $"Código incorrecto. Te quedan {restantes} intento(s)."
+                            : "Código incorrecto. Has superado el límite de intentos. Solicita un nuevo código."
+                    });
+                }
+
+                // ==========================================
+                // CÓDIGO VÁLIDO: MARCAR VERIFICACIÓN EN SESIÓN
+                // ==========================================
+
+                HttpContext.Session.SetString("CodigoRegistroVerificado", "true");
+                HttpContext.Session.SetString("CorreoRegistroVerificado", correo);
+
+                // Limpiar OTP temporal para evitar reuso
+                HttpContext.Session.Remove("HashCodigoRegistro");
+                HttpContext.Session.Remove("CodigoRegistroExpira");
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = "¡Correo electrónico verificado exitosamente!"
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "Error al verificar el código: " + ex.Message
                 });
             }
         }
@@ -3320,9 +3218,9 @@ string titularCuenta
                 return View(usuario);
             }
 
-            if (!usuarioEditado.Correo.EndsWith("@gmail.com"))
+            if (!EsCorreoValidoDominio(usuarioEditado.Correo))
             {
-                ViewData["Mensaje"] = "El correo debe ser Gmail.";
+                ViewData["Mensaje"] = "El correo debe ser Gmail, Hotmail o Outlook.";
                 ViewData["ModoEditar"] = true;
                 return View(usuario);
             }
@@ -3473,9 +3371,9 @@ string titularCuenta
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(correo) || !correo.EndsWith("@gmail.com"))
+                if (string.IsNullOrWhiteSpace(correo) || !EsCorreoValidoDominio(correo))
                 {
-                    return Json(new { ok = false, mensaje = "Ingrese un correo Gmail válido." });
+                    return Json(new { ok = false, mensaje = "Ingrese un correo válido (Gmail, Hotmail o Outlook)." });
                 }
 
                 Random random = new Random();

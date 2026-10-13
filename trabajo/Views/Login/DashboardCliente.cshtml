@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = null;
     Layout = "~/Views/Shared/_LayoutCliente.cshtml";
     ViewData["Title"] = "DashboardCliente";
@@ -14,7 +14,7 @@
     decimal capacidad = ingreso * 0.30m;
     decimal disponible = ingreso - egreso;
     string otrosCreditos = perfil != null
-    ? (perfil.OtrosCreditos ? "Sí tiene" : "No tiene")
+    ? (perfil.OtrosCreditos ? "Sí" : "No")
     : "Sin registro";
 
     string nombre = User.Identity.Name ?? "Cliente";
@@ -914,7 +914,7 @@
             </div>
             <div>
                 <h3>Deuda Actual</h3>
-                <h2>@(perfil != null ? (perfil.OtrosCreditos ? "Sí tiene" : "No tiene") : "Sin registro")</h2>
+                <h2>@(perfil != null ? (perfil.OtrosCreditos ? "Sí" : "No") : "Sin registro")</h2>
                 <span>@(perfil != null ? "Según declaración" : "-")</span>
             </div>
         </div>
@@ -1058,7 +1058,7 @@
             </div>
 
             <div class="finance-item">
-                <span>🏦 Otros créditos</span>
+                <span>🏦 Créditos activos</span>
                 <strong>@otrosCreditos</strong>
             </div>
 

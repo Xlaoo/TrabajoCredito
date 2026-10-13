@@ -1,4 +1,4 @@
-﻿@model trabajo.Models.SolicitudCredito
+@model trabajo.Models.SolicitudCredito
 @using trabajo.Models
 @{
     Layout = null;
@@ -1997,10 +1997,10 @@ historial?.Max(x => x.FechaFin);
 
             <div class="card card-derecha">
 
-                <h3>OTROS CRÉDITOS</h3>
+                <h3>CRÉDITOS ACTIVOS</h3>
 
                 <p>
-                    <b>¿Tiene otros créditos?</b>
+                    <b>¿Tienes créditos activos?</b>
                     <span style="float:right">
                         @(Model.PERFIL_FINANCIERO.OtrosCreditos ? "Sí" : "No")
                     </span>
@@ -2252,7 +2252,7 @@ historial?.Max(x => x.FechaFin);
                         <div class="lado-izquierdo">
 
                             <div class="fila-deuda">
-                                <strong>¿Tiene otros créditos Activos?</strong>
+                                <strong>¿Tienes créditos activos?</strong>
 
                                 @if (tieneOtrosCreditos)
                                 {

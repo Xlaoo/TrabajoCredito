@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = null;
 }
 
@@ -142,16 +142,16 @@
                         <i class="fas fa-arrow-down icon-red"></i>
                     </div>
 
-                    <label>¿Tienes otros créditos? <i class="fas fa-info-circle"></i></label>
+                    <label>¿Tienes créditos activos? <i class="fas fa-info-circle"></i></label>
                     <input type="hidden" name="tieneOtrosCreditos" id="tieneOtrosCreditos" required>
 
                     <div class="opciones-creditos">
                         <div class="opcion-card" onclick="seleccionarCredito('Si', this)">
-                            <span>Sí, tengo otros créditos</span>
+                            <span>Sí</span>
                         </div>
 
                         <div class="opcion-card" onclick="seleccionarCredito('No', this)">
-                            <span>No, no tengo créditos</span>
+                            <span>No</span>
                         </div>
                     </div>
 
@@ -210,7 +210,7 @@
                         <b>¿Qué significa cada campo?</b><br>
                         <p><i class="fas fa-arrow-up icon-green"></i> <b>Ingreso mensual:</b> dinero que recibes cada mes.</p>
                         <p><i class="fas fa-arrow-down icon-red"></i> <b>Egreso mensual:</b> dinero que gastas cada mes.</p>
-                        <p><i class="fas fa-credit-card"></i> <b>Otros créditos:</b> indica si tienes préstamos o deudas activas.</p>
+                        <p><i class="fas fa-credit-card"></i> <b>Créditos activos:</b> indica si tienes préstamos o deudas activas.</p>
                         <p><i class="fas fa-pen"></i> <b>Motivo:</b> razón principal por la que solicitas el préstamo.</p>
                         <p><i class="fas fa-user"></i> <b>Ocupación:</b> actividad que realizas actualmente.</p>
                     </div>
@@ -420,7 +420,7 @@
         }
 
         if (credito === "") {
-            alert("Selecciona si tienes otros créditos.");
+            alert("Selecciona si tienes créditos activos.");
             return;
         }
 

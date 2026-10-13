@@ -1,4 +1,4 @@
-﻿@model trabajo.Models.Usuario
+@model trabajo.Models.Usuario
 @{
     Layout = null;
 }
@@ -341,6 +341,88 @@
             .btn-voz-confirmar:hover {
                 opacity: .9;
             }
+
+        /* ==========================================
+           MODAL VERIFICACIÓN CORREO OTP (CREDIPLUS)
+           ========================================== */
+        .otp-container {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 18px 0;
+        }
+
+        .otp-box {
+            width: 46px;
+            height: 54px;
+            font-size: 26px;
+            font-weight: 800;
+            text-align: center;
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            background: #f8fafc;
+            color: #1e293b;
+            transition: all 0.2s ease;
+        }
+
+        .otp-box:focus {
+            border-color: #4361ee;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.25);
+            outline: none;
+        }
+
+        .otp-timer {
+            font-size: 14px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .otp-timer.activo {
+            color: #4361ee;
+        }
+
+        .otp-timer.expirado {
+            color: #dc2626;
+        }
+
+        .badge-verificado {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: #dcfce7;
+            border: 1px solid #86efac;
+            color: #166534;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            animation: aparecerModal 0.25s ease;
+        }
+
+        .btn-verificar-correo {
+            background: linear-gradient(135deg, #4361ee, #7209b7);
+            color: white;
+            border: none;
+            font-weight: bold;
+            border-radius: 12px;
+            padding: 0 16px;
+            font-size: 13px;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .btn-verificar-correo:hover:not(:disabled) {
+            background: linear-gradient(135deg, #3730a3, #581c87);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .btn-verificar-correo:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
@@ -438,65 +520,41 @@
                     </button>
                 </div>
 
-                <div class="input-util-wrap mb-2">
-                    <input id="correoRegistro"
-                           class="form-control"
-                           type="email"
-                           placeholder="Correo electrónico"
-                           asp-for="Correo"
-                           required />
+                <div class="mb-2">
+                    <div class="d-flex gap-2">
+                        <div class="input-util-wrap flex-grow-1">
+                            <input id="correoRegistro"
+                                   class="form-control"
+                                   type="email"
+                                   placeholder="Correo (Gmail, Hotmail, Outlook)"
+                                   asp-for="Correo"
+                                   required />
 
-                    <button type="button"
-                            class="btn-clear"
-                            onclick="clearInput('correoRegistro')">
-                        ✕
-                    </button>
+                            <button type="button"
+                                    class="btn-clear"
+                                    onclick="clearInput('correoRegistro')">
+                                ✕
+                            </button>
+                        </div>
+                        <button id="btnVerificarCorreo"
+                                class="btn btn-verificar-correo"
+                                type="button"
+                                onclick="iniciarVerificacionCorreo()">
+                            ✉️ VERIFICAR CORREO
+                        </button>
+                    </div>
+
+                    <!-- Badge de confirmación visual -->
+                    <div id="badgeCorreoVerificado" class="badge-verificado mt-2">
+                        <span>✅</span> CORREO VERIFICADO CORRECTAMENTE
+                    </div>
                 </div>
 
-                <div class="d-grid gap-2 mb-1">
+                <!-- Campo oculto para compatibilidad con el formulario POST -->
+                <input type="hidden" id="codigoRegistro" name="codigoVerificacion" value="" />
 
-                    <button id="btnEnviarCodigo"
-                            class="btn btn-code"
-                            type="button"
-                            onclick="enviarCodigo()">
 
-                        Obtener código de verificación
 
-                    </button>
-
-                </div>
-
-                <div id="contadorCodigo"
-                     class="text-center mb-2"
-                     style="
-        display:none;
-        font-size:14px;
-        font-weight:bold;
-        color:#475569;
-     ">
-                </div>
-                <div class="input-util-wrap mb-2">
-                    <input id="codigoRegistro"
-                           class="form-control"
-                           type="text"
-                           placeholder="Código de verificación"
-                           name="codigoVerificacion"
-                           maxlength="6"
-                           autocomplete="one-time-code"
-                           required
-                           oninput="
-           this.value =
-               this.value
-                   .replace(/[^A-Za-z0-9]/g, '')
-                   .toUpperCase();
-       " />
-
-                    <button type="button"
-                            class="btn-clear"
-                            onclick="clearInput('codigoRegistro')">
-                        ✕
-                    </button>
-                </div>
 
                 <div class="input-util-wrap mb-2">
 
@@ -550,54 +608,6 @@
                     </button>
 
                 </div>
-                <!-- ==========================================
-                SEGURIDAD POR VOZ
-                ========================================== -->
-
-                <div class="seguridad-voz-box mb-3">
-
-                    <div class="seguridad-voz-titulo">
-                        🔐 Seguridad por voz
-                    </div>
-
-                    <p class="seguridad-voz-descripcion">
-                        Graba una palabra o frase que usarás como seguridad.
-                    </p>
-
-                    <div class="input-util-wrap mb-2">
-
-                        <input id="fraseVoz"
-                               class="form-control"
-                               type="text"
-                               value="Mi voz protege mi cuenta"
-                               asp-for="FraseVoz"
-                               readonly />
-
-                        <button type="button"
-                                class="btn-clear"
-                                onclick="limpiarFraseVoz()">
-                            ✕
-                        </button>
-
-                    </div>
-
-                    <button type="button"
-                            id="btnGrabarVoz"
-                            class="btn btn-grabar-voz"
-                            onclick="iniciarGrabacionVoz()">
-
-                        🎙️ Grabar mi voz
-
-                    </button>
-
-                    <div id="estadoVoz"
-                         class="estado-voz">
-
-                        ⚪ Aún no has grabado tu voz
-
-                    </div>
-
-                </div>
                 <div class="d-grid gap-2 mb-3">
                     <button class="btn btn-register" type="submit">Registrate</button>
                 </div>
@@ -616,53 +626,6 @@
 
             </form>
         </div>
-    </div>
-    <!-- ==========================================
-     MODAL CONFIRMACIÓN DE VOZ
-     ========================================== -->
-
-    <div id="modalConfirmarVoz" class="modal-voz">
-
-        <div class="modal-voz-contenido">
-
-            <div class="modal-voz-icono">
-                🎙️
-            </div>
-
-            <div class="modal-voz-titulo">
-                Voz detectada
-            </div>
-
-            <div class="modal-voz-texto">
-                Detectamos que dijiste:
-            </div>
-
-            <div id="textoDetectado" class="frase-detectada">
-                ...
-            </div>
-
-            <div class="modal-voz-texto">
-                ¿Deseas que esta sea tu voz de seguridad?
-            </div>
-
-            <div class="modal-voz-botones">
-
-                <button type="button"
-                        class="btn-voz-cancelar"
-                        onclick="rechazarVoz()">
-                    ❌ No, volver a grabar
-                </button>
-
-                <button type="button"
-                        class="btn-voz-confirmar"
-                        onclick="confirmarVoz()">
-                    ✅ Sí, usar esta voz
-                </button>
-
-            </div>
-
-        </div>
-
     </div>
     <div id="modalMensajeRegistro"
          class="modal-voz">
@@ -694,327 +657,404 @@
         </div>
 
     </div>
-    <script>
 
-                // ==========================================
-        // CÓDIGO DE VERIFICACIÓN - REGISTRO
+    <!-- ==========================================
+         MODAL DE VERIFICACIÓN OTP DE CORREO (6 DÍGITOS - 60s)
+         ========================================== -->
+    <div id="modalOtpCorreo" class="modal-voz">
+        <div class="modal-voz-contenido" style="max-width: 460px;">
+            <div class="modal-voz-icono" style="font-size: 50px;">📧</div>
+            <div class="modal-voz-titulo" style="font-size: 24px; margin-bottom: 8px;">
+                Verificación de Correo
+            </div>
+            <div class="modal-voz-texto" style="font-size: 14px; margin-bottom: 6px;">
+                Ingresa el código numérico de 6 dígitos enviado a:
+            </div>
+            <div id="modalCorreoDestino" style="font-weight: bold; color: #1e293b; font-size: 15px; margin-bottom: 12px; word-break: break-all;">
+                correo@ejemplo.com
+            </div>
+
+            <!-- 6 Casillas individuales de OTP con auto-enfoque y soporte para pegar -->
+            <div class="otp-container">
+                <input type="text" class="otp-box" id="otp-0" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+                <input type="text" class="otp-box" id="otp-1" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+                <input type="text" class="otp-box" id="otp-2" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+                <input type="text" class="otp-box" id="otp-3" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+                <input type="text" class="otp-box" id="otp-4" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+                <input type="text" class="otp-box" id="otp-5" maxlength="1" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+            </div>
+
+            <!-- Temporizador estricto de 60 segundos -->
+            <div id="otpTimerDisplay" class="otp-timer activo">
+                ⏳ Código válido por: <span id="otpTimerContador">01:00</span>
+            </div>
+
+            <!-- Mensaje de estado / error dentro del modal -->
+            <div id="otpMensajeModal" style="display: none; font-size: 13px; font-weight: 600; padding: 8px; border-radius: 8px; margin-bottom: 14px;"></div>
+
+            <!-- Botones de acción del modal -->
+            <div class="modal-voz-botones">
+                <button type="button" class="btn-voz-cancelar" onclick="cerrarModalOtp()">
+                    Cancelar
+                </button>
+                <button type="button" id="btnConfirmarOtp" class="btn-voz-confirmar" style="background: linear-gradient(135deg, #4361ee, #7209b7); color: white;" onclick="confirmarOtpRegistro()">
+                    Verificar
+                </button>
+            </div>
+
+            <!-- Reenviar código -->
+            <div class="mt-3">
+                <button type="button" id="btnReenviarOtp" class="btn btn-link text-decoration-none" style="font-size: 13px; font-weight: 600; color: #4361ee;" onclick="reenviarOtpRegistro()" disabled>
+                    🔄 Reenviar nuevo código
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // ==========================================
+        // VERIFICACIÓN DE CORREO ELECTRÓNICO (OTP 60s)
         // ==========================================
 
-        let intervaloCodigoRegistro = null;
-        let segundosCodigoRegistro = 60;
-        let codigoEnEspera = false;
+        let correoVerificado = false;
+        let correoVerificadoTexto = "";
+        let intervaloOtpTimer = null;
+        let segundosOtpTimer = 60;
+        let enviandoOtp = false;
 
+        const regexDominiosPermitidos = /^[A-Za-z0-9._%+-]+@@(gmail\.com|hotmail\.com|hotmail\.es|outlook\.com|outlook\.es|live\.com)$/i;
 
-        async function enviarCodigo() {
+        // Invalida verificación si el usuario cambia el correo después de verificarlo
+        const inputCorreoReg = document.getElementById("correoRegistro");
+        if (inputCorreoReg) {
+            inputCorreoReg.addEventListener("input", function () {
+                const correoActual = this.value.trim().toLowerCase();
+                if (correoVerificado && correoActual !== correoVerificadoTexto) {
+                    correoVerificado = false;
+                    correoVerificadoTexto = "";
+                    const badge = document.getElementById("badgeCorreoVerificado");
+                    if (badge) badge.style.display = "none";
+                    const cod = document.getElementById("codigoRegistro");
+                    if (cod) cod.value = "";
+                    const btn = document.getElementById("btnVerificarCorreo");
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = "✉️ VERIFICAR CORREO";
+                    }
+                }
+            });
+        }
 
-            const correo =
-                document
-                    .getElementById("correoRegistro")
-                    .value
-                    .trim();
-
-            const boton =
-                document.getElementById(
-                    "btnEnviarCodigo"
-                );
-
-            const contador =
-                document.getElementById(
-                    "contadorCodigo"
-                );
-
-
-            // ==========================================
-            // EVITAR DOBLE ENVÍO
-            // ==========================================
-
-            if (codigoEnEspera) {
-                return;
+        function obtenerCodigoOtpIngresado() {
+            let codigo = "";
+            for (let i = 0; i < 6; i++) {
+                const box = document.getElementById(`otp-${i}`);
+                codigo += box ? box.value.trim() : "";
             }
+            return codigo;
+        }
 
+        function limpiarCasillasOtp() {
+            for (let i = 0; i < 6; i++) {
+                const box = document.getElementById(`otp-${i}`);
+                if (box) {
+                    box.value = "";
+                    box.disabled = false;
+                }
+            }
+            const msg = document.getElementById("otpMensajeModal");
+            if (msg) {
+                msg.style.display = "none";
+                msg.innerText = "";
+            }
+        }
 
-            // ==========================================
-            // VALIDAR CORREO
-            // ==========================================
+        function configurarInputsOtp() {
+            for (let i = 0; i < 6; i++) {
+                const box = document.getElementById(`otp-${i}`);
+                if (!box) continue;
+
+                box.addEventListener("input", function () {
+                    this.value = this.value.replace(/[^0-9]/g, "");
+                    if (this.value.length >= 1) {
+                        this.value = this.value.charAt(0);
+                        if (i < 5) {
+                            const next = document.getElementById(`otp-${i + 1}`);
+                            if (next) next.focus();
+                        } else {
+                            confirmarOtpRegistro();
+                        }
+                    }
+                });
+
+                box.addEventListener("keydown", function (e) {
+                    if (e.key === "Backspace" && this.value === "" && i > 0) {
+                        const prev = document.getElementById(`otp-${i - 1}`);
+                        if (prev) {
+                            prev.focus();
+                            prev.value = "";
+                        }
+                    } else if (e.key === "Enter") {
+                        confirmarOtpRegistro();
+                    }
+                });
+
+                box.addEventListener("paste", function (e) {
+                    e.preventDefault();
+                    const pegado = (e.clipboardData || window.clipboardData).getData("text").replace(/[^0-9]/g, "");
+                    if (pegado.length >= 6) {
+                        for (let j = 0; j < 6; j++) {
+                            const b = document.getElementById(`otp-${j}`);
+                            if (b) b.value = pegado.charAt(j);
+                        }
+                        const ultimo = document.getElementById("otp-5");
+                        if (ultimo) ultimo.focus();
+                        confirmarOtpRegistro();
+                    }
+                });
+            }
+        }
+
+        async function iniciarVerificacionCorreo() {
+            const inputCorreo = document.getElementById("correoRegistro");
+            const correo = inputCorreo.value.trim().toLowerCase();
 
             if (correo === "") {
-
-                mostrarMensajeRegistro(
-                    "Primero escribe tu correo Gmail.",
-                    true
-                );
-
+                mostrarMensajeRegistro("Primero escribe tu correo electrónico.", true);
+                inputCorreo.focus();
                 return;
             }
 
-
-                const correoValido =
-        /^[A-Za-z0-9._%+-]+@@gmail\.com$/i
-            .test(correo);
-
-            if (!correoValido) {
-
-                mostrarMensajeRegistro(
-                    "Ingresa un correo Gmail válido.",
-                    true
-                );
-
-                document
-                    .getElementById(
-                        "correoRegistro"
-                    )
-                    .focus();
-
+            if (!regexDominiosPermitidos.test(correo)) {
+                mostrarMensajeRegistro("Ingresa un correo válido (Gmail, Hotmail o Outlook).", true);
+                inputCorreo.focus();
                 return;
             }
 
+            if (enviandoOtp) return;
+            enviandoOtp = true;
 
-            // ==========================================
-            // BLOQUEAR BOTÓN MIENTRAS ENVÍA
-            // ==========================================
-
-            codigoEnEspera = true;
-
-            boton.disabled = true;
-
-            boton.innerText =
-                "Enviando código...";
-
+            const btn = document.getElementById("btnVerificarCorreo");
+            btn.disabled = true;
+            btn.innerText = "Enviando...";
 
             try {
+                const respuesta = await fetch("/Login/EnviarCodigo", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: "correo=" + encodeURIComponent(correo)
+                });
 
-                const respuesta =
-                    await fetch(
-                        "/Login/EnviarCodigo",
-                        {
-                            method: "POST",
+                const data = await respuesta.json();
+                enviandoOtp = false;
 
-                            headers: {
-                                "Content-Type":
-                                    "application/x-www-form-urlencoded"
-                            },
-
-                            body:
-                                "correo=" +
-                                encodeURIComponent(
-                                    correo
-                                )
-                        }
-                    );
-
-
-                const resultado =
-                    await respuesta.json();
-
-
-                // ==========================================
-                // ERROR
-                // ==========================================
-
-                if (!resultado.ok) {
-
-                    codigoEnEspera = false;
-
-                    boton.disabled = false;
-
-                    boton.innerText =
-                        "Obtener código de verificación";
-
-                    mostrarMensajeRegistro(
-                        resultado.mensaje ||
-                        "No se pudo enviar el código.",
-                        true
-                    );
-
+                if (!data.ok) {
+                    btn.disabled = false;
+                    btn.innerText = "✉️ VERIFICAR CORREO";
+                    mostrarMensajeRegistro(data.mensaje || "No se pudo enviar el código.", true);
                     return;
                 }
 
-
-                // ==========================================
-                // CÓDIGO ENVIADO
-                // ==========================================
-
-                mostrarMensajeRegistro(
-                    resultado.mensaje ||
-                    "Código enviado correctamente.",
-                    false
-                );
-
-
-                // Limpiar cualquier código escrito anteriormente
-                document
-                    .getElementById(
-                        "codigoRegistro"
-                    )
-                    .value = "";
-
-
-                // ==========================================
-                // INICIAR CUENTA REGRESIVA
-                // ==========================================
-
-                iniciarContadorCodigoRegistro();
-
-            }
-            catch (error) {
-
-                console.error(
-                    "Error enviando código:",
-                    error
-                );
-
-                codigoEnEspera = false;
-
-                boton.disabled = false;
-
-                boton.innerText =
-                    "Obtener código de verificación";
-
-                mostrarMensajeRegistro(
-                    "No se pudo enviar el código de verificación.",
-                    true
-                );
+                abrirModalOtp(correo);
+            } catch (err) {
+                enviandoOtp = false;
+                btn.disabled = false;
+                btn.innerText = "✉️ VERIFICAR CORREO";
+                mostrarMensajeRegistro("Error de conexión al enviar el código de verificación.", true);
             }
         }
 
+        function abrirModalOtp(correo) {
+            document.getElementById("modalCorreoDestino").innerText = correo;
+            limpiarCasillasOtp();
+            iniciarCuentaRegresivaOtp();
 
-        // ==========================================
-        // CONTADOR DE 60 SEGUNDOS
-        // ==========================================
+            const modal = document.getElementById("modalOtpCorreo");
+            modal.style.display = "flex";
 
-        function iniciarContadorCodigoRegistro() {
+            setTimeout(() => {
+                const primero = document.getElementById("otp-0");
+                if (primero) primero.focus();
+            }, 150);
+        }
 
-            const boton =
-                document.getElementById(
-                    "btnEnviarCodigo"
-                );
+        function cerrarModalOtp() {
+            detenerCuentaRegresivaOtp();
+            const modal = document.getElementById("modalOtpCorreo");
+            modal.style.display = "none";
 
-            const contador =
-                document.getElementById(
-                    "contadorCodigo"
-                );
+            const btn = document.getElementById("btnVerificarCorreo");
+            if (!correoVerificado && btn) {
+                btn.disabled = false;
+                btn.innerText = "✉️ VERIFICAR CORREO";
+            }
+        }
 
+        function iniciarCuentaRegresivaOtp() {
+            detenerCuentaRegresivaOtp();
+            segundosOtpTimer = 60;
 
-            // Eliminar contador anterior
-            if (intervaloCodigoRegistro) {
+            const timerDisplay = document.getElementById("otpTimerDisplay");
+            const contadorSpan = document.getElementById("otpTimerContador");
+            const btnReenviar = document.getElementById("btnReenviarOtp");
+            const btnConfirmar = document.getElementById("btnConfirmarOtp");
 
-                clearInterval(
-                    intervaloCodigoRegistro
-                );
+            timerDisplay.className = "otp-timer activo";
+            contadorSpan.innerText = "01:00";
+            btnReenviar.disabled = true;
+            btnConfirmar.disabled = false;
+
+            for (let i = 0; i < 6; i++) {
+                const box = document.getElementById(`otp-${i}`);
+                if (box) box.disabled = false;
             }
 
+            intervaloOtpTimer = setInterval(function () {
+                segundosOtpTimer--;
 
-            segundosCodigoRegistro = 60;
+                if (segundosOtpTimer > 0) {
+                    const segStr = segundosOtpTimer < 10 ? "0" + segundosOtpTimer : segundosOtpTimer;
+                    contadorSpan.innerText = "00:" + segStr;
+                } else {
+                    detenerCuentaRegresivaOtp();
+                    timerDisplay.className = "otp-timer expirado";
+                    timerDisplay.innerText = "⏰ El código ha expirado (límite 60s).";
+                    btnReenviar.disabled = false;
+                    btnConfirmar.disabled = true;
 
-            codigoEnEspera = true;
+                    for (let i = 0; i < 6; i++) {
+                        const box = document.getElementById(`otp-${i}`);
+                        if (box) box.disabled = true;
+                    }
+                }
+            }, 1000);
+        }
 
-            boton.disabled = true;
+        function detenerCuentaRegresivaOtp() {
+            if (intervaloOtpTimer) {
+                clearInterval(intervaloOtpTimer);
+                intervaloOtpTimer = null;
+            }
+        }
 
-            boton.innerText =
-                "Código enviado";
+        async function reenviarOtpRegistro() {
+            const inputCorreo = document.getElementById("correoRegistro");
+            const correo = inputCorreo.value.trim().toLowerCase();
 
+            const btnReenviar = document.getElementById("btnReenviarOtp");
+            btnReenviar.disabled = true;
+            btnReenviar.innerText = "Enviando...";
 
-            contador.style.display =
-                "block";
-
-
-            actualizarContadorCodigoRegistro();
-
-
-            intervaloCodigoRegistro =
-                setInterval(
-                    function () {
-
-                        segundosCodigoRegistro--;
-
-
-                        actualizarContadorCodigoRegistro();
-
-
-                        // ==========================================
-                        // TERMINÓ EL MINUTO
-                        // ==========================================
-
-                        if (
-                            segundosCodigoRegistro <= 0
-                        ) {
-
-                            clearInterval(
-                                intervaloCodigoRegistro
-                            );
-
-                            intervaloCodigoRegistro =
-                                null;
-
-                            codigoEnEspera = false;
-
-
-                            contador.innerText =
-                                "⏰ El código ha expirado.";
-
-                            contador.style.color =
-                                "#dc2626";
-
-
-                            boton.disabled =
-                                false;
-
-                            boton.innerText =
-                                "🔄 Enviar nuevamente el código";
-
-
-                            // Borrar el código escrito porque ya expiró
-                            const inputCodigo =
-                                document.getElementById(
-                                    "codigoRegistro"
-                                );
-
-                            if (inputCodigo) {
-
-                                inputCodigo.value =
-                                    "";
-                            }
-                        }
-
+            try {
+                const respuesta = await fetch("/Login/EnviarCodigo", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
                     },
-                    1000
-                );
+                    body: "correo=" + encodeURIComponent(correo)
+                });
+
+                const data = await respuesta.json();
+                btnReenviar.innerText = "🔄 Reenviar nuevo código";
+
+                if (!data.ok) {
+                    mostrarMensajeModalOtp(data.mensaje || "No se pudo reenviar el código.", true);
+                    btnReenviar.disabled = false;
+                    return;
+                }
+
+                limpiarCasillasOtp();
+                iniciarCuentaRegresivaOtp();
+                mostrarMensajeModalOtp("Nuevo código de 6 dígitos enviado.", false);
+
+                const primero = document.getElementById("otp-0");
+                if (primero) primero.focus();
+            } catch (err) {
+                btnReenviar.disabled = false;
+                btnReenviar.innerText = "🔄 Reenviar nuevo código";
+                mostrarMensajeModalOtp("Error de conexión al reenviar.", true);
+            }
         }
 
+        function mostrarMensajeModalOtp(mensaje, esError) {
+            const msg = document.getElementById("otpMensajeModal");
+            if (!msg) return;
 
-        // ==========================================
-        // ACTUALIZAR TEXTO 00:59, 00:58...
-        // ==========================================
-
-        function actualizarContadorCodigoRegistro() {
-
-            const contador =
-                document.getElementById(
-                    "contadorCodigo"
-                );
-
-            const segundos =
-                Math.max(
-                    segundosCodigoRegistro,
-                    0
-                );
-
-            const textoSegundos =
-                segundos
-                    .toString()
-                    .padStart(
-                        2,
-                        "0"
-                    );
-
-
-            contador.style.color =
-                "#475569";
-
-            contador.innerText =
-                "⏳ Código válido por 00:" +
-                textoSegundos;
+            msg.innerText = mensaje;
+            msg.style.display = "block";
+            msg.style.backgroundColor = esError ? "#fee2e2" : "#dcfce7";
+            msg.style.color = esError ? "#991b1b" : "#166534";
+            msg.style.border = esError ? "1px solid #fca5a5" : "1px solid #86efac";
         }
+
+        async function confirmarOtpRegistro() {
+            const correo = document.getElementById("correoRegistro").value.trim().toLowerCase();
+            const codigo = obtenerCodigoOtpIngresado();
+
+            if (codigo.length !== 6) {
+                mostrarMensajeModalOtp("Ingresa los 6 dígitos del código.", true);
+                return;
+            }
+
+            const btnConfirmar = document.getElementById("btnConfirmarOtp");
+            btnConfirmar.disabled = true;
+            btnConfirmar.innerText = "Verificando...";
+
+            try {
+                const respuesta = await fetch("/Login/ConfirmarCodigoRegistro", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    body: `correo=${encodeURIComponent(correo)}&codigo=${encodeURIComponent(codigo)}`
+                });
+
+                const data = await respuesta.json();
+                btnConfirmar.disabled = false;
+                btnConfirmar.innerText = "Verificar";
+
+                if (!data.ok) {
+                    mostrarMensajeModalOtp(data.mensaje || "Código incorrecto.", true);
+                    if (data.expirado) {
+                        detenerCuentaRegresivaOtp();
+                        document.getElementById("btnReenviarOtp").disabled = false;
+                        document.getElementById("btnConfirmarOtp").disabled = true;
+                    }
+                    return;
+                }
+
+                // Verificación exitosa
+                correoVerificado = true;
+                correoVerificadoTexto = correo;
+                document.getElementById("codigoRegistro").value = codigo;
+
+                detenerCuentaRegresivaOtp();
+                cerrarModalOtp();
+
+                // Actualizar interfaz del formulario
+                const badge = document.getElementById("badgeCorreoVerificado");
+                if (badge) badge.style.display = "inline-flex";
+
+                const btnVerificar = document.getElementById("btnVerificarCorreo");
+                if (btnVerificar) {
+                    btnVerificar.innerText = "✅ VERIFICADO";
+                    btnVerificar.disabled = true;
+                }
+
+                mostrarMensajeRegistro("¡Correo electrónico verificado exitosamente!", false);
+            } catch (err) {
+                btnConfirmar.disabled = false;
+                btnConfirmar.innerText = "Verificar";
+                mostrarMensajeModalOtp("Error de conexión al verificar el código.", true);
+            }
+        }
+
+        // Configurar los listeners en las casillas OTP
+        document.addEventListener("DOMContentLoaded", function () {
+            configurarInputsOtp();
+        });
+        configurarInputsOtp();
     </script>
     <script>
         const clave = document.getElementById("clave");
@@ -1060,591 +1100,6 @@
             }
         });
 
-                     // ==========================================
-        // VARIABLES DE GRABACIÓN
-        // ==========================================
-
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let audioBlob = null;
-
-        let grabando = false;
-        let finalizandoGrabacion = false;
-
-        // ==========================================
-        // RECONOCIMIENTO DE VOZ
-        // ==========================================
-
-        let reconocimientoVoz = null;
-        let textoDetectado = "";
-
-        const SpeechRecognition =
-            window.SpeechRecognition ||
-            window.webkitSpeechRecognition;
-
-        const reconocimientoDisponible = !!SpeechRecognition;
-
-
-        // ==========================================
-        // CONFIGURAR RECONOCIMIENTO
-        // ==========================================
-
-        if (reconocimientoDisponible) {
-
-            reconocimientoVoz = new SpeechRecognition();
-
-            reconocimientoVoz.lang = "es-PE";
-
-            // Escuchar continuamente
-            reconocimientoVoz.continuous = true;
-
-            // Necesitamos resultados intermedios
-            reconocimientoVoz.interimResults = true;
-
-            reconocimientoVoz.onresult = function (event) {
-
-                let textoFinal = "";
-
-                for (
-                    let i = event.resultIndex;
-                    i < event.results.length;
-                    i++
-                ) {
-
-                    const resultado = event.results[i];
-
-                    if (resultado.isFinal) {
-
-                        textoFinal +=
-                            resultado[0].transcript.trim() + " ";
-                    }
-                }
-
-
-                // Si reconoció una palabra o frase
-                if (textoFinal.trim() !== "") {
-
-                    textoDetectado += textoFinal;
-
-                    console.log(
-                        "Texto reconocido:",
-                        textoDetectado
-                    );
-
-                    // ==========================================
-                    // AQUÍ TERMINAMOS AUTOMÁTICAMENTE
-                    // ==========================================
-
-                    finalizarGrabacionAutomaticamente();
-                }
-
-            };
-
-
-            reconocimientoVoz.onerror = function (event) {
-
-                console.log(
-                    "Error reconocimiento:",
-                    event.error
-                );
-
-                /*
-                 * Si ocurre "no-speech" no queremos cerrar
-                 * la grabación.
-                 *
-                 * Simplemente seguimos esperando.
-                 */
-
-                if (event.error === "no-speech") {
-
-                    return;
-                }
-
-                if (event.error === "aborted") {
-
-                    return;
-                }
-
-                /*
-                 * Otros errores
-                 */
-
-                console.error(
-                    "Error de reconocimiento:",
-                    event.error
-                );
-
-            };
-
-
-            reconocimientoVoz.onend = function () {
-
-                console.log(
-                    "Reconocimiento terminado."
-                );
-
-            };
-
-        }
-
-
-        // ==========================================
-        // INICIAR GRABACIÓN
-        // ==========================================
-
-        async function iniciarGrabacionVoz() {
-
-            const boton =
-                document.getElementById("btnGrabarVoz");
-
-            const estado =
-                document.getElementById("estadoVoz");
-
-
-            // Si ya está grabando no hacemos nada
-            if (grabando) {
-
-                return;
-            }
-
-
-            // ==========================================
-            // VERIFICAR SOPORTE
-            // ==========================================
-
-            if (
-                !navigator.mediaDevices ||
-                !navigator.mediaDevices.getUserMedia
-            ) {
-
-                alert(
-                    "Tu navegador no permite grabar audio."
-                );
-
-                return;
-            }
-
-
-            if (!reconocimientoDisponible) {
-
-                alert(
-                    "Tu navegador no permite reconocer voz automáticamente. " +
-                    "Usa Google Chrome o Microsoft Edge."
-                );
-
-                return;
-            }
-
-
-            try {
-
-                // ==========================================
-                // PEDIR MICRÓFONO
-                // ==========================================
-
-                const stream =
-                    await navigator.mediaDevices.getUserMedia({
-                        audio: true
-                    });
-
-
-                // Limpiar grabación anterior
-                audioChunks = [];
-
-                audioBlob = null;
-
-                textoDetectado = "";
-
-                finalizandoGrabacion = false;
-
-
-                // ==========================================
-                // CREAR GRABADOR
-                // ==========================================
-
-                mediaRecorder =
-                    new MediaRecorder(stream);
-
-
-                mediaRecorder.ondataavailable =
-                    function (event) {
-
-                        if (event.data.size > 0) {
-
-                            audioChunks.push(
-                                event.data
-                            );
-
-                        }
-
-                    };
-
-
-                // ==========================================
-                // CUANDO TERMINE LA GRABACIÓN
-                // ==========================================
-
-                mediaRecorder.onstop =
-                    function () {
-
-                                audioBlob = new Blob(
-            audioChunks,
-            {
-                type: "audio/webm"
-            }
-        );
-
-
-                        // Liberar micrófono
-                        stream
-                            .getTracks()
-                            .forEach(track => {
-                                track.stop();
-                            });
-
-
-                        grabando = false;
-
-                        boton.disabled = false;
-
-                        boton.innerHTML =
-                            "🎙️ Grabar mi voz";
-
-                        boton.classList.remove(
-                            "grabando"
-                        );
-
-
-                        // ==========================================
-                        // MOSTRAR MODAL
-                        // ==========================================
-
-                        mostrarModalVoz();
-
-                    };
-
-
-                // ==========================================
-                // COMENZAR GRABACIÓN
-                // ==========================================
-
-                mediaRecorder.start();
-
-                grabando = true;
-
-
-                // ==========================================
-                // CAMBIAR INTERFAZ
-                // ==========================================
-
-                boton.disabled = true;
-
-                boton.innerHTML =
-                    "🎙️ Escuchando...";
-
-                boton.classList.add(
-                    "grabando"
-                );
-
-
-                estado.innerText =
-                    "🟡 Esperando señal de voz... Habla ahora";
-
-
-                // ==========================================
-                // COMENZAR RECONOCIMIENTO
-                // ==========================================
-
-                textoDetectado = "";
-
-                try {
-
-                    reconocimientoVoz.start();
-
-                }
-                catch (error) {
-
-                    console.log(
-                        "El reconocimiento ya estaba iniciado.",
-                        error
-                    );
-
-                }
-
-            }
-            catch (error) {
-
-                console.error(error);
-
-                grabando = false;
-
-                alert(
-                    "No se pudo acceder al micrófono. " +
-                    "Verifica los permisos del navegador."
-                );
-
-            }
-
-        }
-
-
-        // ==========================================
-        // FINALIZAR AUTOMÁTICAMENTE
-        // ==========================================
-
-        function finalizarGrabacionAutomaticamente() {
-
-            // Evitar que se ejecute dos veces
-            if (finalizandoGrabacion) {
-
-                return;
-            }
-
-            if (!grabando) {
-
-                return;
-            }
-
-
-            finalizandoGrabacion = true;
-
-
-            const estado =
-                document.getElementById("estadoVoz");
-
-
-            estado.innerText =
-                "🟢 Voz detectada. Procesando...";
-
-
-            // ==========================================
-            // DETENER RECONOCIMIENTO
-            // ==========================================
-
-            if (reconocimientoVoz) {
-
-                try {
-
-                    reconocimientoVoz.stop();
-
-                }
-                catch (error) {
-
-                    console.log(error);
-
-                }
-
-            }
-
-
-            // ==========================================
-            // DETENER GRABACIÓN
-            // ==========================================
-
-            if (
-                mediaRecorder &&
-                mediaRecorder.state !== "inactive"
-            ) {
-
-                mediaRecorder.stop();
-
-            }
-
-        }
-
-
-        // ==========================================
-        // MOSTRAR MODAL
-        // ==========================================
-
-        function mostrarModalVoz() {
-
-            const modal =
-                document.getElementById(
-                    "modalConfirmarVoz"
-                );
-
-            const texto =
-                document.getElementById(
-                    "textoDetectado"
-                );
-
-
-            let frase =
-                textoDetectado.trim();
-
-
-            // ==========================================
-            // SI NO RECONOCIÓ NADA
-            // ==========================================
-
-            if (frase === "") {
-
-                audioBlob = null;
-
-                const estado =
-                    document.getElementById(
-                        "estadoVoz"
-                    );
-
-                estado.innerText =
-                    "⚪ No pudimos reconocer tu voz. Intenta nuevamente.";
-
-                finalizandoGrabacion = false;
-
-                return;
-            }
-
-
-            // ==========================================
-            // MOSTRAR TEXTO RECONOCIDO
-            // ==========================================
-
-            texto.innerText =
-                frase;
-
-
-            // ==========================================
-            // ABRIR MODAL
-            // ==========================================
-
-            modal.style.display =
-                "flex";
-
-        }
-
-
-        // ==========================================
-        // CONFIRMAR VOZ
-        // ==========================================
-
-               function confirmarVoz() {
-
-            const modal =
-                document.getElementById(
-                    "modalConfirmarVoz"
-                );
-
-            const estado =
-                document.getElementById(
-                    "estadoVoz"
-                );
-
-            const fraseInput =
-                document.getElementById(
-                    "fraseVoz"
-                );
-
-            const boton =
-                document.getElementById(
-                    "btnGrabarVoz"
-                );
-
-            const frase =
-                textoDetectado.trim();
-
-            if (frase !== "") {
-
-                fraseInput.value =
-                    frase;
-            }
-
-            modal.style.display =
-                "none";
-
-            finalizandoGrabacion = false;
-
-            estado.innerText =
-                "✅ Voz grabada y confirmada correctamente.";
-
-            estado.style.color =
-                "#16a34a";
-
-            if (boton) {
-
-                boton.innerHTML =
-                    "✅ Voz lista para registrar";
-
-                boton.classList.remove(
-                    "grabando"
-                );
-            }
-        }
-
-
-        // ==========================================
-        // RECHAZAR VOZ
-        // ==========================================
-
-        function rechazarVoz() {
-
-            const modal =
-                document.getElementById(
-                    "modalConfirmarVoz"
-                );
-
-            const estado =
-                document.getElementById(
-                    "estadoVoz"
-                );
-
-
-            // ==========================================
-            // ELIMINAR GRABACIÓN
-            // ==========================================
-
-            audioBlob = null;
-
-            audioChunks = [];
-
-            textoDetectado = "";
-
-            finalizandoGrabacion = false;
-
-
-            // ==========================================
-            // CERRAR MODAL
-            // ==========================================
-
-            modal.style.display =
-                "none";
-
-
-            estado.innerText =
-                "⚪ Grabación descartada. Pulsa «Grabar mi voz» para intentarlo nuevamente.";
-
-        }
-
-
-        // ==========================================
-        // LIMPIAR FRASE
-        // ==========================================
-
-        function limpiarFraseVoz() {
-
-            const fraseInput =
-                document.getElementById(
-                    "fraseVoz"
-                );
-
-            fraseInput.value = "";
-
-            audioBlob = null;
-
-            audioChunks = [];
-
-            textoDetectado = "";
-
-
-            const estado =
-                document.getElementById(
-                    "estadoVoz"
-                );
-
-            estado.innerText =
-                "⚪ Aún no has grabado tu voz.";
-
-        }
         // ==========================================
         // ENVIAR FORMULARIO
         // ==========================================
@@ -1679,13 +1134,13 @@
                 }
 
                 // ==========================================
-                // VERIFICAR AUDIO
+                // VERIFICAR CORREO ELECTRÓNICO
                 // ==========================================
 
-                if (!audioBlob) {
-
-                    alert(
-                        "Debes grabar y confirmar tu voz antes de registrarte."
+                if (!correoVerificado) {
+                    mostrarMensajeRegistro(
+                        "Debes verificar tu correo electrónico antes de registrarte.",
+                        true
                     );
 
                     enviandoRegistro = false;
@@ -1695,36 +1150,20 @@
                         botonRegistro.innerText = "Registrate";
                     }
 
+                    const btnVerificar = document.getElementById("btnVerificarCorreo");
+                    if (btnVerificar) btnVerificar.focus();
+
                     return;
                 }
 
                 // ==========================================
-                // CREAR FORMDATA
+                // CREAR FORMDATA (SIN AUDIO)
                 // ==========================================
 
                 const formData = new FormData(formulario);
-
-                // Eliminar cualquier audio anterior
                 formData.delete("audio");
 
-                // Agregar audio grabado
-                formData.append(
-                    "audio",
-                    audioBlob,
-                    "audioRegistro.webm"
-                );
-
-                // ==========================================
-                // INFORMACIÓN EN CONSOLA
-                // ==========================================
-
-                console.log("=================================");
-                console.log("Enviando registro...");
-                console.log("Tamaño del audio:", audioBlob.size);
-                console.log("Tipo del audio:", audioBlob.type);
-                console.log("=================================");
-
-        try {
+                try {
 
             const response = await fetch(
                 formulario.action,
