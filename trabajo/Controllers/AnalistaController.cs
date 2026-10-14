@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -14,21 +14,24 @@ using ClosedXML.Excel;
 
 namespace trabajo.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Analista")]
     public class AnalistaController : Controller
     {
         private readonly UsuarioContext _context;
         private static readonly Random rnd = new Random();
         private readonly IConfiguration _configuration;
         private readonly EmailService _emailService = new EmailService();
+        private readonly IServicioEvaluacionCrediticia _servicioEvaluacion;
         private static string codigoPerfilAnalista = "";
 
         public AnalistaController(
             UsuarioContext context,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IServicioEvaluacionCrediticia servicioEvaluacion = null)
         {
             _context = context;
             _configuration = configuration;
+            _servicioEvaluacion = servicioEvaluacion ?? new ServicioEvaluacionCrediticia();
         }
 
         public IActionResult ProgramaAnalista()
@@ -127,471 +130,508 @@ namespace trabajo.Controllers
             ViewBag.EnEvaluacion = evaluacion;
 
             return View(pendientes);
-        }
-        public IActionResult VerSolicitud(int id, bool abrirMensaje = false)
+        }        public IActionResult VerSolicitud(int id, bool abrirMensaje = false)
         {
             var solicitud = _context.SOLICITUD_CREDITO
-    .Include(x => x.USUARIO)
-    .Include(x => x.PERFIL_FINANCIERO)
-    .Include(x => x.MENSAJES)
-    .FirstOrDefault(x => x.Id_Solicitud == id);
-
+                .Include(x => x.USUARIO)
+                .Include(x => x.PERFIL_FINANCIERO)
+                .Include(x => x.MENSAJES)
+                .FirstOrDefault(x => x.Id_Solicitud == id);
 
             if (solicitud == null)
             {
                 return NotFound();
             }
 
+            // Consultar solicitudes históricas del mismo cliente para no depender únicamente de la solicitud actual
+            var solicitudesUsuario = _context.SOLICITUD_CREDITO
+                .Where(x => x.Usuario_Id_Usuario == solicitud.Usuario_Id_Usuario)
+                .Select(x => x.Id_Solicitud)
+                .ToList();
+
             var historial = _context.HISTORIAL_CREDITO
-          .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == id)
-          .ToList();
+                .Where(x => solicitudesUsuario.Contains(x.SOLICITUD_CREDITO_Id_Solicitud))
+                .ToList();
 
             ViewBag.Historial = historial;
             var resumen = _context.RESUMEN_CREDITICIO
-.FirstOrDefault(x => x.Usuario_Id == solicitud.Usuario_Id_Usuario);
+                .FirstOrDefault(x => x.Usuario_Id == solicitud.Usuario_Id_Usuario);
+
+            // Reconciliación: si el cliente declaró no tener créditos activos, asegurar que no existan activas simuladas
+            bool declaroOtros = solicitud.PERFIL_FINANCIERO?.OtrosCreditos ?? false;
+            if (resumen != null && !declaroOtros && resumen.DeudasActivas > 0)
+            {
+                resumen.DeudasActivas = 0;
+                resumen.DeudasVencidas = 0;
+                _context.SaveChanges();
+            }
+
+            // Préstamos reales de CrediPlus (no simulados)
+            var idsAprobadasUser = _context.SOLICITUD_CREDITO
+                .Where(s => s.Usuario_Id_Usuario == solicitud.Usuario_Id_Usuario && s.Id_Solicitud != id && s.Estado == "Aprobado")
+                .Select(s => s.Id_Solicitud)
+                .ToList();
+
+            var cuotasCrediPlus = _context.CUOTA
+                .Where(c => idsAprobadasUser.Contains(c.SOLICITUD_CREDITO_Id_Solicitud))
+                .ToList();
+
+            int crediPlusActivas = idsAprobadasUser.Count(idSol => cuotasCrediPlus.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol && c.Estado != "Pagado"));
+            int crediPlusPagadas = idsAprobadasUser.Count(idSol => cuotasCrediPlus.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol) && cuotasCrediPlus.Where(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol).All(c => c.Estado == "Pagado"));
+            int crediPlusVencidas = idsAprobadasUser.Count(idSol => cuotasCrediPlus.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol && c.Estado != "Pagado" && c.FechaLimitePago.Date < PeruTimeHelper.TodayPeru));
+
+            ViewBag.CrediPlusActivas = crediPlusActivas;
+            ViewBag.CrediPlusPagadas = crediPlusPagadas;
+            ViewBag.CrediPlusVencidas = crediPlusVencidas;
 
             ViewBag.Resumen = resumen;
-            ViewBag.YaValidado =
-_context.HISTORIAL_CREDITO
-.Any(x =>
-    x.SOLICITUD_CREDITO_Id_Solicitud == id);
+            ViewBag.YaValidado = historial.Any() || resumen != null;
             ViewBag.AbrirMensaje = abrirMensaje;
+
+            decimal ingreso = solicitud.PERFIL_FINANCIERO?.IngresoMensual ?? 0m;
+            decimal gastos = solicitud.PERFIL_FINANCIERO?.EgresoMensual ?? 0m;
+            int act = resumen?.DeudasActivas ?? 0;
+            int pag = resumen?.DeudasPagadas ?? 0;
+            int ven = resumen?.DeudasVencidas ?? 0;
+
+            var evaluacion = _servicioEvaluacion.Evaluar(
+                ingreso,
+                gastos,
+                solicitud.MontoSolicitado,
+                solicitud.PlazoMeses,
+                act,
+                pag,
+                ven,
+                declaroOtros,
+                historial.Count,
+                crediPlusActivas,
+                crediPlusPagadas,
+                crediPlusVencidas
+            );
+
+            ViewBag.EvaluacionRiesgo = evaluacion;
+
             return View(solicitud);
         }
 
         [HttpPost]
         public IActionResult ValidarCliente(int idSolicitud)
         {
-
-            var historialGuardado = _context.HISTORIAL_CREDITO
-                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
-                .ToList();
-            Console.WriteLine("Historial encontrado: " + historialGuardado.Count);
-
             var solicitud = _context.SOLICITUD_CREDITO
-.Include(x => x.PERFIL_FINANCIERO)
-.FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+                .Include(x => x.PERFIL_FINANCIERO)
+                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
 
             if (solicitud == null)
             {
                 return BadRequest("La solicitud no existe");
             }
-            var resumenExistente = _context.RESUMEN_CREDITICIO
-    .FirstOrDefault(x => x.Usuario_Id == solicitud.Usuario_Id_Usuario);
+
+            bool tieneOtrosCreditos = solicitud.PERFIL_FINANCIERO?.OtrosCreditos ?? false;
+
+            // Consultar solicitudes históricas del mismo cliente
+            var solicitudesUsuario = _context.SOLICITUD_CREDITO
+                .Where(x => x.Usuario_Id_Usuario == solicitud.Usuario_Id_Usuario)
+                .Select(x => x.Id_Solicitud)
+                .ToList();
+
+            var historialExistente = _context.HISTORIAL_CREDITO
+                .Where(x => solicitudesUsuario.Contains(x.SOLICITUD_CREDITO_Id_Solicitud))
+                .ToList();
+
+            var resumen = _context.RESUMEN_CREDITICIO
+                .FirstOrDefault(x => x.Usuario_Id == solicitud.Usuario_Id_Usuario);
+
+            // Generador determinístico usando el ID del usuario como semilla
+            // Elimina la aleatoriedad 50/50 arbitraria y garantiza estabilidad en cada consulta
+            int seed = Math.Abs(solicitud.Usuario_Id_Usuario * 73856093 ^ 19349663);
+            Random deterministicRnd = new Random(seed);
+
             int activas = 0;
             int pagadas = 0;
             int vencidas = 0;
+            DateTime ultimaActualizacion = DateTime.Now.AddDays(-15);
 
-            bool tieneOtrosCreditos =
-            solicitud.PERFIL_FINANCIERO.OtrosCreditos;
-            int totalHistorial = 0;
-            if (resumenExistente != null)
+            if (resumen != null)
             {
-                System.Diagnostics.Debug.WriteLine("LEYENDO BD");
-
-
-                return Json(new
+                // Reconciliación: Si declaró NO tener otros créditos, deudas activas y vencidas deben ser estrictamente 0
+                if (!tieneOtrosCreditos && (resumen.DeudasActivas > 0 || resumen.DeudasVencidas > 0))
                 {
-                    activas = resumenExistente.DeudasActivas,
-                    pagadas = resumenExistente.DeudasPagadas,
-                    vencidas = resumenExistente.DeudasVencidas,
-                    ultimaFecha = resumenExistente.UltimaActualizacion
-            .ToString("dd/MM/yyyy")
-                });
+                    resumen.DeudasActivas = 0;
+                    resumen.DeudasVencidas = 0;
+                }
+
+                activas = resumen.DeudasActivas;
+                pagadas = Math.Max(0, resumen.DeudasPagadas);
+                vencidas = resumen.DeudasVencidas;
+                ultimaActualizacion = (resumen.UltimaActualizacion > DateTime.MinValue) 
+                    ? resumen.UltimaActualizacion 
+                    : DateTime.Now.AddDays(-15);
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("LEYENDO BD");
-
-
+                // Generación de escenario inicial estable
                 if (tieneOtrosCreditos)
                 {
-                    bool critico = rnd.Next(2) == 0;
-
-                    if (critico)
-                    {
-                        activas = rnd.Next(1, 5);
-                        pagadas = rnd.Next(1, 5);
-                        vencidas = rnd.Next(1, 4);
-                    }
-                    else
-                    {
-                        activas = rnd.Next(1, 5);
-                        pagadas = rnd.Next(1, 5);
-                        vencidas = 0;
-                    }
+                    activas = (seed % 3) + 1; // 1 a 3 activas
+                    pagadas = (seed % 4) + 1; // 1 a 4 pagadas
+                    vencidas = (seed % 5 == 0) ? 1 : 0; // Solo en casos específicos
                 }
                 else
                 {
-                    bool bajo = rnd.Next(2) == 0;
+                    // REGLA OBLIGATORIA: Si declaró NO tener otros créditos:
+                    // Deudas activas = 0, Deudas vencidas = 0
+                    activas = 0;
+                    vencidas = 0;
+                    bool tieneHistorial = (seed % 3 != 0); // Escenario A (con pagadas) o Escenario B (sin historial)
+                    pagadas = tieneHistorial ? ((seed % 4) + 1) : 0;
+                }
 
-                    if (bajo)
+                resumen = new ResumenCredito
+                {
+                    Usuario_Id = solicitud.Usuario_Id_Usuario,
+                    DeudasActivas = activas,
+                    DeudasPagadas = pagadas,
+                    DeudasVencidas = vencidas,
+                    UltimaActualizacion = ultimaActualizacion
+                };
+                _context.RESUMEN_CREDITICIO.Add(resumen);
+            }
+
+            int totalHistorial = activas + pagadas + vencidas;
+
+            // CORRECCIÓN HISTORIAL VACÍO:
+            // Si hay contadores pero no existen filas detalladas en HISTORIAL_CREDITO para este usuario,
+            // creamos las filas de respaldo vinculadas a la solicitud actual para que el modal no aparezca vacío.
+            if (historialExistente.Count == 0 && totalHistorial > 0)
+            {
+                string[] tipos = {
+                    "Préstamo Personal", "Crédito de Consumo", "Tarjeta de Crédito",
+                    "Línea de Crédito", "Crédito Educativo", "Crédito Vehicular"
+                };
+                string[] bancos = {
+                    "BCP", "Interbank", "BBVA", "Scotiabank", "Banco Pichincha", "BanBif", "Caja Arequipa"
+                };
+                int[] plazos = { 6, 12, 18, 24, 36, 48 };
+
+                List<string> estadosHistorial = new List<string>();
+                for (int i = 0; i < pagadas; i++) estadosHistorial.Add("PAGADA");
+                for (int i = 0; i < activas; i++) estadosHistorial.Add("ACTIVA");
+                for (int i = 0; i < vencidas; i++) estadosHistorial.Add("VENCIDA");
+
+                for (int i = 0; i < totalHistorial; i++)
+                {
+                    string banco = bancos[deterministicRnd.Next(bancos.Length)];
+                    string tipoCredito = tipos[deterministicRnd.Next(tipos.Length)];
+                    int monto = deterministicRnd.Next(2, 16) * 1000;
+                    int plazoMeses = plazos[deterministicRnd.Next(plazos.Length)];
+                    string estadoCredito = estadosHistorial[i];
+
+                    DateTime fechaInicio;
+                    DateTime fechaFin;
+                    int cuotasPagadas;
+
+                    if (estadoCredito == "PAGADA")
                     {
-                        activas = 0;
-                        pagadas = rnd.Next(1, 6);
-                        vencidas = 0;
+                        fechaInicio = new DateTime(deterministicRnd.Next(2018, 2023), deterministicRnd.Next(1, 13), deterministicRnd.Next(1, 28));
+                        fechaFin = fechaInicio.AddMonths(plazoMeses);
+                        cuotasPagadas = plazoMeses;
                     }
-                    else
+                    else if (estadoCredito == "ACTIVA")
                     {
-                        activas = 0;
-                        pagadas = 0;
-                        vencidas = 0;
+                        fechaInicio = DateTime.Today.AddMonths(-deterministicRnd.Next(2, Math.Max(3, plazoMeses - 1)));
+                        fechaFin = fechaInicio.AddMonths(plazoMeses);
+                        cuotasPagadas = Math.Max(1, Math.Min(plazoMeses - 1, ((DateTime.Today.Year - fechaInicio.Year) * 12) + DateTime.Today.Month - fechaInicio.Month));
                     }
-                }
-                totalHistorial =
-        activas + pagadas + vencidas;
-            }
-
-
-
-            string[] tipos =
-{
-    "Préstamo Personal",
-    "Crédito Hipotecario",
-    "Crédito Vehicular",
-    "Crédito Empresarial",
-    "Crédito de Consumo",
-    "Tarjeta de Crédito",
-    "Línea de Crédito",
-    "Crédito Educativo",
-    "Microcrédito",
-    "Crédito Comercial",
-    "Crédito Agropecuario",
-    "Crédito para Negocio",
-    "Crédito Capital de Trabajo",
-    "Crédito para Remodelación",
-    "Crédito para Equipamiento"
-};
-            string[] bancos =
-{
-    "BCP",
-    "Interbank",
-    "BBVA",
-    "Scotiabank",
-    "Banco Pichincha",
-    "Banco Falabella",
-    "Mibanco",
-    "Banco de Comercio",
-    "BanBif",
-    "Santander",
-    "Compartamos Financiera",
-    "Caja Arequipa",
-    "Caja Huancayo",
-    "Caja Piura",
-    "Financiera Crediscotia"
-};
-
-
-            int[] plazos =
-{
-    6,
-    12,
-    18,
-    24,
-    30,
-    36,
-    42,
-    48,
-    54,
-    60,
-    72,
-    84,
-    96,
-    108,
-    120
-};
-
-
-
-
-
-
-
-
-
-
-
-            DateTime ultimaActualizacion = DateTime.MinValue;
-            List<string> estadosHistorial = new List<string>();
-
-            for (int i = 0; i < pagadas; i++)
-            {
-                estadosHistorial.Add("PAGADA");
-            }
-
-            for (int i = 0; i < activas; i++)
-            {
-                estadosHistorial.Add("ACTIVA");
-            }
-
-            for (int i = 0; i < vencidas; i++)
-            {
-                estadosHistorial.Add("VENCIDA");
-            }
-
-            for (int i = 0; i < totalHistorial; i++)
-            {
-                string banco =
-           bancos[rnd.Next(bancos.Length)];
-
-                string tipoCredito = tipos[rnd.Next(tipos.Length)];
-                int monto;
-
-                switch (tipoCredito)
-                {
-                    case "Crédito Hipotecario":
-                        monto = rnd.Next(20, 101) * 1000;
-                        break;
-
-                    case "Crédito Empresarial":
-                        monto = rnd.Next(15, 81) * 1000;
-                        break;
-
-                    case "Crédito Vehicular":
-                        monto = rnd.Next(10, 61) * 1000;
-                        break;
-
-                    case "Préstamo Personal":
-                        monto = rnd.Next(5, 31) * 1000;
-                        break;
-
-                    case "Tarjeta de Crédito":
-                        monto = rnd.Next(1, 16) * 1000;
-                        break;
-
-                    case "Línea de Crédito":
-                        monto = rnd.Next(3, 26) * 1000;
-                        break;
-
-                    case "Crédito Educativo":
-                        monto = rnd.Next(5, 31) * 1000;
-                        break;
-
-                    case "Microcrédito":
-                        monto = rnd.Next(1, 11) * 1000;
-                        break;
-
-                    case "Crédito Comercial":
-                        monto = rnd.Next(10, 101) * 1000;
-                        break;
-
-                    case "Crédito Agropecuario":
-                        monto = rnd.Next(5, 51) * 1000;
-                        break;
-
-                    default:
-                        monto = rnd.Next(3, 21) * 1000;
-                        break;
-                }
-                int plazoMeses;
-
-                switch (tipoCredito)
-                {
-                    case "Crédito Hipotecario":
-                        plazoMeses = plazos[rnd.Next(8, plazos.Length)];
-                        break;
-
-                    case "Crédito Vehicular":
-                        plazoMeses = plazos[rnd.Next(3, 11)];
-                        break;
-
-                    case "Crédito Empresarial":
-                        plazoMeses = plazos[rnd.Next(2, plazos.Length)];
-                        break;
-
-                    case "Tarjeta de Crédito":
-                        plazoMeses = plazos[rnd.Next(0, 4)];
-                        break;
-
-                    default:
-                        plazoMeses = plazos[rnd.Next(plazos.Length)];
-                        break;
-                }
-
-                DateTime fechaInicio;
-                DateTime fechaFin;
-                string estadoCredito = estadosHistorial[i];
-
-
-                if (estadoCredito == "ACTIVA")
-                {
-                    int dia = rnd.Next(1, 28);
-
-                    fechaInicio = new DateTime(
-                        rnd.Next(2023, 2026),
-                        rnd.Next(1, 13),
-                        dia);
-
-                    int plazoMesesCredito = plazoMeses;
-
-                    DateTime fechaVencimiento =
-                        fechaInicio.AddMonths(plazoMesesCredito);
-
-                    DateTime hoy = DateTime.Today;
-
-                    int cuotasPagadas =
-                        ((hoy.Year - fechaInicio.Year) * 12)
-                        + hoy.Month
-                        - fechaInicio.Month;
-
-                    if (cuotasPagadas >= plazoMesesCredito)
-                        cuotasPagadas = plazoMesesCredito - 1;
-
-                    if (cuotasPagadas < 1)
-                        cuotasPagadas = 1;
-
-                    fechaFin =
-                        fechaInicio.AddMonths(cuotasPagadas);
-                }
-                else
-                {
-                    fechaInicio = new DateTime(
-                        rnd.Next(2009, 2022),
-                        rnd.Next(1, 13),
-                        rnd.Next(1, 28));
-
-                    fechaFin =
-                        fechaInicio.AddMonths(plazoMeses);
-
-                    while (fechaFin.Year > 2024)
+                    else // VENCIDA
                     {
-                        fechaInicio =
-                            fechaInicio.AddYears(-1);
-
-                        fechaFin =
-                            fechaInicio.AddMonths(plazoMeses);
+                        fechaInicio = DateTime.Today.AddMonths(-deterministicRnd.Next(6, 18));
+                        fechaFin = fechaInicio.AddMonths(plazoMeses);
+                        cuotasPagadas = Math.Max(1, plazoMeses / 3);
                     }
-                }
-
-
-
-                if (totalHistorial > 0)
-                {
-
-
 
                     if (fechaFin > ultimaActualizacion)
                     {
                         ultimaActualizacion = fechaFin;
                     }
 
-                    int cuotasPagadas;
-
-                    if (estadoCredito == "PAGADA")
-                    {
-                        cuotasPagadas = plazoMeses;
-                    }
-                    else if (estadoCredito == "ACTIVA")
-                    {
-                        cuotasPagadas =
-                            ((fechaFin.Year - fechaInicio.Year) * 12)
-                            + fechaFin.Month
-                            - fechaInicio.Month;
-
-                        if (cuotasPagadas < 1)
-                            cuotasPagadas = 1;
-                    }
-                    else
-                    {
-                        cuotasPagadas =
-                            rnd.Next(1, Math.Max(2, plazoMeses / 2));
-                    }
-                    var historial = new HistorialCredito
+                    var nuevoHistorial = new HistorialCredito
                     {
                         Banco = banco,
                         TipoCredito = tipoCredito,
-
                         Monto = monto,
                         PlazoMeses = plazoMeses,
                         CuotasPagadas = cuotasPagadas,
-
                         EstadoCredito = estadoCredito,
-
                         FechaInicio = fechaInicio,
                         FechaFin = fechaFin,
-
                         SOLICITUD_CREDITO_Id_Solicitud = idSolicitud
-
                     };
-                    _context.HISTORIAL_CREDITO.Add(historial);
+                    _context.HISTORIAL_CREDITO.Add(nuevoHistorial);
                 }
             }
 
-            var resumen =
-    _context.RESUMEN_CREDITICIO
-    .FirstOrDefault(x =>
-        x.Usuario_Id ==
-        solicitud.Usuario_Id_Usuario);
-
-            if (resumen == null)
-            {
-                resumen = new ResumenCredito
-                {
-                    Usuario_Id = solicitud.Usuario_Id_Usuario
-                };
-
-                _context.RESUMEN_CREDITICIO.Add(resumen);
-            }
-
-            resumen.DeudasActivas = activas;
-            resumen.DeudasPagadas = pagadas;
-            resumen.DeudasVencidas = vencidas;
             resumen.UltimaActualizacion = ultimaActualizacion;
-
             _context.SaveChanges();
-            return Json(new
-            {
+
+            // Consultar préstamos reales CrediPlus
+            var idsAprobadasValidar = _context.SOLICITUD_CREDITO
+                .Where(s => s.Usuario_Id_Usuario == solicitud.Usuario_Id_Usuario && s.Id_Solicitud != idSolicitud && s.Estado == "Aprobado")
+                .Select(s => s.Id_Solicitud)
+                .ToList();
+
+            var cuotasCrediPlusValidar = _context.CUOTA
+                .Where(c => idsAprobadasValidar.Contains(c.SOLICITUD_CREDITO_Id_Solicitud))
+                .ToList();
+
+            int crediPlusActivas = idsAprobadasValidar.Count(idSol => cuotasCrediPlusValidar.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol && c.Estado != "Pagado"));
+            int crediPlusPagadas = idsAprobadasValidar.Count(idSol => cuotasCrediPlusValidar.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol) && cuotasCrediPlusValidar.Where(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol).All(c => c.Estado == "Pagado"));
+            int crediPlusVencidas = idsAprobadasValidar.Count(idSol => cuotasCrediPlusValidar.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol && c.Estado != "Pagado" && c.FechaLimitePago.Date < PeruTimeHelper.TodayPeru));
+
+            var evaluacion = _servicioEvaluacion.Evaluar(
+                solicitud.PERFIL_FINANCIERO?.IngresoMensual ?? 0m,
+                solicitud.PERFIL_FINANCIERO?.EgresoMensual ?? 0m,
+                solicitud.MontoSolicitado,
+                solicitud.PlazoMeses,
                 activas,
                 pagadas,
                 vencidas,
-                ultimaFecha = ultimaActualizacion.ToString("dd/MM/yyyy")
-            });
+                tieneOtrosCreditos,
+                totalHistorial,
+                crediPlusActivas,
+                crediPlusPagadas,
+                crediPlusVencidas
+            );
 
+            return Json(new
+            {
+                ok = true,
+                activas = evaluacion.DeudasActivas,
+                pagadas = evaluacion.DeudasPagadas,
+                vencidas = evaluacion.DeudasVencidas,
+                ultimaFecha = ultimaActualizacion.ToString("dd/MM/yyyy"),
+                nivel = evaluacion.NivelRiesgo,
+                clase = evaluacion.ClaseColor,
+                aguja = evaluacion.PosicionAguja,
+                colorHex = evaluacion.ColorHex,
+                motivo = evaluacion.MotivoClasificacion,
+                esCuotaViable = evaluacion.EsCuotaViable,
+                esAprobableOrdinario = evaluacion.EsAprobableOrdinario,
+                cuotaMensual = evaluacion.CuotaMensual,
+                capacidadPago = evaluacion.CapacidadPago,
+                capacidadCuotaDisponible = evaluacion.CapacidadCuotaDisponible,
+                disponiblePrestamo = evaluacion.DisponiblePrestamo,
+                advertencias = evaluacion.Advertencias,
+                crediPlusActivas,
+                crediPlusPagadas,
+                crediPlusVencidas
+            });
         }
+
+        [HttpPost]
+        public IActionResult GuardarPerfilFinanciero(
+            int idSolicitud,
+            decimal montoSolicitado,
+            int plazoMeses,
+            decimal? ingresoMensual = null,
+            decimal? egresoMensual = null)
+        {
+            try
+            {
+                var solicitud = _context.SOLICITUD_CREDITO
+                    .Include(x => x.PERFIL_FINANCIERO)
+                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+
+                if (solicitud == null)
+                {
+                    return Json(new { ok = false, mensaje = "No se encontró la solicitud especificada." });
+                }
+
+                if (solicitud.Estado != "Pendiente" && solicitud.Estado != "En Evaluación")
+                {
+                    return Json(new { ok = false, mensaje = $"No se puede modificar el perfil financiero de una solicitud en estado '{solicitud.Estado}'." });
+                }
+
+                if (montoSolicitado < 1000 || montoSolicitado > 50000)
+                {
+                    return Json(new { ok = false, mensaje = "El monto solicitado debe situarse entre S/ 1,000 y S/ 50,000." });
+                }
+
+                if (plazoMeses <= 0)
+                {
+                    return Json(new { ok = false, mensaje = "El plazo debe ser mayor a 0 meses." });
+                }
+
+                // 1. Persistir cambios en la base de datos
+                solicitud.MontoSolicitado = montoSolicitado;
+                solicitud.PlazoMeses = plazoMeses;
+
+                if (ingresoMensual.HasValue && ingresoMensual.Value > 0 && solicitud.PERFIL_FINANCIERO != null)
+                {
+                    solicitud.PERFIL_FINANCIERO.IngresoMensual = ingresoMensual.Value;
+                }
+
+                if (egresoMensual.HasValue && egresoMensual.Value >= 0 && solicitud.PERFIL_FINANCIERO != null)
+                {
+                    solicitud.PERFIL_FINANCIERO.EgresoMensual = egresoMensual.Value;
+                }
+
+                _context.SaveChanges();
+
+                // 2. Obtener deudas existentes y préstamos reales para el recálculo
+                var resumen = _context.RESUMEN_CREDITICIO
+                    .FirstOrDefault(x => x.Usuario_Id == solicitud.Usuario_Id_Usuario);
+
+                int activas = resumen?.DeudasActivas ?? 0;
+                int pagadas = resumen?.DeudasPagadas ?? 0;
+                int vencidas = resumen?.DeudasVencidas ?? 0;
+                bool tieneOtrosCreditos = solicitud.PERFIL_FINANCIERO?.OtrosCreditos ?? false;
+
+                var idsAprobadas = _context.SOLICITUD_CREDITO
+                    .Where(s => s.Usuario_Id_Usuario == solicitud.Usuario_Id_Usuario && s.Id_Solicitud != idSolicitud && s.Estado == "Aprobado")
+                    .Select(s => s.Id_Solicitud)
+                    .ToList();
+
+                var cuotasCrediPlus = _context.CUOTA
+                    .Where(c => idsAprobadas.Contains(c.SOLICITUD_CREDITO_Id_Solicitud))
+                    .ToList();
+
+                int crediPlusActivas = idsAprobadas.Count(idSol => cuotasCrediPlus.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol && c.Estado != "Pagado"));
+                int crediPlusPagadas = idsAprobadas.Count(idSol => cuotasCrediPlus.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol) && cuotasCrediPlus.Where(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol).All(c => c.Estado == "Pagado"));
+                int crediPlusVencidas = idsAprobadas.Count(idSol => cuotasCrediPlus.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol && c.Estado != "Pagado" && c.FechaLimitePago.Date < PeruTimeHelper.TodayPeru));
+
+                // 3. Recalcular el scoring centralizado con los nuevos valores vigentes
+                var evaluacion = _servicioEvaluacion.Evaluar(
+                    solicitud.PERFIL_FINANCIERO?.IngresoMensual ?? 0m,
+                    solicitud.PERFIL_FINANCIERO?.EgresoMensual ?? 0m,
+                    solicitud.MontoSolicitado,
+                    solicitud.PlazoMeses,
+                    activas,
+                    pagadas,
+                    vencidas,
+                    tieneOtrosCreditos,
+                    -1,
+                    crediPlusActivas,
+                    crediPlusPagadas,
+                    crediPlusVencidas
+                );
+
+                return Json(new
+                {
+                    ok = true,
+                    mensaje = "Perfil financiero actualizado y scoring recalculado exitosamente.",
+                    monto = solicitud.MontoSolicitado,
+                    plazo = solicitud.PlazoMeses,
+                    ingreso = solicitud.PERFIL_FINANCIERO?.IngresoMensual ?? 0m,
+                    egreso = solicitud.PERFIL_FINANCIERO?.EgresoMensual ?? 0m,
+                    capacidadPago = evaluacion.CapacidadPago,
+                    disponiblePrestamo = evaluacion.DisponiblePrestamo,
+                    cuotaMensual = evaluacion.CuotaMensual,
+                    capacidadCuotaDisponible = evaluacion.CapacidadCuotaDisponible,
+                    esCuotaViable = evaluacion.EsCuotaViable,
+                    esAprobableOrdinario = evaluacion.EsAprobableOrdinario,
+                    nivel = evaluacion.NivelRiesgo,
+                    clase = evaluacion.ClaseColor,
+                    aguja = evaluacion.PosicionAguja,
+                    colorHex = evaluacion.ColorHex,
+                    motivo = evaluacion.MotivoClasificacion,
+                    advertencias = evaluacion.Advertencias
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { ok = false, mensaje = "Error al actualizar perfil financiero: " + ex.Message });
+            }
+        }
+
         [HttpGet]
         public IActionResult ObtenerHistorialCredito(int idSolicitud)
         {
             var solicitud = _context.SOLICITUD_CREDITO
                 .Include(x => x.USUARIO)
                 .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
-            var ultimaFecha = _context.HISTORIAL_CREDITO
-    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
-    .Max(x => x.FechaFin);
+
             if (solicitud == null)
             {
-                return Json(new { ok = false });
+                return Json(new { ok = false, mensaje = "Solicitud no encontrada." });
             }
 
-            var historial = _context.HISTORIAL_CREDITO
-                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
+            // Consultar solicitudes históricas del cliente para incluir el historial completo
+            var solicitudesUsuario = _context.SOLICITUD_CREDITO
+                .Where(x => x.Usuario_Id_Usuario == solicitud.Usuario_Id_Usuario)
+                .Select(x => x.Id_Solicitud)
+                .ToList();
+
+            // Historial externo (simulado / central de riesgos)
+            var historialDb = _context.HISTORIAL_CREDITO
+                .Where(x => solicitudesUsuario.Contains(x.SOLICITUD_CREDITO_Id_Solicitud))
+                .OrderByDescending(x => x.FechaFin)
+                .ToList();
+
+            var historialUnico = historialDb
+                .GroupBy(x => new { x.Banco, x.TipoCredito, x.Monto, x.FechaInicio })
+                .Select(g => g.First())
                 .Select(x => new
                 {
+                    origen = "Externo (Central)",
                     banco = x.Banco,
                     tipoCredito = x.TipoCredito,
                     monto = x.Monto,
                     plazoMeses = x.PlazoMeses,
                     cuotasPagadas = x.CuotasPagadas,
                     estadoCredito = x.EstadoCredito,
-
-                    fechaInicio = x.FechaInicio.HasValue
-        ? x.FechaInicio.Value.ToString("dd/MM/yyyy")
-        : "",
-
-                    fechaFin = x.FechaFin.HasValue
-        ? x.FechaFin.Value.ToString("dd/MM/yyyy")
-        : ""
+                    fechaInicio = x.FechaInicio.HasValue ? x.FechaInicio.Value.ToString("dd/MM/yyyy") : "-",
+                    fechaFin = x.FechaFin.HasValue ? x.FechaFin.Value.ToString("dd/MM/yyyy") : "-"
                 })
                 .ToList();
-            System.Diagnostics.Debug.WriteLine(
-     string.Join(", ", historial.Select(x => x.estadoCredito))
- );
+
+            // Préstamos reales de CrediPlus (no simulados)
+            var prestamosCrediPlus = _context.SOLICITUD_CREDITO
+                .Where(s => s.Usuario_Id_Usuario == solicitud.Usuario_Id_Usuario && s.Estado == "Aprobado")
+                .ToList();
+
+            var idsPrestamos = prestamosCrediPlus.Select(p => p.Id_Solicitud).ToList();
+            var cuotasCrediPlusHistorial = _context.CUOTA
+                .Where(c => idsPrestamos.Contains(c.SOLICITUD_CREDITO_Id_Solicitud))
+                .ToList();
+
+            var historialCrediPlus = prestamosCrediPlus.Select(p =>
+            {
+                var cuotasP = cuotasCrediPlusHistorial.Where(c => c.SOLICITUD_CREDITO_Id_Solicitud == p.Id_Solicitud).ToList();
+                int totalCuotas = cuotasP.Count;
+                int cuotasPagadas = cuotasP.Count(c => c.Estado == "Pagado");
+                bool tieneVencidas = cuotasP.Any(c => c.Estado != "Pagado" && c.FechaLimitePago.Date < PeruTimeHelper.TodayPeru);
+                string estado = (totalCuotas > 0 && cuotasPagadas == totalCuotas)
+                    ? "PAGADA"
+                    : (tieneVencidas ? "VENCIDA" : "ACTIVA");
+
+                DateTime? fechaVenc = cuotasP.Any() ? cuotasP.Max(c => c.FechaVencimiento) : (DateTime?)null;
+
+                return new
+                {
+                    origen = "CrediPlus (Real)",
+                    banco = "CrediPlus",
+                    tipoCredito = "Préstamo Personal (" + (p.NumeroSolicitud ?? ("SOL-" + p.Id_Solicitud.ToString("D4"))) + ")",
+                    monto = p.MontoSolicitado,
+                    plazoMeses = p.PlazoMeses,
+                    cuotasPagadas = cuotasPagadas,
+                    estadoCredito = estado,
+                    fechaInicio = p.FechaSolicitud.ToString("dd/MM/yyyy"),
+                    fechaFin = fechaVenc.HasValue ? fechaVenc.Value.ToString("dd/MM/yyyy") : p.FechaSolicitud.AddMonths(p.PlazoMeses).ToString("dd/MM/yyyy")
+                };
+            }).ToList();
+
+            var listaFinal = new List<object>();
+            listaFinal.AddRange(historialCrediPlus);
+            listaFinal.AddRange(historialUnico);
+
             return Json(new
             {
                 ok = true,
-                nombre = solicitud.USUARIO.Nombre,
-                apellido = solicitud.USUARIO.Apellido,
-                dni = solicitud.USUARIO.Dni,
-                historial
+                nombre = solicitud.USUARIO?.Nombre ?? "",
+                apellido = solicitud.USUARIO?.Apellido ?? "",
+                dni = solicitud.USUARIO?.Dni ?? "",
+                historial = listaFinal,
+                total = listaFinal.Count
             });
         }
         [HttpPost]
@@ -611,6 +651,25 @@ _context.HISTORIAL_CREDITO
                     mensaje = "Solicitud no encontrada."
                 });
             }
+
+            if (solicitud.Estado != "Pendiente" && solicitud.Estado != "En Evaluación")
+            {
+                return Json(new
+                {
+                    success = false,
+                    mensaje = $"La solicitud se encuentra en estado '{solicitud.Estado}' y no admite rechazo ordinario."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(comentario))
+            {
+                return Json(new
+                {
+                    success = false,
+                    mensaje = "Debe registrar un comentario fundamentando el motivo del rechazo."
+                });
+            }
+
             solicitud.Estado = "Rechazado";
 
 
@@ -628,7 +687,7 @@ _context.HISTORIAL_CREDITO
             {
                 EstadoActual = "Rechazado",
                 MotivoCambio = "La solicitud del cliente fue rechazada por el analista.",
-                FechaCambio = DateTime.Now,
+                FechaCambio = DateTime.UtcNow,
                 SOLICITUD_CREDITO_Id_Solicitud = idSolicitud
             };
 
@@ -651,7 +710,7 @@ _context.HISTORIAL_CREDITO
 
             evaluacion.Resultado = "Rechazado";
             evaluacion.Observacion = comentario;
-            evaluacion.FechaEvaluacion = DateTime.Now;
+            evaluacion.FechaEvaluacion = DateTime.UtcNow;
             evaluacion.Responsable = "Analista de riesgo";
 
 
@@ -710,15 +769,16 @@ _context.HISTORIAL_CREDITO
         }
         [HttpPost]
         public IActionResult AprobarSolicitud(
-    int idSolicitud,
-    string comentario,
-    string nivelRiesgo)
+            int idSolicitud,
+            string comentario,
+            string nivelRiesgo)
         {
             try
             {
                 var solicitud = _context.SOLICITUD_CREDITO
-    .Include(x => x.USUARIO)
-    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+                    .Include(x => x.USUARIO)
+                    .Include(x => x.PERFIL_FINANCIERO)
+                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
 
                 if (solicitud == null)
                 {
@@ -729,9 +789,86 @@ _context.HISTORIAL_CREDITO
                     });
                 }
 
+                if (solicitud.Estado != "Pendiente" && solicitud.Estado != "En Evaluación")
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        mensaje = $"La solicitud se encuentra en estado '{solicitud.Estado}' y no admite aprobación ordinaria."
+                    });
+                }
+
+                // Evaluar reglas de riesgo y solvencia financiera en backend
+                var resumen = _context.RESUMEN_CREDITICIO
+                    .FirstOrDefault(x => x.Usuario_Id == solicitud.Usuario_Id_Usuario);
+
+                int activas = resumen?.DeudasActivas ?? 0;
+                int pagadas = resumen?.DeudasPagadas ?? 0;
+                int vencidas = resumen?.DeudasVencidas ?? 0;
+
+                var idsAprobadasAprobar = _context.SOLICITUD_CREDITO
+                    .Where(s => s.Usuario_Id_Usuario == solicitud.Usuario_Id_Usuario && s.Id_Solicitud != idSolicitud && s.Estado == "Aprobado")
+                    .Select(s => s.Id_Solicitud)
+                    .ToList();
+
+                var cuotasCrediPlusAprobar = _context.CUOTA
+                    .Where(c => idsAprobadasAprobar.Contains(c.SOLICITUD_CREDITO_Id_Solicitud))
+                    .ToList();
+
+                int crediPlusActivas = idsAprobadasAprobar.Count(idSol => cuotasCrediPlusAprobar.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol && c.Estado != "Pagado"));
+                int crediPlusPagadas = idsAprobadasAprobar.Count(idSol => cuotasCrediPlusAprobar.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol) && cuotasCrediPlusAprobar.Where(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol).All(c => c.Estado == "Pagado"));
+                int crediPlusVencidas = idsAprobadasAprobar.Count(idSol => cuotasCrediPlusAprobar.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSol && c.Estado != "Pagado" && c.FechaLimitePago.Date < PeruTimeHelper.TodayPeru));
+
+                decimal ingreso = solicitud.PERFIL_FINANCIERO?.IngresoMensual ?? 0m;
+                decimal gastos = solicitud.PERFIL_FINANCIERO?.EgresoMensual ?? 0m;
+                bool declaroOtros = solicitud.PERFIL_FINANCIERO?.OtrosCreditos ?? false;
+
+                var evaluacionRiesgo = _servicioEvaluacion.Evaluar(
+                    ingreso,
+                    gastos,
+                    solicitud.MontoSolicitado,
+                    solicitud.PlazoMeses,
+                    activas,
+                    pagadas,
+                    vencidas,
+                    declaroOtros,
+                    -1,
+                    crediPlusActivas,
+                    crediPlusPagadas,
+                    crediPlusVencidas
+                );
+
+                // BLOQUEO ESTRICTO EN BACKEND SEGÚN MATRIZ DE RIESGO
+                if (evaluacionRiesgo.NivelRiesgo == "CRÍTICO")
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        mensaje = "BLOQUEO DE SEGURIDAD: No se puede aprobar una solicitud con nivel de riesgo CRÍTICO (deudas vencidas verificadas)."
+                    });
+                }
+
+                if (evaluacionRiesgo.NivelRiesgo == "ALTO")
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        mensaje = "APROBACIÓN BLOQUEADA: La solicitud presenta nivel de riesgo ALTO por mantener obligaciones crediticias activas. Debe utilizar la opción 'En Evaluación' para reformular monto o plazo."
+                    });
+                }
+
+                if (!evaluacionRiesgo.EsCuotaViable)
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        mensaje = $"CAPACIDAD DE PAGO INSUFICIENTE: La cuota mensual estimada (S/ {evaluacionRiesgo.CuotaMensual:N2}) supera la capacidad disponible del cliente (S/ {evaluacionRiesgo.CapacidadCuotaDisponible:N2}). Utilice 'En Evaluación' para ajustar monto o plazo."
+                    });
+                }
+
                 solicitud.Estado = "Aprobado";
                 var cuotasAnteriores = _context.CUOTA
-    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == solicitud.Id_Solicitud)
+                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == solicitud.Id_Solicitud)
     .ToList();
 
                 _context.CUOTA.RemoveRange(cuotasAnteriores);
@@ -770,7 +907,7 @@ _context.HISTORIAL_CREDITO
                         saldo = 0;
 
                     DateTime vencimiento =
-                        DateTime.Now.AddMonths(i);
+                        PeruTimeHelper.CalcularVencimientoCivil(PeruTimeHelper.TodayPeru, i);
 
                     var cuota = new Cuota
                     {
@@ -819,7 +956,7 @@ _context.HISTORIAL_CREDITO
 
                 evaluacion.Resultado = "Aprobado";
                 evaluacion.Observacion = comentario;
-                evaluacion.FechaEvaluacion = DateTime.Now;
+                evaluacion.FechaEvaluacion = DateTime.UtcNow;
                 evaluacion.Responsable = "Analista de riesgo";
                 var perfil = _context.PERFIL_FINANCIERO
     .FirstOrDefault(x =>
@@ -834,7 +971,7 @@ _context.HISTORIAL_CREDITO
                 {
                     EstadoActual = "Aprobado",
                     MotivoCambio = comentario,
-                    FechaCambio = DateTime.Now,
+                    FechaCambio = DateTime.UtcNow,
                     SOLICITUD_CREDITO_Id_Solicitud = idSolicitud
                 };
 
@@ -843,7 +980,7 @@ _context.HISTORIAL_CREDITO
                 var cronograma = new Cronograma
                 {
                     CorreoDestino = solicitud.USUARIO.Correo,
-                    FechaEnvio = DateTime.Now,
+                    FechaEnvio = DateTime.UtcNow,
                     EstadoEnvio = "Enviado",
                     NumeroOperacion = GenerarNumeroOperacion(),
                     SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
@@ -851,6 +988,7 @@ _context.HISTORIAL_CREDITO
 
                 _context.CRONOGRAMA.Add(cronograma);
                 _context.SaveChanges();
+                ActualizarReporteDashboard();
 
                 return Json(new
                 {
@@ -893,9 +1031,15 @@ _context.HISTORIAL_CREDITO
         [HttpGet]
         public JsonResult ObtenerMensajes(int idSolicitud)
         {
+            // El analista puede revisar cualquier solicitud (scope legítimo del rol),
+            // pero verificamos que la solicitud exista para no revelar información
+            // sobre IDs arbitrarios.
             var solicitud = _context.SOLICITUD_CREDITO
                 .Include(x => x.USUARIO)
                 .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+
+            if (solicitud == null)
+                return Json(new List<object>());
 
             var nombreAnalista = User.FindFirst(ClaimTypes.Name)?.Value;
             var apellidoAnalista = User.FindFirst("Apellido")?.Value;
@@ -927,6 +1071,13 @@ _context.HISTORIAL_CREDITO
     string? mensaje,
     IFormFile? imagen)
         {
+            // Verificar que la solicitud existe antes de escribir mensajes.
+            bool solicitudExiste = _context.SOLICITUD_CREDITO
+                .Any(x => x.Id_Solicitud == idSolicitud);
+
+            if (!solicitudExiste)
+                return Json(new { ok = false, mensaje = "Solicitud no encontrada." });
+
             string rutaImagen = null;
 
             if (imagen != null)
@@ -967,6 +1118,7 @@ _context.HISTORIAL_CREDITO
 
             nuevo.Imagen = rutaImagen;
 
+            // El remitente siempre lo fija el servidor según el rol autenticado.
             nuevo.Remitente = "Analista";
             nuevo.FechaEnvio = DateTime.Now;
             nuevo.Leido = false;
@@ -1025,6 +1177,15 @@ _context.HISTORIAL_CREDITO
                     });
                 }
 
+                if (solicitud.Estado != "Pendiente" && solicitud.Estado != "En Evaluación")
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        mensaje = $"La solicitud se encuentra en estado '{solicitud.Estado}' y no puede pasar a evaluación."
+                    });
+                }
+
                 solicitud.Estado = "En Evaluación";
                 string comentario = "";
 
@@ -1051,7 +1212,7 @@ _context.HISTORIAL_CREDITO
 
                         EsRecomendada = propuesta.GetProperty("esRecomendada").GetBoolean(),
 
-                        FechaRegistro = DateTime.Now
+                        FechaRegistro = DateTime.UtcNow
                     };
 
                     _context.PROPUESTA_CREDITO.Add(nueva);
@@ -1060,7 +1221,7 @@ _context.HISTORIAL_CREDITO
                 {
                     EstadoActual = "En Evaluación",
                     MotivoCambio = "Se enviaron propuestas de evaluación al cliente.",
-                    FechaCambio = DateTime.Now,
+                    FechaCambio = DateTime.UtcNow,
                     SOLICITUD_CREDITO_Id_Solicitud = idSolicitud
                 };
                 _context.HISTORIAL_ESTADO.Add(historial);
@@ -1083,7 +1244,7 @@ _context.HISTORIAL_CREDITO
 
                 evaluacion.Resultado = "Evaluado";
                 evaluacion.Observacion = comentarioFinal;
-                evaluacion.FechaEvaluacion = DateTime.Now;
+                evaluacion.FechaEvaluacion = DateTime.UtcNow;
                 evaluacion.Responsable = "Analista de riesgo";
                 _context.SaveChanges();
                 Console.WriteLine("Observación guardada BD: " + evaluacion.Observacion);
@@ -1314,7 +1475,7 @@ _context.HISTORIAL_CREDITO
 
             var pagos = _context.PAGO_CUOTA.ToList();
 
-            DateTime hoy = DateTime.Today;
+            DateTime hoy = PeruTimeHelper.TodayPeru;
 
             int idCuotaActual = cuotas
                 .Where(c =>
@@ -1430,7 +1591,7 @@ _context.HISTORIAL_CREDITO
 
             var pagos = _context.PAGO_CUOTA.ToList();
 
-            DateTime hoy = DateTime.Today;
+            DateTime hoy = PeruTimeHelper.TodayPeru;
 
             int idCuotaActual = cuotas
                 .Where(c =>
@@ -1551,7 +1712,7 @@ _context.HISTORIAL_CREDITO
                 return RedirectToAction("IniciarSesion", "Login");
             }
 
-            DateTime hoy = DateTime.Today;
+            DateTime hoy = PeruTimeHelper.TodayPeru;
 
             var viewModel = new AlertasNotificacionesViewModel
             {
@@ -1559,17 +1720,20 @@ _context.HISTORIAL_CREDITO
                 AnalistaCorreo = analista.Correo
             };
 
-            // 1. ALERTAS CRÍTICAS: solicitudes pendientes de HOY
-            var solicitudesCriticas = _context.SOLICITUD_CREDITO
+            // Recuperar solicitudes pendientes
+            var solicitudesPendientes = _context.SOLICITUD_CREDITO
                 .Include(x => x.USUARIO)
-                .Where(x =>
-                    x.Estado == "Pendiente" &&
-                    x.FechaSolicitud.Date == hoy &&
-                    !x.NotificacionVistaAnalista)
+                .Where(x => x.Estado == "Pendiente")
+                .ToList();
+
+            // 1. ALERTAS CRÍTICAS: solicitudes pendientes de HOY (en horario civil de Perú)
+            var solicitudesCriticas = solicitudesPendientes
+                .Where(x => PeruTimeHelper.ConvertirFechaBaseDatosAPeru(x.FechaSolicitud, true).Date == hoy && !x.NotificacionVistaAnalista)
                 .ToList();
 
             foreach (var solicitud in solicitudesCriticas)
             {
+                var fechaPeru = PeruTimeHelper.ConvertirFechaBaseDatosAPeru(solicitud.FechaSolicitud, true);
                 viewModel.Alertas.Add(new AlertaItemViewModel
                 {
                     Tipo = "critica",
@@ -1583,22 +1747,20 @@ _context.HISTORIAL_CREDITO
                         ? $"{solicitud.USUARIO.Nombre} {solicitud.USUARIO.Apellido}"
                         : "Cliente desconocido",
                     MontoSolicitado = solicitud.MontoSolicitado,
-                    Fecha = solicitud.FechaSolicitud,
+                    Fecha = fechaPeru,
                     UrlOjo = Url.Action("VerSolicitud", "Analista", new { id = solicitud.Id_Solicitud })
                 });
             }
 
-            // 2. REVISIÓN PENDIENTE: pendientes de días anteriores
-            var revisionesPendientes = _context.SOLICITUD_CREDITO
-                .Include(x => x.USUARIO)
-                .Where(x =>
-                    x.Estado == "Pendiente" &&
-                    x.FechaSolicitud.Date < hoy)
+            // 2. REVISIÓN PENDIENTE: pendientes de días anteriores (en horario civil de Perú)
+            var revisionesPendientes = solicitudesPendientes
+                .Where(x => PeruTimeHelper.ConvertirFechaBaseDatosAPeru(x.FechaSolicitud, true).Date < hoy)
                 .ToList();
 
             foreach (var solicitud in revisionesPendientes)
             {
-                int dias = (hoy - solicitud.FechaSolicitud.Date).Days;
+                var fechaPeru = PeruTimeHelper.ConvertirFechaBaseDatosAPeru(solicitud.FechaSolicitud, true);
+                int dias = (hoy - fechaPeru.Date).Days;
 
                 viewModel.Alertas.Add(new AlertaItemViewModel
                 {
@@ -1613,7 +1775,7 @@ _context.HISTORIAL_CREDITO
                         ? $"{solicitud.USUARIO.Nombre} {solicitud.USUARIO.Apellido}"
                         : "Cliente desconocido",
                     MontoSolicitado = solicitud.MontoSolicitado,
-                    Fecha = solicitud.FechaSolicitud,
+                    Fecha = fechaPeru,
                     UrlOjo = Url.Action("VerSolicitud", "Analista", new { id = solicitud.Id_Solicitud })
                 });
             }
@@ -1698,16 +1860,51 @@ _context.HISTORIAL_CREDITO
         {
             var prestamos = _context.SOLICITUD_CREDITO
                 .Include(x => x.USUARIO)
+                .Include(x => x.HISTORIAL_ESTADOS)
                 .Where(x => x.Estado == "Aprobado")
-                .OrderByDescending(x => x.FechaSolicitud)
                 .ToList();
 
-            return View(prestamos);
+            var revisiones = prestamos.Select(p =>
+            {
+                DateTime fechaSolPeru = PeruTimeHelper.ConvertirFechaBaseDatosAPeru(p.FechaSolicitud, esInstanteUtc: true);
+
+                var histAprobado = p.HISTORIAL_ESTADOS?
+                    .Where(h => h.EstadoActual == "Aprobado")
+                    .OrderByDescending(h => h.FechaCambio)
+                    .FirstOrDefault();
+
+                DateTime? fechaAprobPeru = histAprobado != null
+                    ? PeruTimeHelper.ConvertirFechaBaseDatosAPeru(histAprobado.FechaCambio, esInstanteUtc: true)
+                    : (DateTime?)null;
+
+                DateTime fechaRevisionPeru = fechaSolPeru;
+
+                return new RevisionCalendarioViewModel
+                {
+                    Id_Solicitud = p.Id_Solicitud,
+                    NumeroSolicitud = p.NumeroSolicitud ?? p.Id_Solicitud.ToString("D4"),
+                    ClienteNombre = p.USUARIO != null ? $"{p.USUARIO.Nombre} {p.USUARIO.Apellido}" : "Cliente",
+                    ClienteDni = p.USUARIO?.Dni ?? string.Empty,
+                    ClienteCorreo = p.USUARIO?.Correo ?? string.Empty,
+                    MontoSolicitado = p.MontoSolicitado,
+                    PlazoMeses = p.PlazoMeses,
+                    InteresEstimado = p.InteresEstimado,
+                    Estado = p.Estado,
+                    FechaSolicitudPeru = fechaSolPeru,
+                    FechaAprobacionPeru = fechaAprobPeru,
+                    FechaRevisionPeru = fechaRevisionPeru
+                };
+            })
+            .OrderByDescending(x => x.FechaRevisionPeru)
+            .ToList();
+
+            return View(revisiones);
         }
         public JsonResult ObtenerDetallePrestamo(int id)
         {
             var prestamo = _context.SOLICITUD_CREDITO
                 .Include(x => x.USUARIO)
+                .Include(x => x.HISTORIAL_ESTADOS)
                 .FirstOrDefault(x => x.Id_Solicitud == id);
 
             if (prestamo == null)
@@ -1715,17 +1912,30 @@ _context.HISTORIAL_CREDITO
                 return Json(new { ok = false });
             }
 
+            DateTime fechaSolPeru = PeruTimeHelper.ConvertirFechaBaseDatosAPeru(prestamo.FechaSolicitud, esInstanteUtc: true);
+
+            var histAprobado = prestamo.HISTORIAL_ESTADOS?
+                .Where(h => h.EstadoActual == "Aprobado")
+                .OrderByDescending(h => h.FechaCambio)
+                .FirstOrDefault();
+
+            DateTime? fechaAprobPeru = histAprobado != null
+                ? PeruTimeHelper.ConvertirFechaBaseDatosAPeru(histAprobado.FechaCambio, esInstanteUtc: true)
+                : (DateTime?)null;
+
             return Json(new
             {
                 ok = true,
-                cliente = prestamo.USUARIO.Nombre + " " + prestamo.USUARIO.Apellido,
-                dni = prestamo.USUARIO.Dni,
-                correo = prestamo.USUARIO.Correo,
+                cliente = (prestamo.USUARIO?.Nombre ?? "") + " " + (prestamo.USUARIO?.Apellido ?? ""),
+                dni = prestamo.USUARIO?.Dni ?? "",
+                correo = prestamo.USUARIO?.Correo ?? "",
                 monto = prestamo.MontoSolicitado.ToString("N2"),
                 cuotas = prestamo.PlazoMeses,
                 interes = prestamo.InteresEstimado,
-                fecha = prestamo.FechaSolicitud.ToString("dd/MM/yyyy"),
-                hora = prestamo.FechaSolicitud.ToString("HH:mm"),
+                fecha = fechaSolPeru.ToString("dd/MM/yyyy"),
+                hora = fechaSolPeru.ToString("HH:mm"),
+                fechaSolicitud = fechaSolPeru.ToString("dd/MM/yyyy HH:mm"),
+                fechaAprobacion = fechaAprobPeru.HasValue ? fechaAprobPeru.Value.ToString("dd/MM/yyyy HH:mm") : "N/D",
                 estado = prestamo.Estado
             });
         }
@@ -1780,6 +1990,14 @@ _context.HISTORIAL_CREDITO
 
             if (!string.IsNullOrWhiteSpace(usuario.clave))
             {
+                var resClave = PasswordPolicyHelper.Validar(usuario.clave);
+                if (!resClave.EsValida)
+                {
+                    ViewData["Mensaje"] = resClave.MensajeError;
+                    ViewData["ModoEditar"] = true;
+                    return View(usuario);
+                }
+
                 analista.clave = utilidades.EncriptarClave(usuario.clave);
             }
 
@@ -1944,7 +2162,7 @@ _context.HISTORIAL_CREDITO
         }
         public IActionResult GestionDePago()
         {
-            var hoy = DateTime.Today;
+            var hoy = PeruTimeHelper.TodayPeru;
             string nombre = User.FindFirst(ClaimTypes.Name)?.Value ?? "";
             string apellido = User.FindFirst("Apellido")?.Value ?? "";
             string correo = User.FindFirst("Correo")?.Value ?? "";
@@ -1983,6 +2201,32 @@ _context.HISTORIAL_CREDITO
                 if (cuota != null)
                 {
                     cuota.Estado = "Pagado";
+
+                    // Verificar si TODAS las cuotas del préstamo están pagadas para considerarlo cancelado
+                    int idSolPrestamo = cuota.SOLICITUD_CREDITO_Id_Solicitud;
+                    var cuotasPrestamo = _context.CUOTA
+                        .Where(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSolPrestamo)
+                        .ToList();
+
+                    bool todasPagadas = cuotasPrestamo.All(c => c.Id_Cuota == cuota.Id_Cuota || c.Estado == "Pagado");
+
+                    if (todasPagadas && cuotasPrestamo.Count > 0)
+                    {
+                        var solPrestamo = _context.SOLICITUD_CREDITO.FirstOrDefault(s => s.Id_Solicitud == idSolPrestamo);
+                        if (solPrestamo != null)
+                        {
+                            var resumenUser = _context.RESUMEN_CREDITICIO.FirstOrDefault(r => r.Usuario_Id == solPrestamo.Usuario_Id_Usuario);
+                            if (resumenUser != null)
+                            {
+                                resumenUser.DeudasPagadas += 1;
+                                if (resumenUser.DeudasActivas > 0)
+                                {
+                                    resumenUser.DeudasActivas -= 1;
+                                }
+                                resumenUser.UltimaActualizacion = DateTime.UtcNow;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -1995,15 +2239,21 @@ _context.HISTORIAL_CREDITO
 
             ViewBag.TotalAprobados = pagosAprobados.Count;
 
+            var ahoraPeru = PeruTimeHelper.NowPeru;
             int esteMes = pagosAprobados
-                .Count(x => x.FechaPago.Month == DateTime.Now.Month &&
-                            x.FechaPago.Year == DateTime.Now.Year);
+                .Count(x => {
+                    var fPeru = PeruTimeHelper.ConvertirFechaBaseDatosAPeru(x.FechaPago, true);
+                    return fPeru.Month == ahoraPeru.Month && fPeru.Year == ahoraPeru.Year;
+                });
 
+            var mesAnteriorFecha = ahoraPeru.AddMonths(-1);
             int mesAnterior = _context.PAGO_CUOTA
-                .Count(x =>
-                    x.Estado == "Aprobado" &&
-                    x.FechaPago.Month == DateTime.Now.AddMonths(-1).Month &&
-                    x.FechaPago.Year == DateTime.Now.AddMonths(-1).Year);
+                .Where(x => x.Estado == "Aprobado")
+                .ToList()
+                .Count(x => {
+                    var fPeru = PeruTimeHelper.ConvertirFechaBaseDatosAPeru(x.FechaPago, true);
+                    return fPeru.Month == mesAnteriorFecha.Month && fPeru.Year == mesAnteriorFecha.Year;
+                });
 
             ViewBag.PorcentajeEsteMes = mesAnterior > 0
                 ? Math.Round(((decimal)(esteMes - mesAnterior) / mesAnterior) * 100, 0)
@@ -2287,7 +2537,7 @@ _context.HISTORIAL_CREDITO
                 Asunto = asunto,
                 Mensaje = mensaje,
                 Estado = "Pendiente",
-                FechaEnvio = DateTime.Now,
+                FechaEnvio = DateTime.UtcNow,
                 Leido = false
             });
 

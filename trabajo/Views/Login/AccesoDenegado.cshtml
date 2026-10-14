@@ -1,0 +1,203 @@
+@{
+    Layout = null;
+    Context.Response.StatusCode = 403;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acceso Restringido (403) - CrediPlus</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/utilidades-ui.css" />
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #1e1b4b, #312e81, #4338ca, #3b82f6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .error-card {
+            width: 100%;
+            max-width: 580px;
+            background: #ffffff;
+            border-radius: 28px;
+            padding: 48px 40px;
+            text-align: center;
+            box-shadow: 0 25px 60px rgba(15, 23, 42, 0.35);
+            animation: fadeIn 0.35s ease-out;
+        }
+
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .badge-403 {
+            display: inline-block;
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: 800;
+            font-size: 13px;
+            letter-spacing: 1.5px;
+            padding: 6px 16px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .icon-circle {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            color: #dc2626;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 46px;
+            margin: 0 auto 24px;
+            box-shadow: 0 10px 25px rgba(220, 38, 38, 0.18);
+        }
+
+        h1 {
+            color: #1e1b4b;
+            font-size: 28px;
+            font-weight: 800;
+            margin: 0 0 12px 0;
+        }
+
+        p.description {
+            color: #64748b;
+            font-size: 15.5px;
+            line-height: 1.6;
+            margin: 0 0 32px 0;
+        }
+
+        .btn-panel {
+            width: 100%;
+            height: 52px;
+            border: none;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #4361ee, #7209b7);
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 10px 25px rgba(67, 97, 238, 0.28);
+        }
+
+        .btn-panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 28px rgba(67, 97, 238, 0.36);
+            color: #ffffff;
+        }
+
+        .btn-logout {
+            width: 100%;
+            height: 48px;
+            margin-top: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            background: #ffffff;
+            color: #475569;
+            font-size: 14.5px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-logout:hover {
+            background: #f8fafc;
+            color: #1e293b;
+            border-color: #94a3b8;
+        }
+
+        .footer-note {
+            margin-top: 28px;
+            font-size: 12.5px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <div class="badge-403">HTTP 403 · Prohibido</div>
+        
+        <div class="icon-circle">
+            🛡️
+        </div>
+
+        <h1>Acceso Restringido</h1>
+        
+        <p class="description">
+            No cuentas con los permisos requeridos para acceder a esta sección de la plataforma. 
+            Tu rol actual no tiene autorización para ejecutar esta operación.
+        </p>
+
+        @{
+            string destinoUrl = Url.Action("IniciarSesion", "Login");
+            string destinoTexto = "Ir al inicio de sesión";
+
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                if (User.IsInRole("Administrador"))
+                {
+                    destinoUrl = Url.Action("ProgramaAdministrador", "Administrador");
+                    destinoTexto = "Regresar al panel de Administrador";
+                }
+                else if (User.IsInRole("Analista"))
+                {
+                    destinoUrl = Url.Action("ProgramaAnalista", "Analista");
+                    destinoTexto = "Regresar al panel de Analista";
+                }
+                else if (User.IsInRole("Cliente"))
+                {
+                    destinoUrl = Url.Action("DashboardCliente", "Login");
+                    destinoTexto = "Regresar a mi panel de Cliente";
+                }
+            }
+        }
+
+        <a href="@destinoUrl" class="btn-panel">
+            <span>🏠</span> @destinoTexto
+        </a>
+
+        @if (User?.Identity?.IsAuthenticated == true)
+        {
+            <a href="@Url.Action("CerrarSesion", "Login")" class="btn-logout">
+                <span>🚪</span> Cambiar de cuenta
+            </a>
+        }
+
+        <div class="footer-note">
+            CrediPlus Security · Control de Acceso Basado en Roles (RBAC)
+        </div>
+    </div>
+</body>
+</html>

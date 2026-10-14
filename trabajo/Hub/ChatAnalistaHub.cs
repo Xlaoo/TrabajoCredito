@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
+using System.Security.Claims;
 using trabajo.Models;
 
 namespace trabajo.Hubs
 {
+    [Authorize(Roles = "Analista,Administrador")]
     public class ChatAnalistaHub : Hub
     {
         private readonly UsuarioContext _context;
@@ -18,9 +21,17 @@ namespace trabajo.Hubs
             await Groups.AddToGroupAsync(Context.ConnectionId, grupo);
         }
 
-        public async Task EnviarMensaje(int idAdministrador, int idAnalista, string remitenteRol, string mensaje)
+        // ==========================================
+        // SEGURIDAD: remitenteRol se determina en el SERVIDOR
+        // desde ClaimTypes.Role. No se acepta como parámetro del cliente
+        // para evitar suplantación de rol en mensajes del Hub.
+        // ==========================================
+        public async Task EnviarMensaje(int idAdministrador, int idAnalista, string mensaje)
         {
             if (string.IsNullOrWhiteSpace(mensaje)) return;
+
+            // El rol del remitente lo determina el servidor, no el cliente.
+            string remitenteRol = Context.User?.FindFirst(ClaimTypes.Role)?.Value ?? "Desconocido";
 
             var nuevoMensaje = new MensajeAdminAnalista
             {

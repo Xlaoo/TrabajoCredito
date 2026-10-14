@@ -1,4 +1,4 @@
-﻿@model List<trabajo.Models.SolicitudCredito>
+@model List<trabajo.Models.RevisionCalendarioViewModel>
 @{
     Layout = null;
 
@@ -594,20 +594,18 @@
             </div>
 
             @{
-                var aprobados = Model.Where(x => x.Estado == "Aprobado")
-                .OrderBy(x => x.FechaSolicitud)
-                .ToList();
+                var aprobados = Model;
 
-                var hoy = DateTime.Today;
+                var hoy = trabajo.Service.PeruTimeHelper.TodayPeru;
 
                 var revisionesHoy = aprobados
-                .Count(x => x.FechaSolicitud.Date == hoy);
+                    .Count(x => x.FechaRevisionPeru.Date == hoy);
 
                 var revisionesSemana = aprobados
-                .Count(x => x.FechaSolicitud.Date >= hoy &&
-                x.FechaSolicitud.Date <= hoy.AddDays(7));
+                    .Count(x => x.FechaRevisionPeru.Date >= hoy &&
+                    x.FechaRevisionPeru.Date <= hoy.AddDays(7));
 
-                var proxima = aprobados.FirstOrDefault(x => x.FechaSolicitud.Date >= hoy);
+                var proxima = aprobados.FirstOrDefault(x => x.FechaRevisionPeru.Date >= hoy);
             }
 
             <div class="panel-stats">
@@ -634,15 +632,15 @@
             {
                 <div class="proxima-box">
                     <div class="proxima-fecha">
-                        <span>@proxima.FechaSolicitud.ToString("MMM").ToUpper()</span>
-                        <strong>@proxima.FechaSolicitud.ToString("dd")</strong>
-                        <small>@proxima.FechaSolicitud.ToString("dddd")</small>
+                        <span>@proxima.FechaRevisionPeru.ToString("MMM").ToUpper()</span>
+                        <strong>@proxima.FechaRevisionPeru.ToString("dd")</strong>
+                        <small>@proxima.FechaRevisionPeru.ToString("dddd")</small>
                     </div>
 
                     <div class="proxima-info">
                         <strong>Revisión @proxima.NumeroSolicitud</strong>
-                        <span>@proxima.USUARIO.Nombre @proxima.USUARIO.Apellido</span>
-                        <small>@proxima.FechaSolicitud.ToString("HH:mm")</small>
+                        <span>@proxima.ClienteNombre</span>
+                        <small>@proxima.HoraRevisionTexto</small>
                     </div>
                 </div>
             }
@@ -653,20 +651,20 @@
                 @foreach (var p in aprobados)
                 {
                     <div class="revision-item"
-                         data-nombre="@($"{p.USUARIO.Nombre} {p.USUARIO.Apellido}".ToLower())"
-                         data-dni="@p.USUARIO.Dni">
+                         data-nombre="@p.ClienteNombre.ToLower()"
+                         data-dni="@p.ClienteDni">
 
                         <div class="revision-avatar">👤</div>
 
                         <div class="revision-info">
                             <strong>Revisión @p.NumeroSolicitud</strong>
-                            <span>@p.USUARIO.Nombre @p.USUARIO.Apellido</span>
-                            <small>DNI: @p.USUARIO.Dni</small>
+                            <span>@p.ClienteNombre</span>
+                            <small>DNI: @p.ClienteDni</small>
                         </div>
 
                         <div class="revision-fecha">
-                            <span>@p.FechaSolicitud.ToString("dd/MM/yyyy")</span>
-                            <small>@p.FechaSolicitud.ToString("HH:mm")</small>
+                            <span>@p.FechaRevisionTexto</span>
+                            <small>@p.HoraRevisionTexto</small>
                         </div>
 
                         <button type="button"
@@ -717,13 +715,13 @@
 
         events: [
 
-            @foreach (var p in Model.Where(x => x.Estado == "Aprobado"))
+            @foreach (var p in Model)
             {
                     <text>
                     {
                         id:'@p.Id_Solicitud',
-                        title:'Revisión @p.NumeroSolicitud\n@(p.USUARIO.Nombre) @(p.USUARIO.Apellido)\n@(p.FechaSolicitud.ToString("HH:mm"))',
-                        start:'@p.FechaSolicitud.ToString("yyyy-MM-dd")',
+                        title:'Revisión @p.NumeroSolicitud\n@(p.ClienteNombre)\n@(p.HoraRevisionTexto)',
+                        start:'@p.FechaIso',
                         color:'green'
                     },
                     </text>
@@ -806,17 +804,22 @@
 
         <br><br>
 
-        📅 Fecha
+        📅 Fecha (Perú)
         <br>
         <strong>${data.fecha}</strong>
 
         <br><br>
 
-        🕒 Hora
+        🕒 Hora (Perú)
         <br>
         <strong>${data.hora}</strong>
 
         <br><br>
+
+        ${data.fechaAprobacion && data.fechaAprobacion !== 'N/D' ? `<small style="display:block; color:#15803d; font-weight:700;">✅ Aprobado: ${data.fechaAprobacion}</small>` : ''}
+        ${data.fechaSolicitud ? `<small style="display:block; color:#6b7280; margin-top:4px;">📋 Solicitud: ${data.fechaSolicitud}</small>` : ''}
+
+        <br>
 
         <div class="estado-box">
         <span>Estado actual</span>

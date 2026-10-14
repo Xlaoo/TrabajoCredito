@@ -1,4 +1,4 @@
-﻿@{
+@{
     Layout = null;
 
     bool recuperacionValidada =
@@ -27,6 +27,9 @@
 
     <link rel="stylesheet"
           href="~/css/utilidades-ui.css" />
+
+    <!-- Cloudflare Turnstile API -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
     <style>
 
@@ -851,6 +854,13 @@
 
                     </div>
 
+                    <!-- CLOUDFLARE TURNSTILE CAPTCHA -->
+                    @if (ViewBag.TurnstileSiteKey != null && !string.IsNullOrWhiteSpace(ViewBag.TurnstileSiteKey.ToString()))
+                    {
+                        <div class="mb-3 text-center" style="display:flex; justify-content:center;">
+                            <div id="cf-turnstile-recuperacion" class="cf-turnstile" data-sitekey="@ViewBag.TurnstileSiteKey" data-theme="light"></div>
+                        </div>
+                    }
 
                     <button id="btnEnviarRecuperacion"
                             type="button"
@@ -1094,8 +1104,12 @@
                             ○ Un número
                         </li>
 
+                        <li id="simbolo">
+                            ○ Un símbolo especial (!@@#$%&*...)
+                        </li>
+
                         <li id="longitud">
-                            ○ Mínimo 6 caracteres
+                            ○ Mínimo 12 caracteres
                         </li>
 
                     </ul>
@@ -1378,6 +1392,12 @@
                     correo
                 );
 
+                const turnstileInput = document.querySelector('[name="cf-turnstile-response"]');
+                const turnstileToken = turnstileInput ? turnstileInput.value : "";
+                if (turnstileToken) {
+                    datos.append("cf-turnstile-response", turnstileToken);
+                }
+
 
                 const respuesta =
                     await fetch(
@@ -1404,6 +1424,10 @@
 
 
                 if (!resultado.ok) {
+
+                    if (typeof turnstile !== "undefined") {
+                        try { turnstile.reset(); } catch (e) {}
+                    }
 
                     mostrarMensaje(
                         resultado.mensaje,
@@ -1905,13 +1929,16 @@
 
             // VALIDAR REGLAS
 
-            if (
-                !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/
-                    .test(nuevaClave)
-            ) {
+            const tieneMayus = /[A-Z]/.test(nuevaClave);
+            const tieneMinus = /[a-z]/.test(nuevaClave);
+            const tieneNumero = /[0-9]/.test(nuevaClave);
+            const tieneSimbolo = /[^a-zA-Z0-9\s]/.test(nuevaClave);
+            const tieneLongitud = nuevaClave.length >= 12;
+
+            if (!tieneMayus || !tieneMinus || !tieneNumero || !tieneSimbolo || !tieneLongitud) {
 
                 mostrarMensaje(
-                    "La contraseña debe tener mínimo 6 caracteres, una mayúscula, una minúscula y un número.",
+                    "La contraseña debe tener mínimo 12 caracteres, al menos una mayúscula, una minúscula, un número y un símbolo especial.",
                     false
                 );
 
@@ -2063,6 +2090,11 @@
                 "numero"
             );
 
+        const simbolo =
+            document.getElementById(
+                "simbolo"
+            );
+
         const longitud =
             document.getElementById(
                 "longitud"
@@ -2142,12 +2174,37 @@
                     }
 
 
+                    // SÍMBOLO ESPECIAL
+
+                    if (/[^a-zA-Z0-9\s]/.test(valor)) {
+
+                        if (simbolo) {
+                            simbolo.innerHTML =
+                                "✔ Un símbolo especial (!@@#$%&*...)";
+
+                            simbolo.style.color =
+                                "green";
+                        }
+
+                    }
+                    else {
+
+                        if (simbolo) {
+                            simbolo.innerHTML =
+                                "○ Un símbolo especial (!@@#$%&*...)";
+
+                            simbolo.style.color =
+                                "#64748b";
+                        }
+                    }
+
+
                     // LONGITUD
 
-                    if (valor.length >= 6) {
+                    if (valor.length >= 12) {
 
                         longitud.innerHTML =
-                            "✔ Mínimo 6 caracteres";
+                            "✔ Mínimo 12 caracteres";
 
                         longitud.style.color =
                             "green";
@@ -2156,7 +2213,7 @@
                     else {
 
                         longitud.innerHTML =
-                            "○ Mínimo 6 caracteres";
+                            "○ Mínimo 12 caracteres";
 
                         longitud.style.color =
                             "#64748b";

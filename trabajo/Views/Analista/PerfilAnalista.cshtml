@@ -1,4 +1,4 @@
-﻿@model trabajo.Models.Usuario
+@model trabajo.Models.Usuario
 
 @{
 	Layout = null;
@@ -524,7 +524,8 @@
 				<p id="mayus" class="bad">✖ Una letra mayúscula</p>
 				<p id="minus" class="bad">✖ Una letra minúscula</p>
 				<p id="num" class="bad">✖ Un número</p>
-				<p id="minimo" class="bad">✖ Mínimo 6 caracteres</p>
+				<p id="simbolo" class="bad">✖ Un símbolo especial (!@@#$%&*...)</p>
+				<p id="minimo" class="bad">✖ Mínimo 12 caracteres</p>
 			</div>
 
 			<button id="btnEditar"
@@ -603,7 +604,8 @@
 			cambiarRegla("mayus", /[A-Z]/.test(clave), "Una letra mayúscula");
 			cambiarRegla("minus", /[a-z]/.test(clave), "Una letra minúscula");
 			cambiarRegla("num", /[0-9]/.test(clave), "Un número");
-			cambiarRegla("minimo", clave.length >= 6, "Mínimo 6 caracteres");
+			cambiarRegla("simbolo", /[^a-zA-Z0-9\s]/.test(clave), "Un símbolo especial (!@@#$%&*...)");
+			cambiarRegla("minimo", clave.length >= 12, "Mínimo 12 caracteres");
 		}
 
 		function cambiarRegla(id, cumple, texto) {

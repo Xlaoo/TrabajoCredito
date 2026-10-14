@@ -1,4 +1,4 @@
-﻿@model trabajo.Models.ViewModels.AdminAnalistaViewModel
+@model trabajo.Models.ViewModels.AdminAnalistaViewModel
 
 @{
     Layout = "~/Views/Shared/_LayoutAdministrador.cshtml";
@@ -1083,10 +1083,10 @@
                             <input name="apellido" class="form-control mb-2" placeholder="Apellido" required />
                             <input name="dni" class="form-control mb-2" placeholder="DNI" required />
                             <input name="celular" class="form-control mb-2" placeholder="Celular" required />
-                            <input name="correo" type="email" class="form-control mb-2" placeholder="Correo" required />
-                            <input name="clave" type="password" class="form-control mb-2" placeholder="Contraseña" required />
-
-                            <select name="genero" class="form-select mb-3" required>
+                            <input name="clave" id="claveAnalistaNuevo" type="password" class="form-control mb-1" placeholder="Contraseña (mínimo 12 caracteres y símbolo)" required minlength="12" />
+                            <small class="text-muted d-block mb-2" style="font-size:11px;">
+                                🔒 Requiere mínimo 12 caracteres, una mayúscula, una minúscula, un número y un símbolo especial (!@@#$%&*...).
+                            </small>
                                 <option value="">Seleccione género</option>
                                 <option value="Masculino">Masculino</option>
                                 <option value="Femenino">Femenino</option>
@@ -1377,7 +1377,7 @@
         btnEnviar.disabled = true;
 
         try {
-        await connection.invoke("EnviarMensaje", idAdministrador, idAnalista, remitenteRol, texto);
+        await connection.invoke("EnviarMensaje", idAdministrador, idAnalista, texto);
         mensajeInput.value = "";
         } catch (error) {
         console.error("Error enviando mensaje:", error);

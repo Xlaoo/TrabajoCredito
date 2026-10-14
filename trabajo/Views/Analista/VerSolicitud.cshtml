@@ -1,26 +1,11 @@
 @model trabajo.Models.SolicitudCredito
 @using trabajo.Models
+@using trabajo.Service
 @{
     Layout = null;
     Layout = "~/Views/Shared/_LayoutAnalista.cshtml";
     ViewData["Title"] = "Ver Solicitud";
     ViewData["ActivePage"] = "VerSolicitud";
-
-    decimal capacidadPago =
-        Model.PERFIL_FINANCIERO.IngresoMensual * 0.30m;
-
-    decimal disponiblePrestamo =
-        capacidadPago * 10.5m;
-    var historial = ViewBag.Historial as List<HistorialCredito>;
-    var ultimoHistorial = historial?.LastOrDefault();
-    var resumen = ViewBag.Resumen as ResumenCredito;
-
-    int activas = resumen?.DeudasActivas ?? 0;
-    int pagadas = resumen?.DeudasPagadas ?? 0;
-    int vencidas = resumen?.DeudasVencidas ?? 0;
-    int deudasEncontradas = activas + vencidas;
-    bool tieneOtrosCreditos =
-    Model.PERFIL_FINANCIERO?.OtrosCreditos ?? false;
 
     if (Model.PERFIL_FINANCIERO == null)
     {
@@ -28,42 +13,32 @@
         return;
     }
 
-    var ultimaActualizacion =
-historial?.Max(x => x.FechaFin);
+    var evaluacion = ViewBag.EvaluacionRiesgo as ResultadoEvaluacionRiesgo;
+    decimal capacidadPago = evaluacion?.CapacidadPago ?? (Model.PERFIL_FINANCIERO.IngresoMensual * 0.30m);
+    decimal disponiblePrestamo = evaluacion?.DisponiblePrestamo ?? (capacidadPago * 10.5m);
+
+    var historial = ViewBag.Historial as List<HistorialCredito>;
+    var ultimoHistorial = historial?.LastOrDefault();
+    var resumen = ViewBag.Resumen as ResumenCredito;
+
+    int activas = evaluacion?.DeudasActivas ?? (resumen?.DeudasActivas ?? 0);
+    int pagadas = evaluacion?.DeudasPagadas ?? (resumen?.DeudasPagadas ?? 0);
+    int vencidas = evaluacion?.DeudasVencidas ?? (resumen?.DeudasVencidas ?? 0);
+    int deudasEncontradas = activas + vencidas;
+    bool tieneOtrosCreditos = Model.PERFIL_FINANCIERO?.OtrosCreditos ?? false;
+
+    var ultimaActualizacion = (historial != null && historial.Any(x => x.FechaFin.HasValue))
+        ? historial.Where(x => x.FechaFin.HasValue).Max(x => x.FechaFin)
+        : null;
 
     int totalHistorial = activas + pagadas + vencidas;
 
-    string nivelRiesgo = "";
-    string claseColor = "";
-    string posicionAguja = "";
+    string nivelRiesgo = evaluacion?.NivelRiesgo ?? "MEDIO";
+    string claseColor = evaluacion?.ClaseColor ?? "medio";
+    string posicionAguja = evaluacion?.PosicionAguja ?? "-20deg";
 
-    if (vencidas > 0)
-    {
-        nivelRiesgo = "CRÍTICO";
-        claseColor = "critico";
-        posicionAguja = "70deg";
-    }
-    else if (activas > 0 && pagadas > 0)
-    {
-        nivelRiesgo = "ALTO";
-        claseColor = "alto";
-        posicionAguja = "35deg";
-    }
-    else if (pagadas > 0)
-    {
-        nivelRiesgo = "BAJO";
-        claseColor = "bajo";
-        posicionAguja = "-70deg";
-    }
-    else
-    {
-        nivelRiesgo = "MEDIO";
-        claseColor = "medio";
-        posicionAguja = "-20deg";
-    }
     var estadoNormalizado = Model.Estado?.Trim().ToLower();
     var estaEnEvaluacion = estadoNormalizado == "en evaluación";
-
 }
 
 <style>
@@ -2094,6 +2069,41 @@ historial?.Max(x => x.FechaFin);
                             @Model.PERFIL_FINANCIERO.Ocupacion
                         </div>
                     </div>
+
+                    <div class="item-perfil">
+                        <div class="icono">📈</div>
+
+                        <div class="texto">
+                            <strong>Ingreso mensual:</strong>
+                        </div>
+
+                        <span id="txtIngresoPerfil" style="float:right">
+                            S/ @Model.PERFIL_FINANCIERO.IngresoMensual.ToString("N0")
+                        </span>
+                        <input type="text"
+                               id="inputIngreso"
+                               class="input-editar"
+                               value="@Model.PERFIL_FINANCIERO.IngresoMensual.ToString("N0")"
+                               style="display:none;" />
+                    </div>
+
+                    <div class="item-perfil">
+                        <div class="icono">📉</div>
+
+                        <div class="texto">
+                            <strong>Egreso mensual:</strong>
+                        </div>
+
+                        <span id="txtEgresoPerfil" style="float:right">
+                            S/ @Model.PERFIL_FINANCIERO.EgresoMensual.ToString("N0")
+                        </span>
+                        <input type="text"
+                               id="inputEgreso"
+                               class="input-editar"
+                               value="@Model.PERFIL_FINANCIERO.EgresoMensual.ToString("N0")"
+                               style="display:none;" />
+                    </div>
+
                     <div class="acciones-inferiores">
 
                         <button id="btnIniciarEdicion"
@@ -2134,7 +2144,7 @@ historial?.Max(x => x.FechaFin);
                             <strong>Ingresos mensuales:</strong>
                         </div>
 
-                        <div class="valor-verde">
+                        <div class="valor-verde" id="txtIngresosResumen">
                             S/ @Model.PERFIL_FINANCIERO.IngresoMensual.ToString("N2")
                         </div>
                     </div>
@@ -2146,7 +2156,7 @@ historial?.Max(x => x.FechaFin);
                             <strong>Egresos mensuales:</strong>
                         </div>
 
-                        <div class="valor-rojo">
+                        <div class="valor-rojo" id="txtEgresosResumen">
                             S/ @Model.PERFIL_FINANCIERO.EgresoMensual.ToString("N2")
                         </div>
                     </div>
@@ -2158,7 +2168,7 @@ historial?.Max(x => x.FechaFin);
                             <strong>Capacidad de pago (30%):</strong>
                         </div>
 
-                        <div class="valor-azul">
+                        <div class="valor-azul" id="txtCapacidadResumen">
                             S/ @capacidadPago.ToString("N2")
                         </div>
                     </div>
@@ -2170,7 +2180,7 @@ historial?.Max(x => x.FechaFin);
                             <strong>Disponible para préstamo:</strong>
                         </div>
 
-                        <div class="valor-morado">
+                        <div class="valor-morado" id="txtDisponibleResumen">
                             S/ @disponiblePrestamo.ToString("N2")
                         </div>
                     </div>
@@ -2385,8 +2395,8 @@ historial?.Max(x => x.FechaFin);
                         </span>
                     </div>
 
-                    <div class="info-scoring">
-                        El puntaje se calcula en base al comportamiento financiero del cliente y su capacidad de pago.
+                    <div class="info-scoring" id="txtMotivoScoring">
+                        @(evaluacion?.MotivoClasificacion ?? "El puntaje se calcula en base al comportamiento financiero del cliente y su capacidad de pago.")
                     </div>
 
                 </div>
@@ -2770,20 +2780,8 @@ historial?.Max(x => x.FechaFin);
                 confirmButtonText: "SI",
                 cancelButtonText: "NO"
             }).then((result) => {
-
                 if (result.isConfirmed) {
-
-                    Swal.fire({
-                        icon: "success",
-                        title: "Solicitud Aprobada",
-                        text: "El usuario fue rechazado correctamente.",
-                        confirmButtonColor: "#dc2626"
-                    });
-
-                }
-                        if (result.isConfirmed) {
-
-        fetch('/Analista/RechazarSolicitud', {
+                    fetch('/Analista/RechazarSolicitud', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
@@ -3047,84 +3045,49 @@ historial?.Max(x => x.FechaFin);
 
         document.getElementById("txtDeudasEncontradas").innerText =
             (data.activas + data.vencidas) + " deudas encontradas";
-                    let nivel = "";
-    let clase = "";
-    let aguja = "";
+                    let nivel = data.nivel || "MEDIO";
+                    let clase = data.clase || "medio";
+                    let aguja = data.aguja || "-20deg";
 
-    if (data.vencidas > 0) {
-        nivel = "CRÍTICO";
-        clase = "critico";
-        aguja = "70deg";
-    }
-    else if (data.activas > 0 && data.pagadas > 0) {
-        nivel = "ALTO";
-        clase = "alto";
-        aguja = "35deg";
-    }
-    else if (data.pagadas > 0) {
-        nivel = "BAJO";
-        clase = "bajo";
-        aguja = "-70deg";
-    }
-    else {
-        nivel = "MEDIO";
-        clase = "medio";
-        aguja = "-20deg";
-    }
+                    document.querySelector(".resultado-riesgo span").innerText = nivel;
+                    document.querySelector(".resultado-riesgo span").className = clase;
 
-    document.querySelector(".resultado-riesgo span").innerText = nivel;
-    document.querySelector(".resultado-riesgo span").className = clase;
+                    document.querySelector(".aguja").style.transform =
+                        `translateX(-50%) rotate(${aguja})`;
 
-    document.querySelector(".aguja").style.transform =
-        `translateX(-50%) rotate(${aguja})`;
-                        const btnAprobar = document.getElementById("btnAprobar");
-    const btnRechazar = document.getElementById("btnRechazar");
-    const btnEvaluacion = document.getElementById("btnEvaluacion");
+                    const motivoEl = document.getElementById("txtMotivoScoring");
+                    if (motivoEl && data.motivo) {
+                        motivoEl.innerText = data.motivo;
+                    }
 
-    const estaEnEvaluacion = @estaEnEvaluacion.ToString().ToLower();
+                    const btnAprobar = document.getElementById("btnAprobar");
+                    const btnRechazar = document.getElementById("btnRechazar");
+                    const btnEvaluacion = document.getElementById("btnEvaluacion");
 
-    if (estaEnEvaluacion) {
+                    const estaEnEvaluacion = @estaEnEvaluacion.ToString().ToLower();
 
-        btnAprobar.disabled = false;
-        btnRechazar.disabled = false;
-
-        if (btnEvaluacion) {
-            btnEvaluacion.disabled = true;
-        }
-
-    }
-    else {
-
-        // Pendiente: mantener la lógica actual
-        if (nivel === "CRÍTICO") {
-
-            btnAprobar.disabled = true;
-            btnRechazar.disabled = false;
-
-            if (btnEvaluacion) btnEvaluacion.disabled = false;
-        }
-        else if (nivel === "ALTO") {
-
-            btnAprobar.disabled = true;
-            btnRechazar.disabled = true;
-
-            if (btnEvaluacion) btnEvaluacion.disabled = false;
-        }
-        else if (nivel === "MEDIO") {
-
-            btnAprobar.disabled = true;
-            btnRechazar.disabled = true;
-
-            if (btnEvaluacion) btnEvaluacion.disabled = false;
-        }
-        else if (nivel === "BAJO") {
-
-            btnAprobar.disabled = false;
-            btnRechazar.disabled = true;
-
-            if (btnEvaluacion) btnEvaluacion.disabled = false;
-        }
-    }
+                    if (estaEnEvaluacion) {
+                        // En evaluación: solo aprobar si no es crítico ni alto y la cuota es financieramente viable
+                        btnAprobar.disabled = (nivel === "CRÍTICO" || nivel === "ALTO" || !data.esCuotaViable);
+                        btnRechazar.disabled = false;
+                        if (btnEvaluacion) {
+                            btnEvaluacion.disabled = true;
+                        }
+                    }
+                    else {
+                        // RIESGO CRÍTICO y ALTO: Aprobación ordinaria estrictamente bloqueada
+                        if (nivel === "CRÍTICO" || nivel === "ALTO") {
+                            btnAprobar.disabled = true;
+                            btnRechazar.disabled = false;
+                            if (btnEvaluacion) btnEvaluacion.disabled = false;
+                        }
+                        // RIESGO MEDIO y BAJO: Aprobación permitida solo si la cuota es financieramente viable
+                        else {
+                            btnAprobar.disabled = !data.esCuotaViable;
+                            btnRechazar.disabled = false;
+                            if (btnEvaluacion) btnEvaluacion.disabled = false;
+                        }
+                    }
 
                 btnRegresar.style.display = "none";
     btnValidar.style.display = "none";
@@ -3139,96 +3102,229 @@ historial?.Max(x => x.FechaFin);
     });
 
     });
-        const btnIniciarEdicion =
-        document.getElementById("btnIniciarEdicion");
+        const btnIniciarEdicion = document.getElementById("btnIniciarEdicion");
+        const btnGuardarPerfil = document.getElementById("btnGuardarPerfil");
+        const btnCancelarPerfil = document.getElementById("btnCancelarPerfil");
+        const grupoAcciones = document.getElementById("grupoAcciones");
 
-        const btnGuardarPerfil =
-        document.getElementById("btnGuardarPerfil");
+        const textoMonto = document.getElementById("txtMonto");
+        const textoPlazo = document.getElementById("txtPlazo");
+        const textoIngreso = document.getElementById("txtIngresoPerfil");
+        const textoEgreso = document.getElementById("txtEgresoPerfil");
 
-        const btnCancelarPerfil =
-        document.getElementById("btnCancelarPerfil");
+        const inputMonto = document.getElementById("inputMonto");
+        const inputPlazo = document.getElementById("inputPlazo");
+        const inputIngreso = document.getElementById("inputIngreso");
+        const inputEgreso = document.getElementById("inputEgreso");
 
-        const grupoAcciones =
-        document.getElementById("grupoAcciones");
-
-        const textoMonto =
-        document.getElementById("txtMonto");
-
-        const textoPlazo =
-        document.getElementById("txtPlazo");
-
-        const inputMonto =
-        document.getElementById("inputMonto");
-
-
-        const inputPlazo =
-        document.getElementById("inputPlazo");
         inputPlazo.value = "@Model.PlazoMeses";
 
         let montoOriginal;
         let plazoOriginal;
-                let decisionPerfil = null;     // null, "si" o "no"
-    let perfilModificado = false;
+        let ingresoOriginal;
+        let egresoOriginal;
+        let decisionPerfil = null;
+        let perfilModificado = false;
 
         btnIniciarEdicion.addEventListener("click", function () {
             document.getElementById("iconoEstado").innerHTML = "💾";
 
             montoOriginal = inputMonto.value;
             plazoOriginal = inputPlazo.value;
+            if (inputIngreso) ingresoOriginal = inputIngreso.value;
+            if (inputEgreso) egresoOriginal = inputEgreso.value;
 
             textoMonto.style.display = "none";
             textoPlazo.style.display = "none";
+            if (textoIngreso) textoIngreso.style.display = "none";
+            if (textoEgreso) textoEgreso.style.display = "none";
 
             inputMonto.style.display = "inline-block";
             inputPlazo.style.display = "inline-block";
+            if (inputIngreso) inputIngreso.style.display = "inline-block";
+            if (inputEgreso) inputEgreso.style.display = "inline-block";
 
             btnIniciarEdicion.style.display = "none";
             grupoAcciones.style.display = "inline-flex";
         });
 
-        btnGuardarPerfil.addEventListener("click", function () {
-            document.getElementById("iconoEstado").innerHTML = "✏️";
-                    if (
-        montoOriginal != inputMonto.value ||
-        plazoOriginal != inputPlazo.value
-    ) {
-        perfilModificado = true;
-    }
-                        const montoNumerico = parseInt(
-        inputMonto.value.replace(/[^\d]/g, "")
-    );
+        btnGuardarPerfil.addEventListener("click", async function () {
+            document.getElementById("iconoEstado").innerHTML = "⏳";
 
-    textoMonto.innerText =
-        "S/ " + montoNumerico.toLocaleString('es-PE');
+            const montoNumerico = parseFloat(inputMonto.value.replace(/[^\d.]/g, "")) || 0;
+            const plazoNumerico = parseInt(inputPlazo.value) || 12;
+            const ingresoNumerico = inputIngreso ? (parseFloat(inputIngreso.value.replace(/[^\d.]/g, "")) || null) : null;
+            const egresoNumerico = inputEgreso ? (parseFloat(inputEgreso.value.replace(/[^\d.]/g, "")) || null) : null;
 
-            textoPlazo.innerText =
-    inputPlazo.value;
+            if (montoNumerico < 1000 || montoNumerico > 50000) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Monto no válido",
+                    text: "El monto debe estar entre S/ 1,000 y S/ 50,000."
+                });
+                document.getElementById("iconoEstado").innerHTML = "💾";
+                return;
+            }
 
-            textoMonto.style.display = "inline";
-            textoPlazo.style.display = "inline";
+            try {
+                const formData = new URLSearchParams();
+                formData.append("idSolicitud", "@Model.Id_Solicitud");
+                formData.append("montoSolicitado", montoNumerico);
+                formData.append("plazoMeses", plazoNumerico);
+                if (ingresoNumerico !== null) formData.append("ingresoMensual", ingresoNumerico);
+                if (egresoNumerico !== null) formData.append("egresoMensual", egresoNumerico);
 
-            inputMonto.style.display = "none";
-            inputPlazo.style.display = "none";
+                const response = await fetch('/Analista/GuardarPerfilFinanciero', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                });
 
-            grupoAcciones.style.display = "none";
-            btnIniciarEdicion.style.display = "inline-block";
+                const data = await response.json();
+                if (!data.ok) {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error al guardar",
+                        text: data.mensaje || "No se pudo actualizar el perfil financiero."
+                    });
+                    document.getElementById("iconoEstado").innerHTML = "💾";
+                    return;
+                }
 
+                perfilModificado = true;
+                montoOriginal = inputMonto.value;
+                plazoOriginal = inputPlazo.value;
+                if (inputIngreso) ingresoOriginal = inputIngreso.value;
+                if (inputEgreso) egresoOriginal = inputEgreso.value;
+
+                // 1. Actualizar textos en Perfil Financiero
+                textoMonto.innerText = "S/ " + Number(data.monto).toLocaleString('es-PE');
+                textoPlazo.innerText = data.plazo + " meses";
+                if (textoIngreso && data.ingreso) textoIngreso.innerText = "S/ " + Number(data.ingreso).toLocaleString('es-PE', { minimumFractionDigits: 0 });
+                if (textoEgreso && data.egreso) textoEgreso.innerText = "S/ " + Number(data.egreso).toLocaleString('es-PE', { minimumFractionDigits: 0 });
+
+                // 2. Actualizar tarjetas de Resumen Financiero
+                const resIngreso = document.getElementById("txtIngresosResumen");
+                if (resIngreso) resIngreso.innerText = "S/ " + Number(data.ingreso).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+
+                const resEgreso = document.getElementById("txtEgresosResumen");
+                if (resEgreso) resEgreso.innerText = "S/ " + Number(data.egreso).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+
+                const resCapacidad = document.getElementById("txtCapacidadResumen");
+                if (resCapacidad) resCapacidad.innerText = "S/ " + Number(data.capacidadPago).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+
+                const resDisponible = document.getElementById("txtDisponibleResumen");
+                if (resDisponible) resDisponible.innerText = "S/ " + Number(data.disponiblePrestamo).toLocaleString('es-PE', { minimumFractionDigits: 2 });
+
+                // 3. Actualizar Velocímetro y Scoring
+                const resultadoRiesgoSpan = document.querySelector(".resultado-riesgo span");
+                if (resultadoRiesgoSpan) {
+                    resultadoRiesgoSpan.innerText = data.nivel;
+                    resultadoRiesgoSpan.className = data.clase;
+                }
+
+                const aguja = document.querySelector(".aguja");
+                if (aguja && data.aguja) {
+                    aguja.style.transform = `translateX(-50%) rotate(${data.aguja})`;
+                }
+
+                const motivoEl = document.getElementById("txtMotivoScoring");
+                if (motivoEl && data.motivo) {
+                    motivoEl.innerText = data.motivo;
+                }
+
+                // 4. Actualizar estado de botones según viabilidad y riesgo
+                const btnAprobar = document.getElementById("btnAprobar");
+                const btnRechazar = document.getElementById("btnRechazar");
+                const btnEvaluacion = document.getElementById("btnEvaluacion");
+
+                if (btnAprobar) {
+                    // Si el riesgo es CRÍTICO, ALTO o la cuota supera la capacidad disponible, la aprobación está bloqueada
+                    btnAprobar.disabled = (data.nivel === "CRÍTICO" || data.nivel === "ALTO" || !data.esCuotaViable);
+                }
+                if (btnRechazar) btnRechazar.disabled = false;
+                if (btnEvaluacion) btnEvaluacion.disabled = false;
+
+                // 5. Ocultar inputs y mostrar textos
+                textoMonto.style.display = "inline";
+                textoPlazo.style.display = "inline";
+                if (textoIngreso) textoIngreso.style.display = "inline";
+                if (textoEgreso) textoEgreso.style.display = "inline";
+
+                inputMonto.style.display = "none";
+                inputPlazo.style.display = "none";
+                if (inputIngreso) inputIngreso.style.display = "none";
+                if (inputEgreso) inputEgreso.style.display = "none";
+
+                grupoAcciones.style.display = "none";
+                btnIniciarEdicion.style.display = "inline-block";
+                document.getElementById("iconoEstado").innerHTML = "✏️";
+
+                // 6. Alerta de confirmación con advertencia de capacidad si aplica
+                if (!data.esCuotaViable) {
+                    Swal.fire({
+                        icon: "warning",
+                        title: `Scoring: ${data.nivel}`,
+                        html: `
+                            <p><b>Cambios guardados con éxito en la base de datos.</b></p>
+                            <p style="color: #dc2626; font-weight: 600; margin-top: 10px;">
+                                ⚠️ ALERTA DE CAPACIDAD: La cuota mensual estimada (S/ ${Number(data.cuotaMensual).toFixed(2)}) 
+                                supera la capacidad disponible del cliente (S/ ${Number(data.capacidadCuotaDisponible).toFixed(2)}).
+                            </p>
+                            <p style="margin-top: 8px;">La aprobación directa ha sido bloqueada en frontend y backend. Utilice <b>«EN EVALUACIÓN»</b> para reformular monto o plazo.</p>
+                        `,
+                        confirmButtonColor: "#f59e0b"
+                    });
+                } else if (data.nivel === "MEDIO") {
+                    Swal.fire({
+                        icon: "info",
+                        title: "Scoring: MEDIO",
+                        html: `
+                            <p><b>Cambios guardados con éxito en la base de datos.</b></p>
+                            <p style="margin-top: 8px;">${data.motivo}</p>
+                        `,
+                        confirmButtonColor: "#f59e0b"
+                    });
+                } else {
+                    Swal.fire({
+                        icon: "success",
+                        title: `Scoring: ${data.nivel}`,
+                        text: "Perfil financiero actualizado y scoring recalculado exitosamente.",
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+
+            } catch (err) {
+                console.error(err);
+                Swal.fire({
+                    icon: "error",
+                    title: "Error de conexión",
+                    text: "No se pudo comunicar con el servidor para guardar y recalcular el scoring."
+                });
+                document.getElementById("iconoEstado").innerHTML = "💾";
+            }
         });
 
         btnCancelarPerfil.addEventListener("click", function () {
             document.getElementById("iconoEstado").innerHTML = "✏️";
             inputMonto.value = montoOriginal;
             inputPlazo.value = plazoOriginal;
+            if (inputIngreso) inputIngreso.value = ingresoOriginal;
+            if (inputEgreso) inputEgreso.value = egresoOriginal;
 
             textoMonto.style.display = "inline";
             textoPlazo.style.display = "inline";
+            if (textoIngreso) textoIngreso.style.display = "inline";
+            if (textoEgreso) textoEgreso.style.display = "inline";
 
             inputMonto.style.display = "none";
             inputPlazo.style.display = "none";
+            if (inputIngreso) inputIngreso.style.display = "none";
+            if (inputEgreso) inputEgreso.style.display = "none";
 
             grupoAcciones.style.display = "none";
             btnIniciarEdicion.style.display = "inline-block";
-
         });
                 document.querySelectorAll(".btnHistorialCredito")
     .forEach(btn => {
@@ -3249,40 +3345,51 @@ historial?.Max(x => x.FechaFin);
 
             let filas = "";
 
-            data.historial.forEach(h => {
+            if (!data.historial || data.historial.length === 0) {
+                filas = `
+                <tr>
+                    <td colspan="11" style="text-align:center; padding: 30px; color: #64748b; font-size: 15px; font-weight: 500;">
+                        <i class="fas fa-info-circle me-2" style="color: #6366f1;"></i>
+                        No se encontraron registros crediticios para este cliente.
+                    </td>
+                </tr>`;
+            } else {
+                data.historial.forEach(h => {
+                    const esCrediPlus = h.origen && h.origen.includes("CrediPlus");
+                    const origenTag = esCrediPlus
+                        ? `<span class="badge" style="background:#e0e7ff; color:#4338ca; font-size:10px; padding:3px 6px; border-radius:4px; margin-left:4px;">CrediPlus</span>`
+                        : `<span class="badge" style="background:#f1f5f9; color:#475569; font-size:10px; padding:3px 6px; border-radius:4px; margin-left:4px;">Externo</span>`;
 
-                        filas += `
-    <tr>
-        <td>${data.nombre}</td>
-        <td>${data.apellido}</td>
-        <td>${data.dni}</td>
-        <td>${h.banco}</td>
-        <td>${h.tipoCredito}</td>
-        <td>S/ ${Number(h.monto).toLocaleString('es-PE')}</td>
-        <td>${h.plazoMeses}</td>
-        <td>${h.cuotasPagadas}</td>
-                <td>
-        <span class="${
-            h.estadoCredito === 'ACTIVA'
-                ? 'estado-activa'
-                : h.estadoCredito === 'PAGADA'
-                ? 'estado-pagada'
-                : 'estado-vencida'
-        }">
-            ${h.estadoCredito}
-        </span>
-    </td>
-        <td>${h.fechaInicio}</td>
-        <td>${h.fechaFin}</td>
-    </tr>
-    `;
-            });
+                    filas += `
+                    <tr>
+                        <td>${data.nombre}</td>
+                        <td>${data.apellido}</td>
+                        <td>${data.dni}</td>
+                        <td><b>${h.banco}</b> ${origenTag}</td>
+                        <td>${h.tipoCredito}</td>
+                        <td>S/ ${Number(h.monto).toLocaleString('es-PE')}</td>
+                        <td>${h.plazoMeses} m</td>
+                        <td>${h.cuotasPagadas}</td>
+                        <td>
+                            <span class="${
+                                h.estadoCredito === 'ACTIVA'
+                                    ? 'estado-activa'
+                                    : h.estadoCredito === 'PAGADA'
+                                    ? 'estado-pagada'
+                                    : 'estado-vencida'
+                            }">
+                                ${h.estadoCredito}
+                            </span>
+                        </td>
+                        <td>${h.fechaInicio}</td>
+                        <td>${h.fechaFin}</td>
+                    </tr>
+                    `;
+                });
+            }
 
-            document.getElementById("tablaHistorial")
-            .innerHTML = filas;
-
-            document.getElementById("modalHistorialCredito")
-            .style.display = "flex";
+            document.getElementById("tablaHistorial").innerHTML = filas;
+            document.getElementById("modalHistorialCredito").style.display = "flex";
 
         });
 

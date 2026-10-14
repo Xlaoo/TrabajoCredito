@@ -97,17 +97,20 @@ namespace trabajo.Controllers
         private static readonly object _lockRenovacionVoz = new object();
 
         private readonly IConfiguration _configuration;
+        private readonly ITurnstileService _turnstileService;
 
         public LoginController(
             IusuarioServices usuarioService,
             UsuarioContext context,
             ServicioEmbeddingVoz servicioEmbeddingVoz,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ITurnstileService turnstileService)
         {
             _UsuarioService = usuarioService;
             _Context = context;
             _ServicioEmbeddingVoz = servicioEmbeddingVoz;
             _configuration = configuration;
+            _turnstileService = turnstileService;
         }
 
         [AllowAnonymous]
@@ -126,7 +129,7 @@ namespace trabajo.Controllers
                 }
             ).ToList();
 
-            return View(comentarios);
+            return View("PantallaPrincipal", comentarios);
         }
         public async Task<IActionResult> CerrarSesion()
         {
@@ -146,10 +149,19 @@ namespace trabajo.Controllers
 
             return RedirectToAction("PantallaPrincipal", "Login");
         }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult AccesoDenegado()
+        {
+            Response.StatusCode = StatusCodes.Status403Forbidden;
+            return View();
+        }
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Registro()
         {
+            ViewBag.TurnstileSiteKey = _turnstileService.ObtenerSiteKey();
             return View();
         }
         [HttpPost]
@@ -160,6 +172,21 @@ namespace trabajo.Controllers
     string codigoVerificacion,
     IFormFile? audio)
         {
+            // ==========================================
+            // VERIFICACIÓN DE SEGURIDAD CAPTCHA (TURNSTILE)
+            // ==========================================
+            string? turnstileToken = Request.Form["cf-turnstile-response"].FirstOrDefault();
+            string? ipRemota = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var resTurnstile = await _turnstileService.ValidarTokenAsync(turnstileToken, ipRemota);
+            if (!resTurnstile.Valido)
+            {
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = resTurnstile.Mensaje
+                });
+            }
+
             // ==========================================
             // DNI
             // ==========================================
@@ -220,20 +247,17 @@ namespace trabajo.Controllers
             }
 
             // ==========================================
-            // CONTRASEÑA
+            // CONTRASEÑA (POLÍTICA: MÍNIMO 12 CARACTERES, MAYÚSCULA, MINÚSCULA, NÚMERO Y SÍMBOLO)
             // ==========================================
 
-            if (string.IsNullOrWhiteSpace(usuario.clave) ||
-                !Regex.IsMatch(
-                    usuario.clave,
-                    @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$"))
+            var resClave = PasswordPolicyHelper.Validar(usuario.clave);
+            if (!resClave.EsValida)
             {
                 return Json(new
                 {
                     ok = false,
                     campo = "clave",
-                    mensaje =
-                        "La contraseña debe tener mínimo 6 caracteres, una mayúscula, una minúscula y un número."
+                    mensaje = resClave.MensajeError
                 });
             }
 
@@ -430,6 +454,8 @@ namespace trabajo.Controllers
                 ViewBag.MensajeRegistro = TempData["Mensaje"];
             }
 
+            ViewBag.TurnstileSiteKey = _turnstileService.ObtenerSiteKey();
+
             return View();
         }
         [HttpPost]
@@ -438,6 +464,20 @@ namespace trabajo.Controllers
         {
             try
             {
+                // ==========================================
+                // VERIFICACIÓN DE SEGURIDAD CAPTCHA (TURNSTILE)
+                // ==========================================
+                string? turnstileToken = Request.Form["cf-turnstile-response"].FirstOrDefault();
+                string? ipRemota = HttpContext.Connection.RemoteIpAddress?.ToString();
+                var resTurnstile = await _turnstileService.ValidarTokenAsync(turnstileToken, ipRemota);
+                if (!resTurnstile.Valido)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = resTurnstile.Mensaje
+                    });
+                }
                 // ==========================================
                 // VALIDAR DNI
                 // ==========================================
@@ -1611,6 +1651,7 @@ namespace trabajo.Controllers
                 ) == "true";
 
             ViewBag.RecuperacionValidada = validado;
+            ViewBag.TurnstileSiteKey = _turnstileService.ObtenerSiteKey();
 
             if (validado)
             {
@@ -1640,6 +1681,20 @@ namespace trabajo.Controllers
         {
             try
             {
+                // ==========================================
+                // VERIFICACIÓN DE SEGURIDAD CAPTCHA (TURNSTILE)
+                // ==========================================
+                string? turnstileToken = Request.Form["cf-turnstile-response"].FirstOrDefault();
+                string? ipRemota = HttpContext.Connection.RemoteIpAddress?.ToString();
+                var resTurnstile = await _turnstileService.ValidarTokenAsync(turnstileToken, ipRemota);
+                if (!resTurnstile.Valido)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = resTurnstile.Mensaje
+                    });
+                }
                 // ==========================================
                 // VALIDAR DNI
                 // ==========================================
@@ -2245,19 +2300,16 @@ namespace trabajo.Controllers
             }
 
             // ==========================================
-            // VALIDAR CONTRASEÑA
+            // VALIDAR CONTRASEÑA (POLÍTICA: MÍNIMO 12 CARACTERES, MAYÚSCULA, MINÚSCULA, NÚMERO Y SÍMBOLO)
             // ==========================================
 
-            if (string.IsNullOrWhiteSpace(nuevaClave) ||
-                !Regex.IsMatch(
-                    nuevaClave,
-                    @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$"))
+            var resClave = PasswordPolicyHelper.Validar(nuevaClave);
+            if (!resClave.EsValida)
             {
                 return Json(new
                 {
                     ok = false,
-                    mensaje =
-                        "La contraseña debe tener mínimo 6 caracteres, una mayúscula, una minúscula y un número."
+                    mensaje = resClave.MensajeError
                 });
             }
 
@@ -3345,6 +3397,7 @@ namespace trabajo.Controllers
             return $"{usuario.Substring(0, 2)}***{usuario[^1]}@{dominio}";
         }
 
+        [Authorize(Roles = "Cliente")]
         public IActionResult DashboardCliente()
         {
             string dni = User.FindFirst("Dni")?.Value;
@@ -3401,6 +3454,8 @@ namespace trabajo.Controllers
 
             return View(comentarios);
         }
+
+        [Authorize(Roles = "Cliente")]
         public IActionResult SolicitarCredito()
         {
             string dni = User.FindFirst("Dni")?.Value;
@@ -3447,7 +3502,9 @@ namespace trabajo.Controllers
 
             return View();
         }
+
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public IActionResult RegistrarSolicitudCredito(
     decimal montoSolicitado,
 
@@ -3496,7 +3553,7 @@ string titularCuenta
                 MontoSolicitado = montoSolicitado,
                 PlazoMeses = plazoMeses,
                 InteresEstimado = 10,
-                FechaSolicitud = DateTime.Now,
+                FechaSolicitud = DateTime.UtcNow,
                 Estado = "Pendiente",
                 Usuario_Id_Usuario = usuario.Id
             };
@@ -3525,7 +3582,7 @@ string titularCuenta
                 MotivoPrestamo = motivoPrestamo == "Otros" ? motivoOtro : motivoPrestamo,
                 Ocupacion = ocupacion,
                 NivelRiesgo = null,
-                FechaRegistro = DateTime.Now,
+                FechaRegistro = DateTime.UtcNow,
                 SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
             };
 
@@ -3535,7 +3592,7 @@ string titularCuenta
             {
                 EstadoActual = "Pendiente",
                 MotivoCambio = "pendiente en evaluación.",
-                FechaCambio = DateTime.Now,
+                FechaCambio = DateTime.UtcNow,
                 SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
             };
 
@@ -3548,6 +3605,7 @@ string titularCuenta
         }
 
         [HttpGet]
+        [Authorize(Roles = "Cliente")]
         public IActionResult MisSolicitudes()
         {
             string dni = User.FindFirst("Dni")?.Value;
@@ -3573,15 +3631,24 @@ string titularCuenta
             ViewBag.Evaluaciones = _Context.Evaluacion_Riesgo.ToList();
             return View(solicitudes);
         }
+
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public IActionResult BorrarSolicitudRechazada(int idSolicitud)
         {
+            string dni = User.FindFirst("Dni")?.Value;
+            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+            if (usuario == null)
+            {
+                return Json(new { mensaje = "No se encontró el usuario autenticado." });
+            }
+
             var solicitud = _Context.SOLICITUD_CREDITO
-                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Estado == "Rechazado");
+                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Usuario_Id_Usuario == usuario.Id && x.Estado == "Rechazado");
 
             if (solicitud == null)
             {
-                return Json(new { mensaje = "No se encontró la solicitud rechazada." });
+                return Json(new { mensaje = "No se encontró la solicitud rechazada o no tienes permiso para acceder a ella." });
             }
 
             var perfil = _Context.PERFIL_FINANCIERO
@@ -3612,10 +3679,36 @@ string titularCuenta
 
             _Context.MENSAJE.RemoveRange(mensajes);
 
-            var historialCredito = _Context.HISTORIAL_CREDITO
-                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+            var otraSolicitud = _Context.SOLICITUD_CREDITO
+                .FirstOrDefault(s => s.Usuario_Id_Usuario == solicitud.Usuario_Id_Usuario && s.Id_Solicitud != idSolicitud);
 
-            _Context.HISTORIAL_CREDITO.RemoveRange(historialCredito);
+            var historialCredito = _Context.HISTORIAL_CREDITO
+                .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
+                .ToList();
+
+            if (otraSolicitud != null)
+            {
+                // Preservar el historial crediticio del cliente asociándolo a su otra solicitud
+                foreach (var h in historialCredito)
+                {
+                    h.SOLICITUD_CREDITO_Id_Solicitud = otraSolicitud.Id_Solicitud;
+                }
+            }
+            else
+            {
+                // Si no tiene otras solicitudes, remover registros y sincronizar resumen para evitar contadores huérfanos
+                _Context.HISTORIAL_CREDITO.RemoveRange(historialCredito);
+
+                var resumenUsuario = _Context.RESUMEN_CREDITICIO
+                    .FirstOrDefault(x => x.Usuario_Id == solicitud.Usuario_Id_Usuario);
+                if (resumenUsuario != null)
+                {
+                    resumenUsuario.DeudasActivas = 0;
+                    resumenUsuario.DeudasPagadas = 0;
+                    resumenUsuario.DeudasVencidas = 0;
+                    resumenUsuario.UltimaActualizacion = DateTime.Now;
+                }
+            }
 
             var pagosCancelacion = _Context.PAGO_CANCELACION
                 .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
@@ -3631,7 +3724,9 @@ string titularCuenta
 
             return Json(new { mensaje = "Solicitud rechazada eliminada correctamente." });
         }
+
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public async Task<IActionResult> EnviarCronograma(int idSolicitud)
         {
             try
@@ -3695,9 +3790,9 @@ string titularCuenta
                     decimal cuotaConMora = montoBase;
 
                     if (c.Estado == "Pendiente" &&
-                        DateTime.Now.Date > c.FechaLimitePago.Date)
+                        PeruTimeHelper.TodayPeru > c.FechaLimitePago.Date)
                     {
-                        diasAtraso = (DateTime.Now.Date - c.FechaLimitePago.Date).Days;
+                        diasAtraso = (PeruTimeHelper.TodayPeru - c.FechaLimitePago.Date).Days;
                         mora = diasAtraso * 5;
                         cuotaConMora = montoBase + mora;
                     }
@@ -3804,6 +3899,7 @@ string titularCuenta
         }
 
         [HttpGet]
+        [Authorize(Roles = "Cliente")]
         public IActionResult PerfilPersonal()
         {
             string dni = User.FindFirst("Dni")?.Value;
@@ -3819,6 +3915,7 @@ string titularCuenta
         }
 
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public async Task<IActionResult> PerfilPersonal(Usuario usuarioEditado, string codigoCorreo)
         {
             string dniActual = User.FindFirst("Dni")?.Value;
@@ -3932,13 +4029,10 @@ string titularCuenta
 
             if (!string.IsNullOrWhiteSpace(usuarioEditado.clave))
             {
-                bool tieneMayuscula = usuarioEditado.clave.Any(char.IsUpper);
-                bool tieneMinuscula = usuarioEditado.clave.Any(char.IsLower);
-                bool tieneNumero = usuarioEditado.clave.Any(char.IsDigit);
-
-                if (usuarioEditado.clave.Length < 6 || !tieneMayuscula || !tieneMinuscula || !tieneNumero)
+                var resClave = PasswordPolicyHelper.Validar(usuarioEditado.clave);
+                if (!resClave.EsValida)
                 {
-                    ViewData["Mensaje"] = "La contraseña debe tener mayúscula, minúscula, número y mínimo 6 caracteres.";
+                    ViewData["Mensaje"] = resClave.MensajeError;
                     ViewData["ModoEditar"] = true;
                     return View(usuario);
                 }
@@ -4032,6 +4126,7 @@ string titularCuenta
             );
         }
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public async Task<IActionResult> EnviarCodigoPerfil(string correo)
         {
             try
@@ -4056,10 +4151,14 @@ string titularCuenta
                 return Json(new { ok = false, mensaje = "No se pudo enviar el código de verificación." });
             }
         }
+        [HttpGet]
+        [Authorize(Roles = "Cliente")]
         public IActionResult Configuracion()
         {
             return View();
         }
+        [HttpGet]
+        [Authorize(Roles = "Cliente")]
         public IActionResult PagosPendientes()
         {
             string dni = User.FindFirst("Dni")?.Value;
@@ -4100,9 +4199,9 @@ string titularCuenta
             foreach (var cuota in cuotas)
             {
                 if (cuota.Estado == "Pendiente" &&
-    DateTime.Now.Date > cuota.FechaLimitePago.Date)
+                    PeruTimeHelper.TodayPeru > cuota.FechaLimitePago.Date)
                 {
-                    int diasAtraso = (DateTime.Now.Date - cuota.FechaLimitePago.Date).Days;
+                    int diasAtraso = (PeruTimeHelper.TodayPeru - cuota.FechaLimitePago.Date).Days;
 
                     decimal montoBase =
                         cuota.Capital.GetValueOrDefault()
@@ -4129,35 +4228,45 @@ string titularCuenta
 
             return View(cuotas);
         }
+        [HttpGet]
+        [Authorize(Roles = "Cliente")]
         public IActionResult SimuladorCredito()
         {
             return View();
         }
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public IActionResult RegistrarCancelacion(int idSolicitud, decimal montoDevuelto, string metodoPago, string codigoOperacion, string motivoCancelacion)
         {
             try
             {
+                // ==========================================
+                // IDOR GUARD: verificar propiedad del recurso
+                // ==========================================
+                string dni = User.FindFirst("Dni")?.Value;
+                var usuarioAutenticado = _Context.Usuario.FirstOrDefault(u => u.Dni == dni);
+                if (usuarioAutenticado == null)
+                    return Json(new { ok = false, mensaje = "Sesión inválida." });
+
+                var solicitud = _Context.SOLICITUD_CREDITO
+                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Usuario_Id_Usuario == usuarioAutenticado.Id);
+
+                if (solicitud == null)
+                    return Json(new { ok = false, mensaje = "No se encontró la solicitud." });
+
                 var pago = new PagoCancelacion
                 {
                     MontoDevuelto = montoDevuelto,
                     MetodoPago = metodoPago,
                     CodigoOperacion = codigoOperacion,
                     MotivoCancelacion = motivoCancelacion,
-                    FechaPago = DateTime.Now,
+                    FechaPago = DateTime.UtcNow,
                     Estado = "Pendiente",
                     SOLICITUD_CREDITO_Id_Solicitud = idSolicitud
                 };
 
                 _Context.PAGO_CANCELACION.Add(pago);
-
-                var solicitud = _Context.SOLICITUD_CREDITO.FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
-
-                if (solicitud != null)
-                {
-                    solicitud.Estado = "Pendiente cancelación";
-                }
-
+                solicitud.Estado = "Pendiente cancelación";
                 _Context.SaveChanges();
 
                 return Json(new { ok = true, mensaje = "Pago registrado correctamente. La cancelación queda pendiente de aprobación." });
@@ -4168,12 +4277,21 @@ string titularCuenta
             }
         }
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public IActionResult EditarSolicitud(int idSolicitud, decimal nuevoMonto, int nuevoPlazo)
         {
             try
             {
+                // ==========================================
+                // IDOR GUARD: verificar propiedad del recurso
+                // ==========================================
+                string dni = User.FindFirst("Dni")?.Value;
+                var usuarioAutenticado = _Context.Usuario.FirstOrDefault(u => u.Dni == dni);
+                if (usuarioAutenticado == null)
+                    return Json(new { ok = false, mensaje = "Sesión inválida." });
+
                 var solicitud = _Context.SOLICITUD_CREDITO
-                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Usuario_Id_Usuario == usuarioAutenticado.Id);
 
                 if (solicitud == null)
                 {
@@ -4240,6 +4358,7 @@ string titularCuenta
             }
         }
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public IActionResult RegistrarPagoCuota(
     int idCuota,
     decimal montoPagado,
@@ -4249,6 +4368,37 @@ string titularCuenta
         {
             try
             {
+                // ==========================================
+                // IDOR GUARD: verificar propiedad del recurso
+                // La cuota debe pertenecer a una solicitud del usuario autenticado.
+                // ==========================================
+                string dni = User.FindFirst("Dni")?.Value;
+                var usuarioAutenticado = _Context.Usuario.FirstOrDefault(u => u.Dni == dni);
+                if (usuarioAutenticado == null)
+                    return Json(new { ok = false, mensaje = "Sesión inválida." });
+
+                var cuota = _Context.CUOTA
+                    .Include(c => c.SOLICITUD_CREDITO)
+                    .FirstOrDefault(x => x.Id_Cuota == idCuota && x.SOLICITUD_CREDITO.Usuario_Id_Usuario == usuarioAutenticado.Id);
+
+                if (cuota == null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se encontró la cuota especificada."
+                    });
+                }
+
+                if (cuota.Estado == "Pagado" || cuota.Estado == "Pendiente aprobación")
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La cuota ya se encuentra pagada o en proceso de validación."
+                    });
+                }
+
                 var pago = new PagoCuota
                 {
                     Id_Cuota = idCuota,
@@ -4256,20 +4406,12 @@ string titularCuenta
                     MetodoPago = metodoPago,
                     EntidadPago = entidadPago,
                     CodigoOperacion = codigoOperacion,
-                    FechaPago = DateTime.Now,
+                    FechaPago = DateTime.UtcNow,
                     Estado = "Pendiente validación"
                 };
 
                 _Context.PAGO_CUOTA.Add(pago);
-
-                var cuota = _Context.CUOTA
-                    .FirstOrDefault(x => x.Id_Cuota == idCuota);
-
-                if (cuota != null)
-                {
-                    cuota.Estado = "Pendiente aprobación";
-                }
-
+                cuota.Estado = "Pendiente aprobación";
                 _Context.SaveChanges();
 
                 return Json(new
@@ -4287,16 +4429,30 @@ string titularCuenta
                 });
             }
         }
+        [HttpGet]
+        [Authorize(Roles = "Cliente")]
         public IActionResult PreguntasFrecuentes()
         {
             return View();
         }
         [HttpGet]
+        [Authorize(Roles = "Cliente")]
         public JsonResult ObtenerMensajes(int idSolicitud)
         {
+            // ==========================================
+            // IDOR GUARD: verificar propiedad del recurso
+            // ==========================================
+            string dni = User.FindFirst("Dni")?.Value;
+            var usuarioAutenticado = _Context.Usuario.FirstOrDefault(u => u.Dni == dni);
+            if (usuarioAutenticado == null)
+                return Json(new { ok = false, mensaje = "Sesión inválida." });
+
             var solicitud = _Context.SOLICITUD_CREDITO
                 .Include(x => x.USUARIO)
-                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud);
+                .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Usuario_Id_Usuario == usuarioAutenticado.Id);
+
+            if (solicitud == null)
+                return Json(new List<object>());
 
             var mensajes = _Context.MENSAJE
                 .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
@@ -4310,18 +4466,33 @@ string titularCuenta
 
                     nombre = x.Remitente == "Usuario"
                         ? solicitud.USUARIO.Nombre + " " + solicitud.USUARIO.Apellido
-                        : "Rafael Rosales"
+                        : "Analista de Crédito"
                 })
                 .ToList();
 
             return Json(mensajes);
         }
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public async Task<JsonResult> EnviarMensaje(
      int idSolicitud,
      string? mensaje,
      IFormFile? imagen)
         {
+            // ==========================================
+            // IDOR GUARD: verificar propiedad del recurso
+            // ==========================================
+            string dni = User.FindFirst("Dni")?.Value;
+            var usuarioAutenticado = _Context.Usuario.FirstOrDefault(u => u.Dni == dni);
+            if (usuarioAutenticado == null)
+                return Json(new { ok = false, mensaje = "Sesión inválida." });
+
+            bool solicitudPropia = _Context.SOLICITUD_CREDITO
+                .Any(x => x.Id_Solicitud == idSolicitud && x.Usuario_Id_Usuario == usuarioAutenticado.Id);
+
+            if (!solicitudPropia)
+                return Json(new { ok = false, mensaje = "No autorizado." });
+
             string rutaImagen = null;
 
             if (imagen != null)
@@ -4361,6 +4532,8 @@ string titularCuenta
 
             nuevo.Imagen = rutaImagen;
 
+            // El remitente siempre lo determina el servidor según el rol autenticado,
+            // nunca se acepta desde el cliente.
             nuevo.Remitente = "Usuario";
             nuevo.FechaEnvio = DateTime.Now;
             nuevo.Leido = false;
@@ -4371,6 +4544,7 @@ string titularCuenta
             return Json(new { ok = true });
         }
         [HttpGet]
+        [Authorize(Roles = "Cliente")]
         public JsonResult ObtenerInfoSolicitud(int idSolicitud)
         {
             var analista = _Context.Usuario
@@ -4393,6 +4567,7 @@ string titularCuenta
         }
 
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public JsonResult CancelarEvaluacion(int idSolicitud, string motivo)
         {
             try
@@ -4402,8 +4577,18 @@ string titularCuenta
                     return Json(new { ok = false, mensaje = "Debe ingresar el motivo de cancelación." });
                 }
 
+                // ==========================================
+                // IDOR GUARD: verificar propiedad del recurso
+                // ==========================================
+                string dni = User.FindFirst("Dni")?.Value;
+                var usuarioAutenticado = _Context.Usuario.FirstOrDefault(u => u.Dni == dni);
+                if (usuarioAutenticado == null)
+                    return Json(new { ok = false, mensaje = "Sesión inválida." });
+
                 var solicitud = _Context.SOLICITUD_CREDITO
-                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Estado == "En Evaluación");
+                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud
+                        && x.Estado == "En Evaluación"
+                        && x.Usuario_Id_Usuario == usuarioAutenticado.Id);
 
                 if (solicitud == null)
                 {
@@ -4424,7 +4609,7 @@ string titularCuenta
                     IdSolicitud = null,
                     MontoSolicitado = montoFinal,
                     MotivoCancelacion = motivo.Trim(),
-                    FechaCancelacion = DateTime.Now,
+                    FechaCancelacion = DateTime.UtcNow,
                     Responsable = "Analista de Riesgo"
                 };
 
@@ -4479,6 +4664,7 @@ string titularCuenta
             }
         }
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public IActionResult GuardarResena(int calificacion, string comentario)
         {
             string dni = User.FindFirst("Dni")?.Value;
@@ -4523,6 +4709,7 @@ string titularCuenta
         }
 
         [HttpPost]
+        [Authorize(Roles = "Cliente")]
         public IActionResult MarcarClienteInactivo()
         {
             string dni = User.FindFirst("Dni")?.Value;

@@ -10,6 +10,7 @@
     <title>Registrarse</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/utilidades-ui.css" />
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
     <style>
         body {
@@ -580,10 +581,11 @@
                 </div>
 
                 <ul class="password-rules mb-3">
+                    <li id="minimo"> Mínimo 12 caracteres</li>
                     <li id="mayus"> Una letra mayúscula</li>
                     <li id="minus"> Una letra minúscula</li>
                     <li id="numero"> Un número</li>
-                    <li id="minimo"> Mínimo 6 caracteres</li>
+                    <li id="simbolo"> Un símbolo o carácter especial (!@@#$%&*?_-+)</li>
                 </ul>
 
                 <div class="input-util-wrap mb-3">
@@ -608,6 +610,14 @@
                     </button>
 
                 </div>
+
+                @if (!string.IsNullOrEmpty(ViewBag.TurnstileSiteKey as string))
+                {
+                    <div class="mb-3 d-flex justify-content-center">
+                        <div class="cf-turnstile" data-sitekey="@ViewBag.TurnstileSiteKey" data-theme="light" data-language="es"></div>
+                    </div>
+                }
+
                 <div class="d-grid gap-2 mb-3">
                     <button class="btn btn-register" type="submit">Registrate</button>
                 </div>
@@ -1062,6 +1072,7 @@
         const mayus = document.getElementById("mayus");
         const minus = document.getElementById("minus");
         const numero = document.getElementById("numero");
+        const simbolo = document.getElementById("simbolo");
         const minimo = document.getElementById("minimo");
 
         clave.addEventListener("input", function () {
@@ -1091,11 +1102,23 @@
                 numero.style.color = "#64748b";
             }
 
-            if (valor.length >= 6) {
-                minimo.innerHTML = "✔ Mínimo 6 caracteres";
+            if (/[^a-zA-Z0-9\s]/.test(valor)) {
+                if (simbolo) {
+                    simbolo.innerHTML = "✔ Un símbolo especial (!@@#$%&*...)";
+                    simbolo.style.color = "green";
+                }
+            } else {
+                if (simbolo) {
+                    simbolo.innerHTML = "❌ Un símbolo especial (!@@#$%&*...)";
+                    simbolo.style.color = "#64748b";
+                }
+            }
+
+            if (valor.length >= 12) {
+                minimo.innerHTML = "✔ Mínimo 12 caracteres";
                 minimo.style.color = "green";
             } else {
-                minimo.innerHTML = "❌ Mínimo 6 caracteres";
+                minimo.innerHTML = "❌ Mínimo 12 caracteres";
                 minimo.style.color = "#64748b";
             }
         });
@@ -1222,6 +1245,10 @@
             }
 
             enviandoRegistro = false;
+
+            if (typeof turnstile !== "undefined") {
+                try { turnstile.reset(); } catch (e) {}
+            }
 
             if (botonRegistro) {
 

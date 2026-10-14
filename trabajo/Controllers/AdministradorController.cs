@@ -19,7 +19,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace trabajo.Controllers
     {
-        [Authorize]
+        [Authorize(Roles = "Administrador")]
         public class AdministradorController : Controller
         {
             private readonly UsuarioContext _context;
@@ -229,6 +229,13 @@ namespace trabajo.Controllers
                 string.IsNullOrWhiteSpace(correo) || string.IsNullOrWhiteSpace(genero))
             {
                 TempData["ErrorAnalista"] = "Complete todos los campos.";
+                return RedirectToAction("Analistas");
+            }
+
+            var resClave = PasswordPolicyHelper.Validar(clave);
+            if (!resClave.EsValida)
+            {
+                TempData["ErrorAnalista"] = resClave.MensajeError;
                 return RedirectToAction("Analistas");
             }
 
@@ -4772,6 +4779,13 @@ $"La notificación fue enviada correctamente a {usuario.Nombre} {usuario.Apellid
 
                 if (!string.IsNullOrWhiteSpace(usuario.clave))
                 {
+                    var resClave = PasswordPolicyHelper.Validar(usuario.clave);
+                    if (!resClave.EsValida)
+                    {
+                        TempData["MensajeError"] = resClave.MensajeError;
+                        return RedirectToAction("PerfilAdministrador");
+                    }
+
                     if (usuario.clave != ConfirmarClave)
                     {
                         TempData["MensajeError"] = "Las contraseñas no coinciden.";
