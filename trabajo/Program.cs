@@ -219,6 +219,17 @@ else
 }
 
 // ==========================================
+// CONFIGURACIÓN DE HSTS (HTTP Strict Transport Security)
+// Preload = false (evita registro irreversible de dominios hasta validación final)
+// ==========================================
+builder.Services.AddHsts(options =>
+{
+    options.Preload = false;
+    options.IncludeSubDomains = true;
+    options.MaxAge = TimeSpan.FromDays(365);
+});
+
+// ==========================================
 // MVC CON FILTRO GLOBAL: SIN CACHÉ EN RESPUESTAS PRIVADAS
 // (se eliminó el AddControllersWithViews duplicado que existía antes)
 // ==========================================
@@ -312,6 +323,48 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// ==========================================
+// CABECERAS DE SEGURIDAD HTTP CONTROLADAS (OWASP / Northflank)
+// ==========================================
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["X-Frame-Options"] = "DENY";
+    headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    headers["Permissions-Policy"] = "microphone=(self), camera=(), geolocation=(), payment=(), usb=(), display-capture=()";
+    headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups";
+    headers["X-Permitted-Cross-Domain-Policies"] = "none";
+
+    // Content Security Policy en modo Report-Only para diagnóstico seguro sin bloqueos
+    headers["Content-Security-Policy-Report-Only"] = 
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; " +
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+        "img-src 'self' data: blob: https://cdn-icons-png.flaticon.com https://challenges.cloudflare.com; " +
+        "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+        "connect-src 'self' wss: ws: https://challenges.cloudflare.com; " +
+        "frame-src 'self' https://challenges.cloudflare.com; " +
+        "frame-ancestors 'none'; " +
+        "media-src 'self' blob:; " +
+        "object-src 'none'; " +
+        "base-uri 'self'; " +
+        "form-action 'self';";
+
+    // Si la solicitud es HTTPS o proviene de proxy HTTPS de Northflank (X-Forwarded-Proto),
+    // asegurar que se emita HSTS si no está presente
+    bool esHttps = context.Request.IsHttps || 
+                   string.Equals(context.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
+
+    if (esHttps && !headers.ContainsKey("Strict-Transport-Security") && !app.Environment.IsDevelopment())
+    {
+        headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
+    }
+
+    await next();
+});
 
 var proveedorTiposArchivo = new FileExtensionContentTypeProvider();
 proveedorTiposArchivo.Mappings[".apk"] =
