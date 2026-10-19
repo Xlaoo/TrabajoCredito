@@ -31,9 +31,9 @@ namespace TestTrabajoCredito
             headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups";
             headers["X-Permitted-Cross-Domain-Policies"] = "none";
 
-            headers["Content-Security-Policy-Report-Only"] =
+            headers["Content-Security-Policy"] =
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; " +
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; " +
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                 "img-src 'self' data: blob: https://cdn-icons-png.flaticon.com https://challenges.cloudflare.com; " +
                 "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
@@ -140,16 +140,16 @@ namespace TestTrabajoCredito
                     return headers["X-Permitted-Cross-Domain-Policies"].ToString();
                 });
 
-            // 7. Content-Security-Policy-Report-Only: Compatibilidad con scripts, Turnstile, CDNs y WebSockets
+            // 7. Content-Security-Policy: Directiva activa con orígenes permitidos (Cloudflare, CDNs, SignalR wss)
             await runner.EvaluarAsync(
-                nombreEscenario: "CSP en modo Report-Only incluye orígenes permitidos (Cloudflare, CDNs, SignalR wss)",
+                nombreEscenario: "CSP activa y efectiva incluye orígenes permitidos (Cloudflare, CDNs, SignalR wss, unsafe-eval)",
                 datoEntrada: "Inspección de directivas CSP (script-src, connect-src, frame-src, media-src)",
                 esperado: "TurnstileOk: True, BootstrapCdnOk: True, SignalROk: True, MediaBlobOk: True, FrameAncestorsNone: True",
                 accionAsync: async () =>
                 {
                     var ctx = new DefaultHttpContext();
                     var headers = await EjecutarMiddlewareSeguridadAsync(ctx);
-                    string csp = headers["Content-Security-Policy-Report-Only"].ToString();
+                    string csp = headers["Content-Security-Policy"].ToString();
 
                     bool turnstileOk = csp.Contains("https://challenges.cloudflare.com");
                     bool cdnOk = csp.Contains("https://cdn.jsdelivr.net") && csp.Contains("https://cdnjs.cloudflare.com");
