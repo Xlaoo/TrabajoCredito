@@ -1301,7 +1301,7 @@ namespace trabajo.Controllers
                 // ==========================================
                 // BUSCAR USUARIO
                 // ==========================================
-                Usuario usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dniLoginPendiente);
+                Usuario? usuario = await _Context.Usuario.AsNoTracking().FirstOrDefaultAsync(x => x.Dni == dniLoginPendiente);
                 if (usuario == null)
                 {
                     Console.WriteLine("Usuario localizado: NO");
@@ -3158,6 +3158,7 @@ namespace trabajo.Controllers
             string? tokenRenovacion)
         {
             string? nuevaRutaAudio = null;
+            string? rutaWavCompartida = null;
             try
             {
                 string? dniLoginPendiente = HttpContext.Session.GetString("DniLoginPendiente");
@@ -3211,15 +3212,6 @@ namespace trabajo.Controllers
                     });
                 }
 
-                if (string.IsNullOrWhiteSpace(fraseVoz))
-                {
-                    return Json(new
-                    {
-                        ok = false,
-                        mensaje = "Debes indicar tu nueva palabra o frase secreta."
-                    });
-                }
-
                 if (audio.Length > 5 * 1024 * 1024)
                 {
                     return Json(new
@@ -3251,7 +3243,7 @@ namespace trabajo.Controllers
                     });
                 }
 
-                Usuario usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dniLoginPendiente);
+                Usuario? usuario = await _Context.Usuario.FirstOrDefaultAsync(x => x.Dni == dniLoginPendiente);
                 if (usuario == null)
                 {
                     return Json(new
@@ -3261,9 +3253,32 @@ namespace trabajo.Controllers
                     });
                 }
 
-                // 1. GENERAR EL NUEVO EMBEDDING BIOMÉTRICO MODERNO CON VAD DINÁMICO
-                float[] embedding = await _ServicioEmbeddingVoz.GenerarEmbeddingDesdeAudio(audio);
+                // Convertir una sola vez a WAV 16kHz PCM para Vosk y ECAPA-TDNN compartidos
+                rutaWavCompartida = await _ServicioEmbeddingVoz.ConvertirAudioAWavPcm16k(audio);
 
+                // 1. RECONOCIMIENTO DE FRASE CON VOSK DIRECTAMENTE DESDE EL AUDIO
+                string transcripcionVosk = TranscribirAudioConVosk(rutaWavCompartida);
+                string fraseFinal = !string.IsNullOrWhiteSpace(transcripcionVosk)
+                    ? transcripcionVosk.Trim()
+                    : (fraseVoz ?? "").Trim();
+
+                if (string.IsNullOrWhiteSpace(fraseFinal))
+                {
+                    fraseFinal = "Mi voz protege mi cuenta";
+                }
+
+                // 2. GENERAR EL NUEVO EMBEDDING BIOMÉTRICO CON ECAPA-TDNN DESDE EL MISMO WAV
+                var candidatos = await _ServicioEmbeddingVoz.GenerarEmbeddingsCandidatos(rutaWavCompartida);
+                if (candidatos == null || candidatos.Count == 0)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "No se pudo generar correctamente la identificación biométrica de la nueva voz."
+                    });
+                }
+
+                float[] embedding = candidatos[0];
                 if (embedding == null || embedding.Length != 192)
                 {
                     return Json(new
@@ -3296,7 +3311,7 @@ namespace trabajo.Controllers
                     });
                 }
 
-                // 2. PREPARAR EL NUEVO ARCHIVO DE AUDIO EN WWWROOT
+                // 3. PREPARAR EL NUEVO ARCHIVO DE AUDIO EN WWWROOT
                 string carpetaAudio = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "audiosRegistro");
                 if (!Directory.Exists(carpetaAudio))
                 {
@@ -3318,27 +3333,60 @@ namespace trabajo.Controllers
                 // Recordar la ruta del audio anterior para eliminarlo de forma segura tras guardar en MySQL
                 string? rutaAudioAnterior = usuario.AudioRegistro;
 
-                // 3. ACTUALIZAR EXCLUSIVAMENTE LOS CUATRO CAMPOS BIOMÉTRICOS EN MYSQL
-                usuario.FraseVoz = fraseVoz.Trim();
-                usuario.AudioRegistro = "/audiosRegistro/" + nuevoNombreAudio;
+                // 4. ACTUALIZAR EXCLUSIVAMENTE LOS CUATRO CAMPOS BIOMÉTRICOS EN MYSQL CON LA ESTRATEGIA DE EJECUCIÓN REINTENTABLE
+                var strategy = _Context.Database.CreateExecutionStrategy();
+                await strategy.ExecuteAsync(async () =>
+                {
+                    using var transaction = await _Context.Database.BeginTransactionAsync();
 
-                usuario.EmbeddingVoz = new byte[embedding.Length * sizeof(float)];
-                Buffer.BlockCopy(embedding, 0, usuario.EmbeddingVoz, 0, usuario.EmbeddingVoz.Length);
+                    // Re-verificar si un intento previo ya persistió los datos (en caso de reintento tras pérdida de respuesta)
+                    var usuarioEnDb = await _Context.Usuario.FirstOrDefaultAsync(x => x.Dni == dniLoginPendiente);
+                    if (usuarioEnDb == null)
+                    {
+                        throw new InvalidOperationException("No se encontró el usuario en el sistema.");
+                    }
 
-                // Como ya se validó el OTP de renovación antes de grabar, se habilita directamente la voz
-                usuario.VozHabilitadaLogin = true;
+                    string rutaRelativaNuevoAudio = "/audiosRegistro/" + nuevoNombreAudio;
+                    if (usuarioEnDb.AudioRegistro == rutaRelativaNuevoAudio && usuarioEnDb.FraseVoz == fraseFinal)
+                    {
+                        // Ya se persistió en una ejecución previa de la estrategia
+                        return;
+                    }
 
-                // Configurar ChangeTracker de EF Core para actualizar ÚNICAMENTE las 4 columnas requeridas
-                var entry = _Context.Entry(usuario);
-                entry.State = EntityState.Unchanged;
-                entry.Property(u => u.FraseVoz).IsModified = true;
-                entry.Property(u => u.EmbeddingVoz).IsModified = true;
-                entry.Property(u => u.AudioRegistro).IsModified = true;
-                entry.Property(u => u.VozHabilitadaLogin).IsModified = true;
+                    usuarioEnDb.FraseVoz = fraseFinal;
+                    usuarioEnDb.AudioRegistro = rutaRelativaNuevoAudio;
 
-                await _Context.SaveChangesAsync();
+                    usuarioEnDb.EmbeddingVoz = new byte[embedding.Length * sizeof(float)];
+                    Buffer.BlockCopy(embedding, 0, usuarioEnDb.EmbeddingVoz, 0, usuarioEnDb.EmbeddingVoz.Length);
 
-                // 4. ELIMINAR EL ARCHIVO BIOMÉTRICO ANTERIOR SOLO TRAS CONFIRMAR EL GUARDADO EN MYSQL
+                    // Como ya se validó el OTP de renovación antes de grabar, se habilita directamente la voz
+                    usuarioEnDb.VozHabilitadaLogin = true;
+
+                    // Configurar ChangeTracker de EF Core para actualizar las columnas modificadas
+                    var entry = _Context.Entry(usuarioEnDb);
+                    entry.Property(u => u.FraseVoz).IsModified = true;
+                    entry.Property(u => u.EmbeddingVoz).IsModified = true;
+                    entry.Property(u => u.AudioRegistro).IsModified = true;
+                    entry.Property(u => u.VozHabilitadaLogin).IsModified = true;
+
+                    int filasAfectadas = await _Context.SaveChangesAsync();
+                    if (filasAfectadas == 0)
+                    {
+                        await transaction.RollbackAsync();
+                        throw new InvalidOperationException("No se pudo actualizar la biometría en la base de datos.");
+                    }
+
+                    await transaction.CommitAsync();
+                });
+
+                // 5. COMPROBAR QUE LA NUEVA FRASE Y EMBEDDING SE RECUPEREN DESDE MYSQL MEDIANTE CONSULTA SIN SEGUIMIENTO
+                var usuarioGuardado = await _Context.Usuario.AsNoTracking().FirstOrDefaultAsync(x => x.Dni == dniLoginPendiente);
+                if (usuarioGuardado == null || usuarioGuardado.FraseVoz != fraseFinal || usuarioGuardado.EmbeddingVoz == null || usuarioGuardado.EmbeddingVoz.Length != 192 * sizeof(float))
+                {
+                    Console.WriteLine("[CrediPlus] Advertencia: La consulta sin seguimiento en MySQL no devolvió la biometría actualizada.");
+                }
+
+                // 6. ELIMINAR EL ARCHIVO BIOMÉTRICO ANTERIOR SOLO TRAS CONFIRMAR EL GUARDADO EN MYSQL
                 if (!string.IsNullOrWhiteSpace(rutaAudioAnterior))
                 {
                     try
@@ -3377,6 +3425,13 @@ namespace trabajo.Controllers
                     ok = false,
                     mensaje = "Ocurrió un error al actualizar la biometría: " + ex.Message
                 });
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(rutaWavCompartida) && System.IO.File.Exists(rutaWavCompartida))
+                {
+                    try { System.IO.File.Delete(rutaWavCompartida); } catch { }
+                }
             }
         }
 
@@ -5131,8 +5186,7 @@ string titularCuenta
                     host.StartsWith("127.0.0.1")
                 )
                 {
-                    baseUrl =
-                        "http://192.168.18.127:5280";
+                    baseUrl = "http://192.168.18.13:5280";
                 }
 
                 Console.WriteLine(
@@ -5285,7 +5339,7 @@ string titularCuenta
                         .AddMinutes(1)
                         .ToUnixTimeSeconds();
 
-                // Guardar temporalmente en la sesión
+                // Guardar temporalmente en la sesión asociado a la identidad del usuario
                 HttpContext.Session.SetString(
                     "CodigoAuthenticator",
                     codigo
@@ -5293,6 +5347,16 @@ string titularCuenta
 
                 HttpContext.Session.SetString(
                     "CodigoAuthenticatorExpira",
+                    expiracion.ToString()
+                );
+
+                HttpContext.Session.SetString(
+                    $"CodigoAuthenticator_{dni}",
+                    codigo
+                );
+
+                HttpContext.Session.SetString(
+                    $"CodigoAuthenticatorExpira_{dni}",
                     expiracion.ToString()
                 );
 
@@ -5318,7 +5382,7 @@ string titularCuenta
             catch (Exception ex)
             {
                 Console.WriteLine(
-                    "ERROR AUTHENTICATOR CORREO: " + ex
+                    $"[CrediPlus] Error al enviar código authenticator: {ex.GetType().Name} - {ex.Message}"
                 );
 
                 return Json(new
@@ -5331,29 +5395,56 @@ string titularCuenta
         [HttpPost]
         [AllowAnonymous]
         public IActionResult VerificarCodigoVinculacionAuthenticator(
-    string codigo
-)
+            [FromForm] string? codigo
+        )
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(codigo))
+                string? dni =
+                    HttpContext.Session.GetString("DniLoginPendiente");
+
+                if (string.IsNullOrWhiteSpace(dni))
                 {
                     return Json(new
                     {
                         ok = false,
+                        expirado = true,
+                        mensaje = "La sesión ha expirado. Inicia sesión nuevamente."
+                    });
+                }
+
+                string? codigoRecibido = codigo;
+
+                if (string.IsNullOrWhiteSpace(codigoRecibido) &&
+                    Request.HasFormContentType &&
+                    Request.Form.ContainsKey("codigo"))
+                {
+                    codigoRecibido = Request.Form["codigo"].ToString();
+                }
+
+                if (string.IsNullOrWhiteSpace(codigoRecibido) &&
+                    Request.Query.ContainsKey("codigo"))
+                {
+                    codigoRecibido = Request.Query["codigo"].ToString();
+                }
+
+                if (string.IsNullOrWhiteSpace(codigoRecibido))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        expirado = false,
                         mensaje = "Ingresa el código de seguridad."
                     });
                 }
 
                 string? codigoGuardado =
-                    HttpContext.Session.GetString(
-                        "CodigoAuthenticator"
-                    );
+                    HttpContext.Session.GetString($"CodigoAuthenticator_{dni}") ??
+                    HttpContext.Session.GetString("CodigoAuthenticator");
 
                 string? expiracionTexto =
-                    HttpContext.Session.GetString(
-                        "CodigoAuthenticatorExpira"
-                    );
+                    HttpContext.Session.GetString($"CodigoAuthenticatorExpira_{dni}") ??
+                    HttpContext.Session.GetString("CodigoAuthenticatorExpira");
 
                 if (
                     string.IsNullOrWhiteSpace(codigoGuardado) ||
@@ -5364,7 +5455,7 @@ string titularCuenta
                     {
                         ok = false,
                         expirado = true,
-                        mensaje = "No existe un código activo."
+                        mensaje = "No existe un código activo. Solicita un nuevo código."
                     });
                 }
 
@@ -5372,11 +5463,13 @@ string titularCuenta
                         expiracionTexto,
                         out long expiracion))
                 {
+                    LimpiarCodigoAuthenticator(dni);
+
                     return Json(new
                     {
                         ok = false,
                         expirado = true,
-                        mensaje = "El código ya no es válido."
+                        mensaje = "El código ya no es válido. Solicita un nuevo código."
                     });
                 }
 
@@ -5386,28 +5479,25 @@ string titularCuenta
 
                 if (ahora >= expiracion)
                 {
-                    HttpContext.Session.Remove(
-                        "CodigoAuthenticator"
-                    );
-
-                    HttpContext.Session.Remove(
-                        "CodigoAuthenticatorExpira"
-                    );
+                    LimpiarCodigoAuthenticator(dni);
 
                     return Json(new
                     {
                         ok = false,
                         expirado = true,
-                        mensaje = "El código ha expirado."
+                        mensaje = "El código ha expirado. Solicita un nuevo código."
                     });
                 }
 
-                codigo =
-                    codigo.Trim().ToUpper();
+                codigoRecibido =
+                    codigoRecibido.Trim().ToUpperInvariant();
+
+                string codigoEsperado =
+                    codigoGuardado.Trim().ToUpperInvariant();
 
                 if (!string.Equals(
-                        codigo,
-                        codigoGuardado,
+                        codigoRecibido,
+                        codigoEsperado,
                         StringComparison.Ordinal))
                 {
                     return Json(new
@@ -5418,22 +5508,14 @@ string titularCuenta
                     });
                 }
 
-                // IMPORTANTE:
-                // Desde aquí sabemos que realmente controla
-                // el correo registrado.
+                // Identidad confirmada correctamente
                 HttpContext.Session.SetString(
                     "AuthenticatorIdentidadVerificada",
                     "true"
                 );
 
-                // El código ya fue usado: destruirlo
-                HttpContext.Session.Remove(
-                    "CodigoAuthenticator"
-                );
-
-                HttpContext.Session.Remove(
-                    "CodigoAuthenticatorExpira"
-                );
+                // El código ya fue usado: destruirlo para evitar reutilización
+                LimpiarCodigoAuthenticator(dni);
 
                 return Json(new
                 {
@@ -5444,14 +5526,32 @@ string titularCuenta
             catch (Exception ex)
             {
                 Console.WriteLine(
-                    "ERROR VERIFICANDO AUTHENTICATOR: " + ex
+                    $"[CrediPlus] Error al verificar código authenticator: {ex.GetType().Name} - {ex.Message}"
                 );
 
                 return Json(new
                 {
                     ok = false,
-                    mensaje = "No se pudo verificar el código."
+                    mensaje = "Ocurrió un error al verificar el código. Inténtalo nuevamente."
                 });
+            }
+        }
+
+        private void LimpiarCodigoAuthenticator(string? dni)
+        {
+            try
+            {
+                HttpContext.Session.Remove("CodigoAuthenticator");
+                HttpContext.Session.Remove("CodigoAuthenticatorExpira");
+
+                if (!string.IsNullOrWhiteSpace(dni))
+                {
+                    HttpContext.Session.Remove($"CodigoAuthenticator_{dni}");
+                    HttpContext.Session.Remove($"CodigoAuthenticatorExpira_{dni}");
+                }
+            }
+            catch
+            {
             }
         }
         private string OcultarCorreo(string correo)

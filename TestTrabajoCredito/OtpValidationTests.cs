@@ -252,5 +252,143 @@ namespace TestTrabajoCredito
 
             runner.VerificarTodosAprobados();
         }
+
+        [Fact]
+        public void ProbarValidacionesCodigoVinculacionAuthenticator()
+        {
+            var runner = new EscenarioRunner(_output, "Validaciones de Código de Vinculación CrediPlus Authenticator (Email OTP)");
+
+            // 1. Sesión sin DNI pendiente
+            runner.Evaluar(
+                nombreEscenario: "Rechazo cuando no hay DNI en sesión pendiente",
+                datoEntrada: "DniLoginPendiente = null, codigo = 'ABC123'",
+                esperado: "Rechazado: La sesión ha expirado. Inicia sesión nuevamente.",
+                accion: () =>
+                {
+                    var (controller, _) = CrearControladorConSesion();
+                    var res = controller.VerificarCodigoVinculacionAuthenticator("ABC123");
+                    var json = (JsonResult)res;
+                    bool ok = (bool)(ObtenerPropiedad(json.Value, "ok") ?? true);
+                    string? msg = (string?)ObtenerPropiedad(json.Value, "mensaje");
+                    return !ok ? $"Rechazado: {msg}" : "Aceptado";
+                });
+
+            // 2. Código nulo o vacío
+            runner.Evaluar(
+                nombreEscenario: "Rechazo cuando el código ingresado está vacío",
+                datoEntrada: "DniLoginPendiente = '72345678', codigo = ''",
+                esperado: "Rechazado: Ingresa el código de seguridad.",
+                accion: () =>
+                {
+                    var (controller, session) = CrearControladorConSesion();
+                    session.SetString("DniLoginPendiente", "72345678");
+                    var res = controller.VerificarCodigoVinculacionAuthenticator("");
+                    var json = (JsonResult)res;
+                    bool ok = (bool)(ObtenerPropiedad(json.Value, "ok") ?? true);
+                    string? msg = (string?)ObtenerPropiedad(json.Value, "mensaje");
+                    return !ok ? $"Rechazado: {msg}" : "Aceptado";
+                });
+
+            // 3. Sin código activo en sesión
+            runner.Evaluar(
+                nombreEscenario: "Rechazo cuando no existe código activo en sesión",
+                datoEntrada: "DniLoginPendiente = '72345678', sin OTP en sesión",
+                esperado: "Rechazado: No existe un código activo. Solicita un nuevo código.",
+                accion: () =>
+                {
+                    var (controller, session) = CrearControladorConSesion();
+                    session.SetString("DniLoginPendiente", "72345678");
+                    var res = controller.VerificarCodigoVinculacionAuthenticator("ABC123");
+                    var json = (JsonResult)res;
+                    bool ok = (bool)(ObtenerPropiedad(json.Value, "ok") ?? true);
+                    string? msg = (string?)ObtenerPropiedad(json.Value, "mensaje");
+                    return !ok ? $"Rechazado: {msg}" : "Aceptado";
+                });
+
+            // 4. Código expirado (> 60 segundos)
+            runner.Evaluar(
+                nombreEscenario: "Rechazo cuando el código OTP de 60s ha expirado",
+                datoEntrada: "DniLoginPendiente = '72345678', expira hace 10 segundos",
+                esperado: "Rechazado: El código ha expirado. Solicita un nuevo código.",
+                accion: () =>
+                {
+                    var (controller, session) = CrearControladorConSesion();
+                    session.SetString("DniLoginPendiente", "72345678");
+                    session.SetString("CodigoAuthenticator_72345678", "ABC123");
+                    session.SetString("CodigoAuthenticatorExpira_72345678", DateTimeOffset.UtcNow.AddSeconds(-10).ToUnixTimeSeconds().ToString());
+
+                    var res = controller.VerificarCodigoVinculacionAuthenticator("ABC123");
+                    var json = (JsonResult)res;
+                    bool ok = (bool)(ObtenerPropiedad(json.Value, "ok") ?? true);
+                    bool expirado = (bool)(ObtenerPropiedad(json.Value, "expirado") ?? false);
+                    string? msg = (string?)ObtenerPropiedad(json.Value, "mensaje");
+                    return (!ok && expirado) ? $"Rechazado: {msg}" : "Aceptado";
+                });
+
+            // 5. Código incorrecto
+            runner.Evaluar(
+                nombreEscenario: "Rechazo cuando el código OTP no coincide",
+                datoEntrada: "Esperado 'ABC123', ingresado 'XYZ999'",
+                esperado: "Rechazado: El código ingresado es incorrecto.",
+                accion: () =>
+                {
+                    var (controller, session) = CrearControladorConSesion();
+                    session.SetString("DniLoginPendiente", "72345678");
+                    session.SetString("CodigoAuthenticator_72345678", "ABC123");
+                    session.SetString("CodigoAuthenticatorExpira_72345678", DateTimeOffset.UtcNow.AddSeconds(60).ToUnixTimeSeconds().ToString());
+
+                    var res = controller.VerificarCodigoVinculacionAuthenticator("XYZ999");
+                    var json = (JsonResult)res;
+                    bool ok = (bool)(ObtenerPropiedad(json.Value, "ok") ?? true);
+                    string? msg = (string?)ObtenerPropiedad(json.Value, "mensaje");
+                    return !ok ? $"Rechazado: {msg}" : "Aceptado";
+                });
+
+            // 6. Código correcto verificado con éxito (insensible a mayúsculas/minúsculas y espacios)
+            runner.Evaluar(
+                nombreEscenario: "Aceptación de código correcto y establecimiento de identidad verificada",
+                datoEntrada: "Esperado 'ABC123', ingresado ' abc123 ' dentro del TTL",
+                esperado: "Identidad confirmada correctamente.",
+                accion: () =>
+                {
+                    var (controller, session) = CrearControladorConSesion();
+                    session.SetString("DniLoginPendiente", "72345678");
+                    session.SetString("CodigoAuthenticator_72345678", "ABC123");
+                    session.SetString("CodigoAuthenticatorExpira_72345678", DateTimeOffset.UtcNow.AddSeconds(60).ToUnixTimeSeconds().ToString());
+
+                    var res = controller.VerificarCodigoVinculacionAuthenticator(" abc123 ");
+                    var json = (JsonResult)res;
+                    bool ok = (bool)(ObtenerPropiedad(json.Value, "ok") ?? false);
+                    string? msg = (string?)ObtenerPropiedad(json.Value, "mensaje");
+                    bool identidadConfirmada = session.GetString("AuthenticatorIdentidadVerificada") == "true";
+
+                    return (ok && identidadConfirmada) ? msg! : "Fallo en verificación";
+                });
+
+            // 7. Protección contra reutilización (Replay Attack - uso único)
+            runner.Evaluar(
+                nombreEscenario: "Protección contra reutilización: código ya verificado queda invalidado",
+                datoEntrada: "Segundo intento con el mismo código tras consumo previo",
+                esperado: "Rechazado: No existe un código activo. Solicita un nuevo código.",
+                accion: () =>
+                {
+                    var (controller, session) = CrearControladorConSesion();
+                    session.SetString("DniLoginPendiente", "72345678");
+                    session.SetString("CodigoAuthenticator_72345678", "ABC123");
+                    session.SetString("CodigoAuthenticatorExpira_72345678", DateTimeOffset.UtcNow.AddSeconds(60).ToUnixTimeSeconds().ToString());
+
+                    // Primer uso (válido)
+                    controller.VerificarCodigoVinculacionAuthenticator("ABC123");
+
+                    // Segundo uso (debe ser rechazado porque ya se consumió)
+                    var resSegundo = controller.VerificarCodigoVinculacionAuthenticator("ABC123");
+                    var json = (JsonResult)resSegundo;
+                    bool ok = (bool)(ObtenerPropiedad(json.Value, "ok") ?? true);
+                    string? msg = (string?)ObtenerPropiedad(json.Value, "mensaje");
+                    return !ok ? $"Rechazado: {msg}" : "Aceptado indebidamente";
+                });
+
+            runner.VerificarTodosAprobados();
+        }
     }
 }

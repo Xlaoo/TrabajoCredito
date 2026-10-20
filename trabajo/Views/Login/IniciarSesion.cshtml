@@ -2877,11 +2877,11 @@
                         <div class="seguridad-voz-box">
 
                             <p style="font-weight:700;color:#3c096c;">
-                                🎙️ Palabra o frase clave registrada:
+                                🎙️ Palabra o frase clave:
                             </p>
 
                             <div class="alert alert-light text-center">
-                                <strong id="textoFraseEsperadaVoz">Di tu palabra o frase de seguridad registrada</strong>
+                                <strong id="textoFraseEsperadaRegistroVoz" class="textoFraseEsperadaVoz">Di tu palabra o frase de seguridad registrada</strong>
                             </div>
 
                             <button type="button"
@@ -2941,7 +2941,7 @@
                             </p>
 
                             <div class="alert alert-light text-center">
-                                <strong id="textoFraseEsperadaVoz">Di tu palabra o frase de seguridad registrada</strong>
+                                <strong id="textoFraseEsperadaVoz" class="textoFraseEsperadaVoz">Di tu palabra o frase de seguridad registrada</strong>
                             </div>
 
                             <button type="button"
@@ -5281,6 +5281,7 @@
                         </button>
 
                         <button type="button"
+                                id="btnConfirmarRegistroVozModal"
                                 class="btn btn-success flex-fill"
                                 onclick="confirmarRegistroVozLogin()">
 
@@ -5482,6 +5483,9 @@
         let tokenRenovacionVozActivo = null;
         let intervaloOtpRenovacion = null;
         let segundosOtpRenovacion = 60;
+                // Temporizador de vinculación CrediPlus Authenticator
+        let intervaloAuthenticator = null;
+        let segundosAuthenticator = 60;
         let correoUsuarioOcultoRenovacion = "";
             // ==========================================
             // CONTADOR DEL CÓDIGO
@@ -5952,10 +5956,10 @@
 
             try {
 
-                const cuerpo =
-                    new URLSearchParams();
+                const datos =
+                    new FormData();
 
-                cuerpo.append(
+                datos.append(
                     "codigo",
                     codigo
                 );
@@ -5966,16 +5970,14 @@
                         "/Login/VerificarCodigoVinculacionAuthenticator",
                         {
                             method: "POST",
-
-                            headers: {
-                                "Content-Type":
-                                    "application/x-www-form-urlencoded"
-                            },
-
-                            body:
-                                cuerpo.toString()
+                            body: datos
                         }
                     );
+
+
+                if (!respuesta.ok) {
+                    throw new Error("Error HTTP " + respuesta.status);
+                }
 
 
                 const resultado =
@@ -5986,7 +5988,7 @@
 
                     mostrarMensajeAuthenticator(
                         "mensajeAuthenticatorPaso2",
-                        resultado.mensaje,
+                        resultado.mensaje || "El código ingresado no es válido.",
                         false
                     );
 
@@ -5994,136 +5996,112 @@
                 }
 
 
-                if (intervaloAuthenticator) {
+        if (intervaloAuthenticator) {
+            clearInterval(intervaloAuthenticator);
+            intervaloAuthenticator = null;
+        }
 
-                    clearInterval(
-                        intervaloAuthenticator
-                    );
+        const mensaje = document.getElementById("mensajeAuthenticatorPaso2");
+        if (mensaje) {
+            mensaje.textContent = "Identidad confirmada correctamente.";
+            mensaje.style.display = "block";
+            mensaje.classList.remove("alert-danger");
+            mensaje.classList.add("alert-success");
+        }
 
-                    intervaloAuthenticator = null;
-                }
+        const modalActualEl =
+            document.getElementById("modalFiltroAuthenticator");
 
+        const modalExitoEl =
+            document.getElementById("modalIdentidadConfirmadaAuthenticator");
 
-                mostrarMensajeAuthenticator(
-                    "mensajeAuthenticatorPaso2",
-                    "Identidad confirmada correctamente.",
-                    true
-                );
+        if (!modalExitoEl) {
+            console.error("Falta modalIdentidadConfirmadaAuthenticator");
+            return;
+        }
 
-
-                // POR AHORA:
-                // Luego este punto abrirá la pantalla
-                // de descarga y vinculación de la app.
-
-        setTimeout(function () {
-
+        if (modalActualEl) {
             const modalActual =
-                bootstrap.Modal.getInstance(
-                    document.getElementById(
-                        "modalFiltroAuthenticator"
-                    )
-                );
+                bootstrap.Modal.getOrCreateInstance(modalActualEl);
 
-            if (modalActual) {
-                modalActual.hide();
-            }
+            modalActualEl.addEventListener("hidden.bs.modal", function () {
+                bootstrap.Modal.getOrCreateInstance(modalExitoEl).show();
+            }, { once: true });
 
-            setTimeout(function () {
+            modalActual.hide();
+        } else {
+            bootstrap.Modal.getOrCreateInstance(modalExitoEl).show();
+        }
 
-                const modalExito =
-                    bootstrap.Modal.getOrCreateInstance(
-                        document.getElementById(
-                            "modalIdentidadConfirmadaAuthenticator"
-                        )
-                    );
+            }catch (error) {
 
-                modalExito.show();
-
-            }, 250);
-
-        }, 700);
-
-            }
-            catch (error) {
-
-                console.error(error);
+                console.error("Error al verificar código Authenticator:", error);
 
                 mostrarMensajeAuthenticator(
                     "mensajeAuthenticatorPaso2",
-                    "No se pudo verificar el código.",
+                    "No se pudo verificar el código. Inténtalo nuevamente.",
                     false
                 );
             }
             finally {
 
-                boton.disabled = false;
+                if (boton) {
+                    boton.disabled = false;
 
-                boton.innerHTML =
-                    '<i class="bi bi-shield-check me-1"></i> Verificar identidad';
+                    boton.innerHTML =
+                        '<i class="bi bi-shield-check me-1"></i> Verificar identidad';
+                }
             }
         }
 
 
-        function iniciarContadorAuthenticator() {
-
+               function iniciarContadorAuthenticator() {
             if (intervaloAuthenticator) {
-                clearInterval(
-                    intervaloAuthenticator
-                );
+                clearInterval(intervaloAuthenticator);
+                intervaloAuthenticator = null;
             }
 
-            segundosAuthenticator = 60;
+            const tiempo = document.getElementById("tiempoAuthenticator");
+            const reenviar = document.getElementById("btnReenviarAuthenticator");
 
-            const tiempo =
-                document.getElementById(
-                    "tiempoAuthenticator"
+            const vencimiento = Date.now() + 60000;
+
+            if (reenviar) {
+                reenviar.disabled = true;
+                reenviar.style.pointerEvents = "none";
+                reenviar.style.opacity = "0.5";
+            }
+
+            function actualizar() {
+                const restantes = Math.max(
+                    0,
+                    Math.ceil((vencimiento - Date.now()) / 1000)
                 );
 
-            const reenviar =
-                document.getElementById(
-                    "btnReenviarAuthenticator"
-                );
+                segundosAuthenticator = restantes;
 
-            reenviar.disabled = true;
+                if (tiempo) {
+                    tiempo.textContent =
+                        String(Math.floor(restantes / 60)).padStart(2, "0") +
+                        ":" +
+                        String(restantes % 60).padStart(2, "0");
+                }
 
-            tiempo.innerText = "01:00";
+                if (restantes === 0) {
+                    clearInterval(intervaloAuthenticator);
+                    intervaloAuthenticator = null;
 
-
-            intervaloAuthenticator =
-                setInterval(function () {
-
-                    segundosAuthenticator--;
-
-                    const minutos =
-                        Math.floor(
-                            segundosAuthenticator / 60
-                        );
-
-                    const segundos =
-                        segundosAuthenticator % 60;
-
-                    tiempo.innerText =
-                        String(minutos).padStart(2, "0")
-                        +
-                        ":"
-                        +
-                        String(segundos).padStart(2, "0");
-
-
-                    if (segundosAuthenticator <= 0) {
-
-                        clearInterval(
-                            intervaloAuthenticator
-                        );
-
-                        intervaloAuthenticator = null;
-
-                        tiempo.innerText = "00:00";
-
+                    if (reenviar) {
                         reenviar.disabled = false;
-                    }
+                        reenviar.style.pointerEvents = "";
+                        reenviar.style.opacity = "";
 
-                }, 1000);
+                    }
+                }
+            }
+
+            actualizar();
+            intervaloAuthenticator = setInterval(actualizar, 250);
         }
 
 
@@ -6613,10 +6591,14 @@
                 estadoVoz.innerText = "⚪ Pulsa para grabar tu nueva voz y palabra secreta";
             }
 
-            // Reset de variables de audio
+            // Reset de variables de audio y nueva frase
             audioBlobLogin = null;
             audioChunksLogin = [];
             fraseRegistroVozLogin = "";
+
+            document.querySelectorAll(".textoFraseEsperadaVoz, #textoFraseEsperadaRegistroVoz, #textoFraseEsperadaVoz").forEach(el => {
+                el.innerText = "Pulsa «Grabar mi nueva voz» y pronuncia con claridad tu nueva frase secreta";
+            });
 
             const btnCancelarForm = document.getElementById("btnCancelarRenovacionFormulario");
             if (btnCancelarForm) btnCancelarForm.style.display = "block";
@@ -6650,6 +6632,10 @@
 
             const texto = document.querySelector("#modalVerificacionSeguridad .texto-seguridad");
             if (texto) texto.innerText = "Para continuar, selecciona cómo deseas verificar tu identidad.";
+
+            document.querySelectorAll(".textoFraseEsperadaVoz, #textoFraseEsperadaRegistroVoz, #textoFraseEsperadaVoz").forEach(el => {
+                el.innerText = fraseVozBD || "Di tu palabra o frase de seguridad registrada";
+            });
 
             // Seleccionar método voz con el enlace visible
             seleccionarMetodo("voz");
@@ -7434,10 +7420,9 @@
                         const resultado = await respuesta.json();
                         if (resultado.fraseVoz) {
                             fraseVozBD = resultado.fraseVoz;
-                            const elementoFrase = document.getElementById("textoFraseEsperadaVoz");
-                            if (elementoFrase) {
-                                elementoFrase.innerText = fraseVozBD;
-                            }
+                            document.querySelectorAll("#textoFraseEsperadaVoz").forEach(el => {
+                                el.innerText = fraseVozBD;
+                            });
 
                             console.log(
                                 "Frase de seguridad configurada para verificación:",
@@ -8025,23 +8010,41 @@
                     boton.disabled = false;
                     boton.classList.remove("grabando", "btn-danger");
                     boton.classList.add("btn-primary");
-                    boton.innerHTML = "🎙️ Grabar mi voz";
+                    boton.innerHTML = modoRenovacionVoz ? "🎙️ Grabar mi nueva voz" : "🎙️ Grabar mi voz";
                 }
             }
 
+            let enviandoConfirmacionVozLogin = false;
             async function confirmarRegistroVozLogin() {
-                const modalElemento = document.getElementById("modalConfirmarRegistroVozLogin");
-                if (modalElemento) {
-                    const modal = bootstrap.Modal.getOrCreateInstance(modalElemento);
-                    modal.hide();
+                if (enviandoConfirmacionVozLogin) return;
+                enviandoConfirmacionVozLogin = true;
+
+                const btnModal = document.getElementById("btnConfirmarRegistroVozModal");
+                if (btnModal) {
+                    btnModal.disabled = true;
+                    btnModal.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Confirmando...';
                 }
 
-                const estado = document.getElementById("estadoVozLogin");
-                if (estado) {
-                    estado.innerText = "⏳ Guardando tu voz de seguridad...";
-                }
+                try {
+                    const modalElemento = document.getElementById("modalConfirmarRegistroVozLogin");
+                    if (modalElemento) {
+                        const modal = bootstrap.Modal.getOrCreateInstance(modalElemento);
+                        modal.hide();
+                    }
 
-                await enviarVozLogin();
+                    const estado = document.getElementById("estadoVozLogin");
+                    if (estado) {
+                        estado.innerText = "⏳ Guardando tu voz de seguridad...";
+                    }
+
+                    await enviarVozLogin();
+                } finally {
+                    enviandoConfirmacionVozLogin = false;
+                    if (btnModal) {
+                        btnModal.disabled = false;
+                        btnModal.innerHTML = '<i class="bi bi-check-circle-fill"></i> Confirmar voz';
+                    }
+                }
             }
 
             async function enviarVozLogin() {
@@ -8053,10 +8056,15 @@
                     return;
                 }
 
+                let fraseAEnviar = (fraseRegistroVozLogin || "").trim();
+                if (!fraseAEnviar) {
+                    fraseAEnviar = "Mi voz protege mi cuenta";
+                }
+
                 const ext = obtenerExtensionAudio(audioBlobLogin.type);
                 const formData = new FormData();
                 formData.append("audio", audioBlobLogin, "audioLogin." + ext);
-                formData.append("fraseVoz", (fraseRegistroVozLogin || "Mi voz protege mi cuenta").trim());
+                formData.append("fraseVoz", fraseAEnviar);
 
                 if (modoRenovacionVoz) {
                     if (!tokenRenovacionVozActivo) {
@@ -8084,7 +8092,7 @@
                         if (estado) estado.innerText = "❌ " + resultado.mensaje;
                         if (boton) {
                             boton.disabled = false;
-                            boton.innerHTML = "🎙️ Intentar nuevamente";
+                            boton.innerHTML = modoRenovacionVoz ? "🎙️ Grabar mi nueva voz" : "🎙️ Intentar nuevamente";
                         }
                         return;
                     }
@@ -8095,10 +8103,9 @@
                         vozHabilitadaLogin = true;
                         if (resultado.nuevaFrase) {
                             fraseVozBD = resultado.nuevaFrase;
-                            const elementoFrase = document.getElementById("textoFraseEsperadaVoz");
-                            if (elementoFrase) {
-                                elementoFrase.innerText = fraseVozBD;
-                            }
+                            document.querySelectorAll(".textoFraseEsperadaVoz, #textoFraseEsperadaRegistroVoz, #textoFraseEsperadaVoz").forEach(el => {
+                                el.innerText = fraseVozBD;
+                            });
                         }
 
                         if (estado) estado.innerText = "✅ Biometría actualizada correctamente.";

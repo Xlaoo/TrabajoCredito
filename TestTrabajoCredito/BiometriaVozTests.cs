@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 using Xunit.Abstractions;
 using trabajo.Controllers;
@@ -206,6 +207,72 @@ namespace TestTrabajoCredito
                 accion: () => InvocarVerificarCoincidenciaPalabraClave("clave", null));
 
             runner.VerificarTodosAprobados();
+        }
+
+        [Fact]
+        public async System.Threading.Tasks.Task ProbarPersistenciaEfCoreActualizacionVoz()
+        {
+            var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<trabajo.Models.UsuarioContext>()
+                .UseInMemoryDatabase(databaseName: "TestDb_Voz_" + Guid.NewGuid().ToString())
+                .Options;
+
+            using (var ctx = new trabajo.Models.UsuarioContext(options))
+            {
+                var u = new trabajo.Models.Usuario
+                {
+                    Id = 1,
+                    Dni = "12345678",
+                    Nombre = "Test",
+                    Apellido = "User",
+                    Celular = "999888777",
+                    Correo = "test@example.com",
+                    clave = "hash",
+                    Rol = "Cliente",
+                    Genero = "M",
+                    FraseVoz = "Frase Antigua",
+                    EmbeddingVoz = new byte[192 * sizeof(float)],
+                    AudioRegistro = "/audios/antiguo.webm",
+                    VozHabilitadaLogin = true
+                };
+                ctx.Usuario.Add(u);
+                await ctx.SaveChangesAsync();
+            }
+
+            // Simular lo que hace RenovarVozLogin
+            using (var ctx = new trabajo.Models.UsuarioContext(options))
+            {
+                var usuario = ctx.Usuario.FirstOrDefault(x => x.Dni == "12345678");
+                Assert.NotNull(usuario);
+
+                usuario.FraseVoz = "Nueva Frase Secreta";
+                usuario.AudioRegistro = "/audiosRegistro/nuevo.webm";
+                byte[] nuevoEmb = new byte[192 * sizeof(float)];
+                nuevoEmb[0] = 42;
+                usuario.EmbeddingVoz = nuevoEmb;
+                usuario.VozHabilitadaLogin = true;
+
+                var entry = ctx.Entry(usuario);
+                entry.Property(u => u.FraseVoz).IsModified = true;
+                entry.Property(u => u.EmbeddingVoz).IsModified = true;
+                entry.Property(u => u.AudioRegistro).IsModified = true;
+                entry.Property(u => u.VozHabilitadaLogin).IsModified = true;
+
+                int filas = await ctx.SaveChangesAsync();
+                _output.WriteLine($"Filas afectadas con entry.State=Unchanged: {filas}");
+            }
+
+            // Verificar si persistió
+            using (var ctx = new trabajo.Models.UsuarioContext(options))
+            {
+                var usuario = ctx.Usuario.FirstOrDefault(x => x.Dni == "12345678");
+                Assert.NotNull(usuario);
+                _output.WriteLine($"Frase en DB: '{usuario.FraseVoz}'");
+                _output.WriteLine($"Audio en DB: '{usuario.AudioRegistro}'");
+                _output.WriteLine($"Embedding[0]: {usuario.EmbeddingVoz?[0]}");
+                Assert.Equal("Nueva Frase Secreta", usuario.FraseVoz);
+                Assert.Equal("/audiosRegistro/nuevo.webm", usuario.AudioRegistro);
+                Assert.Equal((byte)42, usuario.EmbeddingVoz?[0]);
+            }
         }
     }
 }
