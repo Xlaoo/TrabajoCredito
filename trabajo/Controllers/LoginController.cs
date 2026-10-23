@@ -36,9 +36,69 @@ namespace trabajo.Controllers
         // ==========================================
         private static readonly ConcurrentDictionary<string, (DateTime UltimoEnvio, int ContadorFallos)> _alertasFallidasCache = new();
 
-        // ==========================================
-        // COMPATIBILIDAD CON GMAIL, HOTMAIL, OUTLOOK
-        // ==========================================
+        private const int MAX_INTENTOS_LOGIN = 3;
+        private const int SEGUNDOS_BLOQUEO_LOGIN = 60;
+
+        private const string CLAVE_INTENTOS_LOGIN = "IntentosFallidosLogin";
+        private const string CLAVE_BLOQUEO_LOGIN = "BloqueoHastaLogin";
+
+        private int ObtenerSegundosBloqueoLogin()
+        {
+            string? bloqueoTexto = HttpContext.Session.GetString(CLAVE_BLOQUEO_LOGIN);
+
+            if (!long.TryParse(bloqueoTexto, out long bloqueoHasta))
+                return 0;
+
+            long ahora = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            int restantes = (int)Math.Max(0, bloqueoHasta - ahora);
+
+            if (restantes == 0)
+            {
+                HttpContext.Session.Remove(CLAVE_BLOQUEO_LOGIN);
+                HttpContext.Session.Remove(CLAVE_INTENTOS_LOGIN);
+            }
+
+            return restantes;
+        }
+
+        private IActionResult RegistrarIntentoFallidoLogin()
+        {
+            int intentos = HttpContext.Session.GetInt32(CLAVE_INTENTOS_LOGIN) ?? 0;
+            intentos++;
+
+            if (intentos >= MAX_INTENTOS_LOGIN)
+            {
+                long bloqueoHasta = DateTimeOffset.UtcNow
+                    .AddSeconds(SEGUNDOS_BLOQUEO_LOGIN)
+                    .ToUnixTimeSeconds();
+
+                HttpContext.Session.SetString(
+                    CLAVE_BLOQUEO_LOGIN,
+                    bloqueoHasta.ToString()
+                );
+
+                HttpContext.Session.Remove(CLAVE_INTENTOS_LOGIN);
+
+                return Json(new
+                {
+                    ok = false,
+                    bloqueado = true,
+                    segundosRestantes = SEGUNDOS_BLOQUEO_LOGIN,
+                    intentosRestantes = 0,
+                    mensaje = "Demasiados intentos fallidos. Espera 1 minuto."
+                });
+            }
+
+            HttpContext.Session.SetInt32(CLAVE_INTENTOS_LOGIN, intentos);
+
+            return Json(new
+            {
+                ok = false,
+                bloqueado = false,
+                intentosRestantes = MAX_INTENTOS_LOGIN - intentos,
+                mensaje = "DNI o contraseña incorrectos."
+            });
+        }
         private static readonly Regex _regexCorreoValido = new(
             @"^[A-Za-z0-9._%+-]+@(gmail\.com|hotmail\.com|hotmail\.es|outlook\.com|outlook\.es|live\.com)$",
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -464,6 +524,19 @@ namespace trabajo.Controllers
         {
             try
             {
+                int segundosBloqueo = ObtenerSegundosBloqueoLogin();
+
+                if (segundosBloqueo > 0)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        bloqueado = true,
+                        segundosRestantes = segundosBloqueo,
+                        intentosRestantes = 0,
+                        mensaje = "Demasiados intentos fallidos. Espera a que termine el bloqueo."
+                    });
+                }
                 // ==========================================
                 // VERIFICACIÓN DE SEGURIDAD CAPTCHA (TURNSTILE)
                 // ==========================================
@@ -498,14 +571,9 @@ namespace trabajo.Controllers
 
                 var usuarioRegistrado =
                     await _Context.Usuario.FirstOrDefaultAsync(x => x.Dni == dni);
-
                 if (usuarioRegistrado == null)
                 {
-                    return Json(new
-                    {
-                        ok = false,
-                        mensaje = "No estás registrado. Primero debes crear una cuenta."
-                    });
+                    return RegistrarIntentoFallidoLogin();
                 }
 
                 // ==========================================
@@ -564,15 +632,14 @@ namespace trabajo.Controllers
                         Console.WriteLine($"[CrediPlus] Error en caché de alertas fallidas: {exAlerta.Message}");
                     }
 
-                    return Json(new
-                    {
-                        ok = false,
-                        mensaje = "La contraseña es incorrecta."
-                    });
+                    return RegistrarIntentoFallidoLogin();
                 }
 
                 // Credenciales correctas: limpiar registro de intentos fallidos
                 _alertasFallidasCache.TryRemove(dni, out _);
+
+                HttpContext.Session.Remove(CLAVE_INTENTOS_LOGIN);
+                HttpContext.Session.Remove(CLAVE_BLOQUEO_LOGIN);
 
                 // Alerta de seguridad preventiva: Detectamos acceso correcto con DNI y contraseña
                 if (!string.IsNullOrWhiteSpace(usuarioRegistrado.Correo))

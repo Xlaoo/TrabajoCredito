@@ -7379,7 +7379,58 @@
             // ==========================================
             // INICIAR SESIÓN
             // ==========================================
+                    let intervaloBloqueoLogin = null;
+        let bloqueoLoginHasta = 0;
 
+        function iniciarBloqueoLogin(segundos, boton, mensaje) {
+            if (intervaloBloqueoLogin !== null) {
+                clearInterval(intervaloBloqueoLogin);
+            }
+
+            bloqueoLoginHasta = Date.now() + Math.max(0, segundos) * 1000;
+
+            function actualizarContadorLogin() {
+                const restantes = Math.max(
+                    0,
+                    Math.ceil((bloqueoLoginHasta - Date.now()) / 1000)
+                );
+
+                if (restantes === 0) {
+                    clearInterval(intervaloBloqueoLogin);
+                    intervaloBloqueoLogin = null;
+
+                    if (boton) {
+                        boton.disabled = false;
+                        boton.innerText = "Iniciar sesión";
+                    }
+
+                    if (mensaje) {
+                        mensaje.style.display = "none";
+                    }
+
+                    return;
+                }
+
+                const minutos = String(Math.floor(restantes / 60)).padStart(2, "0");
+                const segundosTexto = String(restantes % 60).padStart(2, "0");
+
+                if (mensaje) {
+                    mensaje.style.display = "block";
+                    mensaje.className = "alert alert-danger mt-3";
+                    mensaje.innerText =
+                        "Demasiados intentos fallidos. Inténtalo nuevamente en " +
+                        minutos + ":" + segundosTexto;
+                }
+
+                if (boton) {
+                    boton.disabled = true;
+                    boton.innerText = "Bloqueado " + minutos + ":" + segundosTexto;
+                }
+            }
+
+            actualizarContadorLogin();
+            intervaloBloqueoLogin = setInterval(actualizarContadorLogin, 250);
+        }
             document.addEventListener("DOMContentLoaded", function() {
 
                 const formulario = document.getElementById("formLogin");
@@ -7445,31 +7496,48 @@
                         // DNI / CONTRASEÑA INCORRECTOS
                         // ==========================================
 
-                        if (!resultado.ok) {
+                                if (!resultado.ok) {
 
-                            if (mensaje) {
-                                mensaje.style.display = "block";
-                                mensaje.className = "alert alert-danger mt-3";
-                                mensaje.innerText =
-                                    resultado.mensaje || "Los datos ingresados son incorrectos.";
-                            }
+            if (window.turnstile) {
+                try { turnstile.reset(); } catch (e) {}
+            }
 
-                            if (boton) {
-                                boton.disabled = false;
-                                boton.innerHTML = "Iniciar sesión";
-                            }
+            if (resultado.bloqueado === true) {
+                iniciarBloqueoLogin(
+                    Number(resultado.segundosRestantes) || 60,
+                    boton,
+                    mensaje
+                );
+                return;
+            }
 
-                            if (window.turnstile) {
-                                try { turnstile.reset(); } catch(e){}
-                            }
+            if (mensaje) {
+                mensaje.style.display = "block";
+                mensaje.className = "alert alert-danger mt-3";
+                mensaje.innerText =
+                    resultado.mensaje || "DNI o contraseña incorrectos.";
 
-                            return;
-                        }
+                if (typeof resultado.intentosRestantes === "number") {
+                    mensaje.innerText +=
+                        " Intentos restantes: " + resultado.intentosRestantes + ".";
+                }
+            }
+
+            if (boton) {
+                boton.disabled = false;
+                boton.innerHTML = "Iniciar sesión";
+            }
+
+            return;
+        }
 
                         // ==========================================
                         // DNI + CONTRASEÑA CORRECTOS
                         // ==========================================
-
+                                if (intervaloBloqueoLogin !== null) {
+            clearInterval(intervaloBloqueoLogin);
+            intervaloBloqueoLogin = null;
+        }
                         const modalElemento =
                             document.getElementById("modalVerificacionSeguridad");
 
