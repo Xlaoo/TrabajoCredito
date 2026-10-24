@@ -37,7 +37,7 @@ namespace TestTrabajoCredito
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                 "img-src 'self' data: blob: https://cdn-icons-png.flaticon.com https://challenges.cloudflare.com; " +
                 "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
-                "connect-src 'self' wss: ws: https://challenges.cloudflare.com; " +
+                "connect-src 'self' https://challenges.cloudflare.com; " +
                 "frame-src 'self' https://challenges.cloudflare.com; " +
                 "frame-ancestors 'none'; " +
                 "media-src 'self' blob:; " +
@@ -140,11 +140,11 @@ namespace TestTrabajoCredito
                     return headers["X-Permitted-Cross-Domain-Policies"].ToString();
                 });
 
-            // 7. Content-Security-Policy: Directiva activa con orígenes permitidos (Cloudflare, CDNs, SignalR wss)
+            // 7. Content-Security-Policy: Directiva activa con orígenes permitidos sin comodines de esquema (Cloudflare, CDNs, 'self')
             await runner.EvaluarAsync(
-                nombreEscenario: "CSP activa y efectiva incluye orígenes permitidos (Cloudflare, CDNs, SignalR wss, unsafe-eval)",
+                nombreEscenario: "CSP activa y segura sin comodines en connect-src (Cloudflare, CDNs, unsafe-eval)",
                 datoEntrada: "Inspección de directivas CSP (script-src, connect-src, frame-src, media-src)",
-                esperado: "TurnstileOk: True, BootstrapCdnOk: True, SignalROk: True, MediaBlobOk: True, FrameAncestorsNone: True",
+                esperado: "TurnstileOk: True, BootstrapCdnOk: True, SinWildcardWs: True, MediaBlobOk: True, FrameAncestorsNone: True",
                 accionAsync: async () =>
                 {
                     var ctx = new DefaultHttpContext();
@@ -153,11 +153,11 @@ namespace TestTrabajoCredito
 
                     bool turnstileOk = csp.Contains("https://challenges.cloudflare.com");
                     bool cdnOk = csp.Contains("https://cdn.jsdelivr.net") && csp.Contains("https://cdnjs.cloudflare.com");
-                    bool signalrOk = csp.Contains("wss:") && csp.Contains("ws:");
+                    bool sinWildcardWs = !csp.Contains("wss:") && !csp.Contains("ws:") && csp.Contains("connect-src 'self' https://challenges.cloudflare.com;");
                     bool mediaBlobOk = csp.Contains("media-src 'self' blob:");
                     bool frameAncestorsNone = csp.Contains("frame-ancestors 'none'");
 
-                    return $"TurnstileOk: {turnstileOk}, BootstrapCdnOk: {cdnOk}, SignalROk: {signalrOk}, MediaBlobOk: {mediaBlobOk}, FrameAncestorsNone: {frameAncestorsNone}";
+                    return $"TurnstileOk: {turnstileOk}, BootstrapCdnOk: {cdnOk}, SinWildcardWs: {sinWildcardWs}, MediaBlobOk: {mediaBlobOk}, FrameAncestorsNone: {frameAncestorsNone}";
                 });
 
             // 8. HSTS (Strict-Transport-Security) cuando la solicitud proviene de HTTPS o proxy Northflank

@@ -345,7 +345,7 @@ app.Use(async (context, next) =>
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
         "img-src 'self' data: blob: https://cdn-icons-png.flaticon.com https://challenges.cloudflare.com; " +
         "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
-        "connect-src 'self' wss: ws: https://challenges.cloudflare.com; " +
+        "connect-src 'self' https://challenges.cloudflare.com; " +
         "frame-src 'self' https://challenges.cloudflare.com; " +
         "frame-ancestors 'none'; " +
         "media-src 'self' blob:; " +
