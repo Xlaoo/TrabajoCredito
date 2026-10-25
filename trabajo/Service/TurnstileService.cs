@@ -66,7 +66,7 @@ namespace trabajo.Service
             if (string.IsNullOrWhiteSpace(token))
             {
                 resultado.Valido = false;
-                resultado.Mensaje = "Por favor completa la verificación de seguridad (CAPTCHA).";
+                resultado.Mensaje = "Por favor completa la verificación de seguridad.";
                 return resultado;
             }
 
@@ -115,7 +115,7 @@ namespace trabajo.Service
                 }
                 else
                 {
-                    resultado.Mensaje = "Verificación de seguridad fallida. Por favor confirma que no eres un robot.";
+                    resultado.Mensaje = "Verificación de seguridad no completada. Por favor intenta nuevamente.";
                 }
 
                 _logger.LogWarning("Verificación Turnstile rechazada: {Errores}", string.Join(", ", resultado.CodigosError));

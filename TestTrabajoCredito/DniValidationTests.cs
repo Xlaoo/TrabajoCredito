@@ -206,7 +206,7 @@ namespace TestTrabajoCredito
                     var json = (JsonResult)res;
                     string? msg = (string?)ObtenerPropiedad(json.Value, "mensaje");
                     // Al superar el formato 8 dígitos numéricos, pasa a buscar en BD
-                    return msg == "No estás registrado. Primero debes crear una cuenta."
+                    return (msg == "No estás registrado. Primero debes crear una cuenta." || msg == "DNI o contraseña incorrectos.")
                         ? "Formato Válido (Pasa a verificación en BD)"
                         : $"Error de formato: {msg}";
                 });
@@ -221,7 +221,7 @@ namespace TestTrabajoCredito
                     var res = await controller.IniciarSesion("76543210", "Clave#12345678");
                     var json = (JsonResult)res;
                     string? msg = (string?)ObtenerPropiedad(json.Value, "mensaje");
-                    return msg == "No estás registrado. Primero debes crear una cuenta."
+                    return (msg == "No estás registrado. Primero debes crear una cuenta." || msg == "DNI o contraseña incorrectos.")
                         ? "Formato Válido (Pasa a verificación en BD)"
                         : $"Error de formato: {msg}";
                 });

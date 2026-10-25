@@ -2805,7 +2805,7 @@
                 }
 
                 <div class="register-link mb-2">
-                    <a href="@Url.Action("OlvideContrasena", "Login")">¿Olvidaste tu contraseña?</a>
+                    <a href="@Url.Action("OlvideContrasena", "Login", new { nuevo = true })">¿Olvidaste tu contraseña?</a>
                 </div>
 
                 <div class="register-link">
@@ -7440,6 +7440,26 @@
                     return;
                 }
 
+                @if (ViewBag.Bloqueado == true)
+                {
+                    <text>
+                    const btnInit = formulario.querySelector('button[type="submit"]');
+                    const msgInit = document.getElementById("mensajeLogin");
+                    iniciarBloqueoLogin(@(ViewBag.SegundosBloqueo ?? 60), btnInit, msgInit);
+                    </text>
+                }
+                else if (ViewBag.IntentosFallidos != null && (int)ViewBag.IntentosFallidos > 0)
+                {
+                    <text>
+                    const msgInitIntentos = document.getElementById("mensajeLogin");
+                    if (msgInitIntentos) {
+                        msgInitIntentos.style.display = "block";
+                        msgInitIntentos.className = "alert alert-danger mt-3";
+                        msgInitIntentos.innerText = "DNI o contraseña incorrectos. Intentos restantes: @(ViewBag.IntentosRestantes).";
+                    }
+                    </text>
+                }
+
                 formulario.addEventListener("submit", async function(event) {
 
                     // MUY IMPORTANTE:
@@ -7451,6 +7471,16 @@
 
                     if (mensaje) {
                         mensaje.style.display = "none";
+                    }
+
+                    const turnstileInput = formulario.querySelector('[name="cf-turnstile-response"]');
+                    if (window.turnstile && turnstileInput && !turnstileInput.value) {
+                        if (mensaje) {
+                            mensaje.style.display = "block";
+                            mensaje.className = "alert alert-warning mt-3";
+                            mensaje.innerText = "Verificación de seguridad pendiente. Por favor espera un momento...";
+                        }
+                        return;
                     }
 
                     if (boton) {

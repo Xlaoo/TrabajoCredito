@@ -1180,6 +1180,26 @@
                 }
 
                 // ==========================================
+                // VERIFICAR TURNSTILE
+                // ==========================================
+
+                const turnstileInput = formulario.querySelector('[name="cf-turnstile-response"]');
+                const turnstileToken = turnstileInput ? turnstileInput.value : "";
+                const turnstileWidget = formulario.querySelector('.cf-turnstile');
+                if (turnstileWidget && !turnstileToken) {
+                    mostrarMensajeRegistro(
+                        "Verificación de seguridad pendiente. Por favor espera un momento...",
+                        true
+                    );
+                    enviandoRegistro = false;
+                    if (botonRegistro) {
+                        botonRegistro.disabled = false;
+                        botonRegistro.innerText = "Registrate";
+                    }
+                    return;
+                }
+
+                // ==========================================
                 // CREAR FORMDATA (SIN AUDIO)
                 // ==========================================
 

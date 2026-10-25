@@ -264,6 +264,16 @@ namespace trabajo.Service
                     listaCandidatos.Add(embLegado201);
                 }
 
+                // Candidato 4: Si el audio es prolongado (> 1.5s), extraer un segmento enfocado en el pico de energía
+                // para evitar que pausas prolongadas o repeticiones diluyan el promedio temporal de ECAPA-TDNN
+                if (monoUtil.Length > 24000)
+                {
+                    float[] segmentoPico = ExtraerSegmentoPicoEnergia(monoUtil, 24000);
+                    int framesPico = Math.Clamp((segmentoPico.Length - 400) / 160 + 1, 50, 201);
+                    float[] embPico = CalcularEmbeddingParaMuestras(segmentoPico, framesPico);
+                    listaCandidatos.Add(embPico);
+                }
+
                 Console.WriteLine($"Embeddings generados correctamente. Candidatos: {listaCandidatos.Count}, Frames dinámicos: {framesDinamicos}");
                 return listaCandidatos;
             }
@@ -278,6 +288,34 @@ namespace trabajo.Service
 
                 Console.WriteLine($"[DIAGNÓSTICO MEMORIA ECAPA] Duración: {cronometro.ElapsedMilliseconds} ms | Heap .NET: {heapInicio / 1048576.0:F1} MB -> {heapFin / 1048576.0:F1} MB | RAM Proceso (WorkingSet): {ramInicio / 1048576.0:F1} MB -> {ramFin / 1048576.0:F1} MB");
             }
+        }
+
+        private float[] ExtraerSegmentoPicoEnergia(float[] audio, int tamanoSegmento)
+        {
+            if (audio == null || audio.Length <= tamanoSegmento) return audio ?? Array.Empty<float>();
+
+            int mejorInicio = 0;
+            double maxEnergia = 0;
+            const int paso = 1600; // Paso de 100 ms
+
+            for (int inicio = 0; inicio + tamanoSegmento <= audio.Length; inicio += paso)
+            {
+                double energia = 0;
+                for (int i = 0; i < tamanoSegmento; i += 4)
+                {
+                    float muestra = audio[inicio + i];
+                    energia += muestra * muestra;
+                }
+                if (energia > maxEnergia)
+                {
+                    maxEnergia = energia;
+                    mejorInicio = inicio;
+                }
+            }
+
+            float[] segmento = new float[tamanoSegmento];
+            Array.Copy(audio, mejorInicio, segmento, 0, tamanoSegmento);
+            return segmento;
         }
 
         private float[] RecortarSilencios(float[] audio)

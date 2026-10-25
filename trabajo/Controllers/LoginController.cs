@@ -35,6 +35,7 @@ namespace trabajo.Controllers
         // SEGURIDAD - ALERTAS DE ACCESO (RATE LIMIT 5 MIN)
         // ==========================================
         private static readonly ConcurrentDictionary<string, (DateTime UltimoEnvio, int ContadorFallos)> _alertasFallidasCache = new();
+        private static readonly ConcurrentDictionary<string, (int Intentos, long BloqueoHastaUnix)> _intentosLoginCache = new();
 
         private const int MAX_INTENTOS_LOGIN = 3;
         private const int SEGUNDOS_BLOQUEO_LOGIN = 60;
@@ -42,42 +43,113 @@ namespace trabajo.Controllers
         private const string CLAVE_INTENTOS_LOGIN = "IntentosFallidosLogin";
         private const string CLAVE_BLOQUEO_LOGIN = "BloqueoHastaLogin";
 
-        private int ObtenerSegundosBloqueoLogin()
+        private int ObtenerSegundosBloqueoLogin(string? dni = null)
         {
-            string? bloqueoTexto = HttpContext.Session.GetString(CLAVE_BLOQUEO_LOGIN);
-
-            if (!long.TryParse(bloqueoTexto, out long bloqueoHasta))
-                return 0;
-
             long ahora = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            int restantes = (int)Math.Max(0, bloqueoHasta - ahora);
+            int restantes = 0;
 
-            if (restantes == 0)
+            // 1. Revisar bloqueo en Sesión
+            string? bloqueoTexto = HttpContext.Session.GetString(CLAVE_BLOQUEO_LOGIN);
+            if (long.TryParse(bloqueoTexto, out long bloqueoHastaSesion))
             {
-                HttpContext.Session.Remove(CLAVE_BLOQUEO_LOGIN);
-                HttpContext.Session.Remove(CLAVE_INTENTOS_LOGIN);
+                if (bloqueoHastaSesion > ahora)
+                {
+                    restantes = Math.Max(restantes, (int)(bloqueoHastaSesion - ahora));
+                }
+                else
+                {
+                    HttpContext.Session.Remove(CLAVE_BLOQUEO_LOGIN);
+                    HttpContext.Session.Remove(CLAVE_INTENTOS_LOGIN);
+                }
+            }
+
+            // 2. Revisar bloqueo por DNI en caché en memoria (para persistencia entre pestañas/recargas)
+            if (!string.IsNullOrWhiteSpace(dni) && _intentosLoginCache.TryGetValue(dni, out var registroDni))
+            {
+                if (registroDni.BloqueoHastaUnix > ahora)
+                {
+                    restantes = Math.Max(restantes, (int)(registroDni.BloqueoHastaUnix - ahora));
+                }
+                else if (registroDni.BloqueoHastaUnix > 0)
+                {
+                    _intentosLoginCache.TryRemove(dni, out _);
+                }
+            }
+
+            // 3. Revisar bloqueo por IP remota
+            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            if (!string.IsNullOrWhiteSpace(ip) && _intentosLoginCache.TryGetValue("IP_" + ip, out var registroIp))
+            {
+                if (registroIp.BloqueoHastaUnix > ahora)
+                {
+                    restantes = Math.Max(restantes, (int)(registroIp.BloqueoHastaUnix - ahora));
+                }
+                else if (registroIp.BloqueoHastaUnix > 0)
+                {
+                    _intentosLoginCache.TryRemove("IP_" + ip, out _);
+                }
             }
 
             return restantes;
         }
 
-        private IActionResult RegistrarIntentoFallidoLogin()
+        private int ObtenerIntentosFallidosActuales(string? dni = null)
         {
             int intentos = HttpContext.Session.GetInt32(CLAVE_INTENTOS_LOGIN) ?? 0;
-            intentos++;
+
+            if (!string.IsNullOrWhiteSpace(dni) && _intentosLoginCache.TryGetValue(dni, out var regDni))
+            {
+                intentos = Math.Max(intentos, regDni.Intentos);
+            }
+
+            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            if (!string.IsNullOrWhiteSpace(ip) && _intentosLoginCache.TryGetValue("IP_" + ip, out var regIp))
+            {
+                intentos = Math.Max(intentos, regIp.Intentos);
+            }
+
+            return Math.Min(intentos, MAX_INTENTOS_LOGIN);
+        }
+
+        private void LimpiarIntentosFallidosLogin(string? dni = null)
+        {
+            HttpContext.Session.Remove(CLAVE_INTENTOS_LOGIN);
+            HttpContext.Session.Remove(CLAVE_BLOQUEO_LOGIN);
+
+            if (!string.IsNullOrWhiteSpace(dni))
+            {
+                _intentosLoginCache.TryRemove(dni, out _);
+            }
+
+            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            if (!string.IsNullOrWhiteSpace(ip))
+            {
+                _intentosLoginCache.TryRemove("IP_" + ip, out _);
+            }
+        }
+
+        private IActionResult RegistrarIntentoFallidoLogin(string? dni = null)
+        {
+            int intentos = ObtenerIntentosFallidosActuales(dni) + 1;
+            long ahora = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            string? ip = HttpContext.Connection.RemoteIpAddress?.ToString();
 
             if (intentos >= MAX_INTENTOS_LOGIN)
             {
-                long bloqueoHasta = DateTimeOffset.UtcNow
-                    .AddSeconds(SEGUNDOS_BLOQUEO_LOGIN)
-                    .ToUnixTimeSeconds();
+                long bloqueoHasta = ahora + SEGUNDOS_BLOQUEO_LOGIN;
 
-                HttpContext.Session.SetString(
-                    CLAVE_BLOQUEO_LOGIN,
-                    bloqueoHasta.ToString()
-                );
-
+                HttpContext.Session.SetString(CLAVE_BLOQUEO_LOGIN, bloqueoHasta.ToString());
                 HttpContext.Session.Remove(CLAVE_INTENTOS_LOGIN);
+
+                if (!string.IsNullOrWhiteSpace(dni))
+                {
+                    _intentosLoginCache.AddOrUpdate(dni, (MAX_INTENTOS_LOGIN, bloqueoHasta), (_, _) => (MAX_INTENTOS_LOGIN, bloqueoHasta));
+                }
+
+                if (!string.IsNullOrWhiteSpace(ip))
+                {
+                    _intentosLoginCache.AddOrUpdate("IP_" + ip, (MAX_INTENTOS_LOGIN, bloqueoHasta), (_, _) => (MAX_INTENTOS_LOGIN, bloqueoHasta));
+                }
 
                 return Json(new
                 {
@@ -91,11 +163,21 @@ namespace trabajo.Controllers
 
             HttpContext.Session.SetInt32(CLAVE_INTENTOS_LOGIN, intentos);
 
+            if (!string.IsNullOrWhiteSpace(dni))
+            {
+                _intentosLoginCache.AddOrUpdate(dni, (intentos, 0), (_, _) => (intentos, 0));
+            }
+
+            if (!string.IsNullOrWhiteSpace(ip))
+            {
+                _intentosLoginCache.AddOrUpdate("IP_" + ip, (intentos, 0), (_, _) => (intentos, 0));
+            }
+
             return Json(new
             {
                 ok = false,
                 bloqueado = false,
-                intentosRestantes = MAX_INTENTOS_LOGIN - intentos,
+                intentosRestantes = Math.Max(0, MAX_INTENTOS_LOGIN - intentos),
                 mensaje = "DNI o contraseña incorrectos."
             });
         }
@@ -509,9 +591,31 @@ namespace trabajo.Controllers
         [AllowAnonymous]
         public IActionResult IniciarSesion()
         {
+            // Limpiar cualquier estado residual de recuperación de contraseña para garantizar flujo nuevo
+            HttpContext.Session.Remove("RecuperacionValidada");
+            HttpContext.Session.Remove("RecuperacionDni");
+            HttpContext.Session.Remove("RecuperacionCorreo");
+            HttpContext.Session.Remove("RecuperacionToken");
+            HttpContext.Session.Remove("RecuperacionExpiracion");
+
             if (TempData["Mensaje"] != null)
             {
                 ViewBag.MensajeRegistro = TempData["Mensaje"];
+            }
+
+            int segundosBloqueo = ObtenerSegundosBloqueoLogin();
+            if (segundosBloqueo > 0)
+            {
+                ViewBag.Bloqueado = true;
+                ViewBag.SegundosBloqueo = segundosBloqueo;
+                ViewBag.IntentosRestantes = 0;
+            }
+            else
+            {
+                int intentosActuales = ObtenerIntentosFallidosActuales();
+                ViewBag.Bloqueado = false;
+                ViewBag.IntentosFallidos = intentosActuales;
+                ViewBag.IntentosRestantes = Math.Max(0, MAX_INTENTOS_LOGIN - intentosActuales);
             }
 
             ViewBag.TurnstileSiteKey = _turnstileService.ObtenerSiteKey();
@@ -524,7 +628,7 @@ namespace trabajo.Controllers
         {
             try
             {
-                int segundosBloqueo = ObtenerSegundosBloqueoLogin();
+                int segundosBloqueo = ObtenerSegundosBloqueoLogin(dni);
 
                 if (segundosBloqueo > 0)
                 {
@@ -545,9 +649,12 @@ namespace trabajo.Controllers
                 var resTurnstile = await _turnstileService.ValidarTokenAsync(turnstileToken, ipRemota);
                 if (!resTurnstile.Valido)
                 {
+                    int intentosActuales = ObtenerIntentosFallidosActuales(dni);
                     return Json(new
                     {
                         ok = false,
+                        bloqueado = false,
+                        intentosRestantes = Math.Max(0, MAX_INTENTOS_LOGIN - intentosActuales),
                         mensaje = resTurnstile.Mensaje
                     });
                 }
@@ -558,9 +665,12 @@ namespace trabajo.Controllers
                 if (string.IsNullOrWhiteSpace(dni) ||
                     !Regex.IsMatch(dni, @"^\d{8}$"))
                 {
+                    int intentosActuales = ObtenerIntentosFallidosActuales(dni);
                     return Json(new
                     {
                         ok = false,
+                        bloqueado = false,
+                        intentosRestantes = Math.Max(0, MAX_INTENTOS_LOGIN - intentosActuales),
                         mensaje = "El DNI debe tener exactamente 8 números."
                     });
                 }
@@ -573,7 +683,7 @@ namespace trabajo.Controllers
                     await _Context.Usuario.FirstOrDefaultAsync(x => x.Dni == dni);
                 if (usuarioRegistrado == null)
                 {
-                    return RegistrarIntentoFallidoLogin();
+                    return RegistrarIntentoFallidoLogin(dni);
                 }
 
                 // ==========================================
@@ -632,14 +742,12 @@ namespace trabajo.Controllers
                         Console.WriteLine($"[CrediPlus] Error en caché de alertas fallidas: {exAlerta.Message}");
                     }
 
-                    return RegistrarIntentoFallidoLogin();
+                    return RegistrarIntentoFallidoLogin(dni);
                 }
 
                 // Credenciales correctas: limpiar registro de intentos fallidos
                 _alertasFallidasCache.TryRemove(dni, out _);
-
-                HttpContext.Session.Remove(CLAVE_INTENTOS_LOGIN);
-                HttpContext.Session.Remove(CLAVE_BLOQUEO_LOGIN);
+                LimpiarIntentosFallidosLogin(dni);
 
                 // Alerta de seguridad preventiva: Detectamos acceso correcto con DNI y contraseña
                 if (!string.IsNullOrWhiteSpace(usuarioRegistrado.Correo))
@@ -669,9 +777,13 @@ namespace trabajo.Controllers
                 // ==========================================
 
                 HttpContext.Session.SetString(
-    "DniLoginPendiente",
-    usuarioEncontrado.Dni
-);
+                    "DniLoginPendiente",
+                    usuarioEncontrado.Dni
+                );
+                HttpContext.Session.SetInt32(
+                    "UsuarioIdLoginPendiente",
+                    usuarioEncontrado.Id
+                );
                 // ==========================================
                 // CONSULTAR BLOQUEO DE VOZ DE ESTA CUENTA
                 // ==========================================
@@ -1061,7 +1173,81 @@ namespace trabajo.Controllers
             }
         }
 
-        private static string TranscribirAudioConVosk(string rutaWav)
+        private static string EjecutarReconocimientoVosk(Model model, string rutaWav, string? grammarJson)
+        {
+            using var fs = new FileStream(rutaWav, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (fs.Length < 12) return "";
+
+            // Parsear encabezado RIFF/WAV para localizar el bloque "data" sin asumir tamaño fijo
+            byte[] header = new byte[12];
+            if (fs.Read(header, 0, 12) < 12) return "";
+
+            long pcmStart = 0;
+            long pcmLength = fs.Length;
+
+            if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F' &&
+                header[8] == 'W' && header[9] == 'A' && header[10] == 'V' && header[11] == 'E')
+            {
+                byte[] chunkHeader = new byte[8];
+                while (fs.Position + 8 <= fs.Length)
+                {
+                    if (fs.Read(chunkHeader, 0, 8) < 8) break;
+                    string chunkId = Encoding.ASCII.GetString(chunkHeader, 0, 4);
+                    int subChunkSize = BitConverter.ToInt32(chunkHeader, 4);
+                    if (subChunkSize < 0) break;
+
+                    if (chunkId == "data")
+                    {
+                        pcmStart = fs.Position;
+                        pcmLength = Math.Min(subChunkSize, fs.Length - pcmStart);
+                        break;
+                    }
+
+                    fs.Position += subChunkSize + ((subChunkSize & 1) == 1 ? 1 : 0);
+                }
+            }
+
+            fs.Position = pcmStart;
+            using var rec = !string.IsNullOrWhiteSpace(grammarJson)
+                ? new VoskRecognizer(model, 16000.0f, grammarJson)
+                : new VoskRecognizer(model, 16000.0f);
+
+            var sb = new StringBuilder();
+            const int chunkSize = 4096;
+            byte[] buffer = new byte[chunkSize];
+            long totalLeido = 0;
+
+            while (totalLeido < pcmLength)
+            {
+                int porLeer = (int)Math.Min(chunkSize, pcmLength - totalLeido);
+                int leidos = fs.Read(buffer, 0, porLeer);
+                if (leidos <= 0) break;
+                totalLeido += leidos;
+
+                if (rec.AcceptWaveform(buffer, leidos))
+                {
+                    string resJson = rec.Result();
+                    string seg = ExtraerTextoDeJsonVosk(resJson);
+                    if (!string.IsNullOrWhiteSpace(seg))
+                    {
+                        if (sb.Length > 0) sb.Append(" ");
+                        sb.Append(seg.Trim());
+                    }
+                }
+            }
+
+            string finalJson = rec.FinalResult();
+            string segFinal = ExtraerTextoDeJsonVosk(finalJson);
+            if (!string.IsNullOrWhiteSpace(segFinal))
+            {
+                if (sb.Length > 0) sb.Append(" ");
+                sb.Append(segFinal.Trim());
+            }
+
+            return Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
+        }
+
+        private static string TranscribirAudioConVosk(string rutaWav, string? fraseEsperada = null)
         {
             if (string.IsNullOrWhiteSpace(rutaWav) || !System.IO.File.Exists(rutaWav)) return "";
             try
@@ -1069,74 +1255,38 @@ namespace trabajo.Controllers
                 var model = ObtenerModeloVosk();
                 if (model == null) return "";
 
-                using var fs = new FileStream(rutaWav, FileMode.Open, FileAccess.Read, FileShare.Read);
-                if (fs.Length < 12) return "";
-
-                // Parsear encabezado RIFF/WAV para localizar el bloque "data" sin asumir tamaño fijo
-                byte[] header = new byte[12];
-                if (fs.Read(header, 0, 12) < 12) return "";
-
-                long pcmStart = 0;
-                long pcmLength = fs.Length;
-
-                if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F' &&
-                    header[8] == 'W' && header[9] == 'A' && header[10] == 'V' && header[11] == 'E')
+                // Si se proporcionó una frase esperada, intentar primero reconocimiento con gramática acotada
+                string fraseNorm = NormalizarTextoVoz(fraseEsperada);
+                if (!string.IsNullOrWhiteSpace(fraseNorm))
                 {
-                    byte[] chunkHeader = new byte[8];
-                    while (fs.Position + 8 <= fs.Length)
+                    try
                     {
-                        if (fs.Read(chunkHeader, 0, 8) < 8) break;
-                        string chunkId = Encoding.ASCII.GetString(chunkHeader, 0, 4);
-                        int subChunkSize = BitConverter.ToInt32(chunkHeader, 4);
-                        if (subChunkSize < 0) break;
-
-                        if (chunkId == "data")
+                        var tokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                         {
-                            pcmStart = fs.Position;
-                            pcmLength = Math.Min(subChunkSize, fs.Length - pcmStart);
-                            break;
+                            fraseNorm,
+                            fraseNorm + " " + fraseNorm,
+                            "[unk]"
+                        };
+                        foreach (var p in fraseNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            tokens.Add(p);
                         }
 
-                        fs.Position += subChunkSize + ((subChunkSize & 1) == 1 ? 1 : 0);
+                        string grammarJson = JsonSerializer.Serialize(tokens);
+                        string textoGrammar = EjecutarReconocimientoVosk(model, rutaWav, grammarJson);
+                        if (!string.IsNullOrWhiteSpace(textoGrammar) && !textoGrammar.Contains("[unk]"))
+                        {
+                            return textoGrammar;
+                        }
+                    }
+                    catch (Exception exGrammar)
+                    {
+                        Console.WriteLine("Aviso: Vosk grammar no disponible, usando vocabulario abierto: " + exGrammar.Message);
                     }
                 }
 
-                fs.Position = pcmStart;
-                using var rec = new VoskRecognizer(model, 16000.0f);
-                var sb = new StringBuilder();
-
-                const int chunkSize = 4096;
-                byte[] buffer = new byte[chunkSize];
-                long totalLeido = 0;
-
-                while (totalLeido < pcmLength)
-                {
-                    int porLeer = (int)Math.Min(chunkSize, pcmLength - totalLeido);
-                    int leidos = fs.Read(buffer, 0, porLeer);
-                    if (leidos <= 0) break;
-                    totalLeido += leidos;
-
-                    if (rec.AcceptWaveform(buffer, leidos))
-                    {
-                        string resJson = rec.Result();
-                        string seg = ExtraerTextoDeJsonVosk(resJson);
-                        if (!string.IsNullOrWhiteSpace(seg))
-                        {
-                            if (sb.Length > 0) sb.Append(" ");
-                            sb.Append(seg.Trim());
-                        }
-                    }
-                }
-
-                string finalJson = rec.FinalResult();
-                string segFinal = ExtraerTextoDeJsonVosk(finalJson);
-                if (!string.IsNullOrWhiteSpace(segFinal))
-                {
-                    if (sb.Length > 0) sb.Append(" ");
-                    sb.Append(segFinal.Trim());
-                }
-
-                return Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
+                // Reconocimiento con vocabulario abierto estándar
+                return EjecutarReconocimientoVosk(model, rutaWav, null);
             }
             catch (Exception ex)
             {
@@ -1267,6 +1417,61 @@ namespace trabajo.Controllers
             return Regex.Replace(sb.ToString(), @"\s+", " ").Trim();
         }
 
+        private static string NormalizarFoneticaEspanol(string texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto)) return "";
+            // Normalizar seseo y confusiones fonéticas comunes del español
+            return texto.Replace("z", "s")
+                        .Replace("ce", "se")
+                        .Replace("ci", "si")
+                        .Replace("v", "b");
+        }
+
+        private static int CalcularDistanciaLevenshtein(string s, string t)
+        {
+            if (string.IsNullOrEmpty(s)) return string.IsNullOrEmpty(t) ? 0 : t.Length;
+            if (string.IsNullOrEmpty(t)) return s.Length;
+
+            int n = s.Length;
+            int m = t.Length;
+            int[,] d = new int[n + 1, m + 1];
+
+            for (int i = 0; i <= n; i++) d[i, 0] = i;
+            for (int j = 0; j <= m; j++) d[0, j] = j;
+
+            for (int i = 1; i <= n; i++)
+            {
+                for (int j = 1; j <= m; j++)
+                {
+                    int costo = (s[i - 1] == t[j - 1]) ? 0 : 1;
+                    d[i, j] = Math.Min(
+                        Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
+                        d[i - 1, j - 1] + costo
+                    );
+                }
+            }
+            return d[n, m];
+        }
+
+        private static string ColapsarPalabrasDuplicadas(string texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto)) return "";
+            var palabras = texto.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (palabras.Length <= 1) return texto.Trim();
+
+            var resultado = new List<string>(palabras.Length);
+            string? anterior = null;
+            foreach (var p in palabras)
+            {
+                if (anterior == null || !string.Equals(p, anterior, StringComparison.OrdinalIgnoreCase))
+                {
+                    resultado.Add(p);
+                    anterior = p;
+                }
+            }
+            return string.Join(" ", resultado);
+        }
+
         private static bool VerificarCoincidenciaPalabraClave(string? transcripcion, string? fraseEsperada)
         {
             string trans = NormalizarTextoVoz(transcripcion);
@@ -1277,8 +1482,85 @@ namespace trabajo.Controllers
                 return false;
             }
 
-            // Exigir coincidencia completa con la palabra o frase registrada, sin coincidencias parciales
-            return string.Equals(trans, esp, StringComparison.Ordinal);
+            // 1. Coincidencia exacta tras normalizar tildes, signos y mayúsculas
+            if (string.Equals(trans, esp, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            // 2. Coincidencia tras colapsar repeticiones consecutivas (ej. "rafa rafa" -> "rafa")
+            string transColapsada = ColapsarPalabrasDuplicadas(trans);
+            if (string.Equals(transColapsada, esp, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            // 3. Coincidencia fonética (seseo: z/s/ce/ci, v/b)
+            string transFon = NormalizarFoneticaEspanol(trans);
+            string espFon = NormalizarFoneticaEspanol(esp);
+            if (string.Equals(transFon, espFon, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            string transFonColapsada = ColapsarPalabrasDuplicadas(transFon);
+            if (string.Equals(transFonColapsada, espFon, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            // 4. Palabra o frase esperada contenida como palabra completa independiente (ej. pausas accesorias)
+            var palabrasTrans = trans.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var palabrasEsp = esp.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            if (Regex.IsMatch(trans, $@"\b{Regex.Escape(esp)}\b", RegexOptions.IgnoreCase))
+            {
+                if (palabrasTrans.Length <= palabrasEsp.Length + 2)
+                {
+                    return true;
+                }
+            }
+            if (Regex.IsMatch(transFon, $@"\b{Regex.Escape(espFon)}\b", RegexOptions.IgnoreCase))
+            {
+                if (palabrasTrans.Length <= palabrasEsp.Length + 2)
+                {
+                    return true;
+                }
+            }
+
+            // 5. Frases medianas o largas (>= 8 caracteres) contenidas en transcripción
+            if (esp.Length >= 8 && trans.Contains(esp, StringComparison.Ordinal))
+            {
+                return true;
+            }
+            if (espFon.Length >= 8 && transFon.Contains(espFon, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            // 6. Distancia Levenshtein con tolerancia proporcional sobre cadenas colapsadas
+            int maxLen = Math.Max(transFonColapsada.Length, espFon.Length);
+            int minLen = Math.Min(transFonColapsada.Length, espFon.Length);
+
+            // Si la longitud es excesivamente dispar (por ejemplo "mi voz" vs "mi voz es mi contrasena"), rechazar
+            if (minLen < maxLen * 0.70)
+            {
+                return false;
+            }
+
+            int distancia = CalcularDistanciaLevenshtein(transFonColapsada, espFon);
+            double similitudRatio = 1.0 - ((double)distancia / maxLen);
+
+            // Para frases medianas o largas (>= 8 caracteres), permitir similitud >= 80% con distancia <= 3
+            if (espFon.Length >= 8)
+            {
+                return similitudRatio >= 0.80 && distancia <= 3;
+            }
+            else
+            {
+                // Frases cortas (< 8 caracteres): tolerancia estricta (máximo 1 caracter y similitud >= 75%)
+                return distancia <= 1 && similitudRatio >= 0.75;
+            }
         }
 
         [HttpPost]
@@ -1368,7 +1650,16 @@ namespace trabajo.Controllers
                 // ==========================================
                 // BUSCAR USUARIO
                 // ==========================================
-                Usuario? usuario = await _Context.Usuario.AsNoTracking().FirstOrDefaultAsync(x => x.Dni == dniLoginPendiente);
+                int? usuarioIdPendiente = HttpContext.Session.GetInt32("UsuarioIdLoginPendiente");
+                Usuario? usuario = null;
+                if (usuarioIdPendiente.HasValue && usuarioIdPendiente.Value > 0)
+                {
+                    usuario = await _Context.Usuario.AsNoTracking().FirstOrDefaultAsync(x => x.Id == usuarioIdPendiente.Value);
+                }
+                if (usuario == null)
+                {
+                    usuario = await _Context.Usuario.AsNoTracking().FirstOrDefaultAsync(x => x.Dni == dniLoginPendiente);
+                }
                 if (usuario == null)
                 {
                     Console.WriteLine("Usuario localizado: NO");
@@ -1525,26 +1816,44 @@ namespace trabajo.Controllers
                     Model? modeloVosk = ObtenerModeloVosk();
                     bool modeloCargado = modeloVosk != null;
 
-                    string transcripcionServidor = TranscribirAudioConVosk(rutaWavCompartida);
+                    string transcripcionServidor = TranscribirAudioConVosk(rutaWavCompartida, usuario.FraseVoz);
                     bool transcripcionVacia = string.IsNullOrWhiteSpace(transcripcionServidor);
 
                     bool palabraValida = VerificarCoincidenciaPalabraClave(transcripcionServidor, usuario.FraseVoz);
+
+                    double duracionAudioSeg = 0;
+                    if (System.IO.File.Exists(rutaWavCompartida))
+                    {
+                        var fiWav = new FileInfo(rutaWavCompartida);
+                        duracionAudioSeg = Math.Max(0, (fiWav.Length - 44) / 32000.0);
+                    }
+
+                    string normTrans = NormalizarFoneticaEspanol(ColapsarPalabrasDuplicadas(NormalizarTextoVoz(transcripcionServidor)));
+                    string normEsp = NormalizarFoneticaEspanol(NormalizarTextoVoz(usuario.FraseVoz));
+                    int distanciaComp = CalcularDistanciaLevenshtein(normTrans, normEsp);
 
                     // ==========================================
                     // LOGS SEGUROS (Sin datos sensibles ni palabras secretas)
                     // ==========================================
                     Console.WriteLine("==========================================");
                     Console.WriteLine("VERIFICACIÓN INDEPENDIENTE DE VOZ (FFMPEG ÚNICO)");
-                    Console.WriteLine($"BIOMETRÍA ECAPA-TDNN: {(biometriaValida ? "CORRECTA" : "RECHAZADA")} (Similitud: {similitud:F4})");
+                    Console.WriteLine($"BIOMETRÍA ECAPA-TDNN: {(biometriaValida ? "CORRECTA" : "RECHAZADA")} (Similitud: {similitud:F4}, Umbral: {UMBRAL_VOZ})");
                     Console.WriteLine($"PALABRA CLAVE: {(palabraValida ? "CORRECTA" : "INCORRECTA")}");
                     Console.WriteLine("--- DIAGNÓSTICO TÉCNICO SEGURO ---");
-                    Console.WriteLine("Usuario localizado: SÍ");
-                    Console.WriteLine($"FraseVoz recuperada: {(usuario.FraseVoz != null ? "SÍ" : "NO")}");
-                    Console.WriteLine($"FraseVoz vacía o NULL: {(string.IsNullOrWhiteSpace(usuario.FraseVoz) ? "SÍ" : "NO")}");
+                    Console.WriteLine($"Usuario localizado: SÍ (ID: {usuario.Id})");
+                    Console.WriteLine($"Biometría habilitada: {(usuario.VozHabilitadaLogin ? "SÍ" : "NO")}");
+                    Console.WriteLine($"Embedding válido: {(usuario.EmbeddingVoz != null && usuario.EmbeddingVoz.Length == 192 * sizeof(float) ? "SÍ" : "NO")}");
+                    Console.WriteLine($"Audio recibido: SÍ (Bytes: {audio?.Length ?? 0})");
+                    Console.WriteLine($"Duración del audio: {duracionAudioSeg:F2} s");
+                    Console.WriteLine($"Conversión FFmpeg: {(ffmpegOk ? "CORRECTA" : "FALLIDA")}");
+                    Console.WriteLine("Modelo ECAPA cargado: SÍ");
+                    Console.WriteLine($"Similitud coseno calculada: {similitud:F4}");
+                    Console.WriteLine($"Umbral utilizado: {UMBRAL_VOZ}");
                     Console.WriteLine($"Modelo Vosk cargado: {(modeloCargado ? "SÍ" : "NO")}");
-                    Console.WriteLine($"FFmpeg ejecutado correctamente: {(ffmpegOk ? "SÍ" : "NO")}");
-                    Console.WriteLine($"Transcripción Vosk vacía: {(transcripcionVacia ? "SÍ" : "NO")}");
-                    Console.WriteLine($"Coincidencia exacta después de normalizar: {(palabraValida ? "SÍ" : "NO")}");
+                    Console.WriteLine($"Transcripción vacía: {(transcripcionVacia ? "SÍ" : "NO")}");
+                    Console.WriteLine($"Longitud de la transcripción: {transcripcionServidor.Length}");
+                    Console.WriteLine($"Distancia de comparación: {distanciaComp}");
+                    Console.WriteLine($"Resultado de cada validación: Biometría={(biometriaValida ? "CORRECTA" : "RECHAZADA")}, Palabra={(palabraValida ? "CORRECTA" : "INCORRECTA")}");
                     Console.WriteLine($"RESULTADO GENERAL: {(biometriaValida && palabraValida ? "ACCESO CONCEDIDO" : "ACCESO DENEGADO")}");
                     Console.WriteLine("==========================================");
 
@@ -1670,6 +1979,7 @@ namespace trabajo.Controllers
                 }
 
                 HttpContext.Session.Remove("DniLoginPendiente");
+                HttpContext.Session.Remove("UsuarioIdLoginPendiente");
 
                 return Json(new
                 {
@@ -1710,12 +2020,48 @@ namespace trabajo.Controllers
         }
         [HttpGet]
         [AllowAnonymous]
-        public IActionResult OlvideContrasena()
+        public IActionResult OlvideContrasena(bool? nuevo = false)
         {
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+
+            if (nuevo == true)
+            {
+                HttpContext.Session.Remove("RecuperacionValidada");
+                HttpContext.Session.Remove("RecuperacionDni");
+                HttpContext.Session.Remove("RecuperacionCorreo");
+                HttpContext.Session.Remove("RecuperacionToken");
+                HttpContext.Session.Remove("RecuperacionExpiracion");
+            }
+
             bool validado =
                 HttpContext.Session.GetString(
                     "RecuperacionValidada"
                 ) == "true";
+
+            string? expStr = HttpContext.Session.GetString("RecuperacionExpiracion");
+
+            // Validar que la verificación de identidad no haya expirado (máximo 5 minutos)
+            if (validado && !string.IsNullOrWhiteSpace(expStr) && long.TryParse(expStr, out long expUnix))
+            {
+                if (DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= expUnix)
+                {
+                    validado = false;
+                    HttpContext.Session.Remove("RecuperacionValidada");
+                    HttpContext.Session.Remove("RecuperacionDni");
+                    HttpContext.Session.Remove("RecuperacionCorreo");
+                    HttpContext.Session.Remove("RecuperacionToken");
+                    HttpContext.Session.Remove("RecuperacionExpiracion");
+                }
+            }
+            else if (validado && string.IsNullOrWhiteSpace(expStr))
+            {
+                validado = false;
+                HttpContext.Session.Remove("RecuperacionValidada");
+                HttpContext.Session.Remove("RecuperacionDni");
+                HttpContext.Session.Remove("RecuperacionCorreo");
+            }
 
             ViewBag.RecuperacionValidada = validado;
             ViewBag.TurnstileSiteKey = _turnstileService.ObtenerSiteKey();
@@ -1730,6 +2076,11 @@ namespace trabajo.Controllers
                 ViewBag.CorreoRecuperacion =
                     HttpContext.Session.GetString(
                         "RecuperacionCorreo"
+                    );
+
+                ViewBag.RecuperacionToken =
+                    HttpContext.Session.GetString(
+                        "RecuperacionToken"
                     );
             }
 
@@ -1914,6 +2265,14 @@ namespace trabajo.Controllers
 
                 HttpContext.Session.Remove(
                     "RecuperacionCorreo"
+                );
+
+                HttpContext.Session.Remove(
+                    "RecuperacionToken"
+                );
+
+                HttpContext.Session.Remove(
+                    "RecuperacionExpiracion"
                 );
 
                 // ==========================================
@@ -2261,6 +2620,9 @@ namespace trabajo.Controllers
                 // CÓDIGO CORRECTO
                 // ==========================================
 
+                string tokenRecuperacion = Guid.NewGuid().ToString("N");
+                long expUnix = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds();
+
                 HttpContext.Session.SetString(
                     "RecuperacionValidada",
                     "true"
@@ -2274,6 +2636,16 @@ namespace trabajo.Controllers
                 HttpContext.Session.SetString(
                     "RecuperacionCorreo",
                     usuario.Correo
+                );
+
+                HttpContext.Session.SetString(
+                    "RecuperacionToken",
+                    tokenRecuperacion
+                );
+
+                HttpContext.Session.SetString(
+                    "RecuperacionExpiracion",
+                    expUnix.ToString()
                 );
 
                 // ==========================================
@@ -2332,14 +2704,20 @@ namespace trabajo.Controllers
             string nuevaClave,
             string confirmarClave)
         {
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+
             // ==========================================
-            // COMPROBAR QUE VALIDÓ EL CORREO
+            // COMPROBAR QUE VALIDÓ EL CORREO Y TIEMPO VIGENTE
             // ==========================================
 
             bool validado =
                 HttpContext.Session.GetString(
                     "RecuperacionValidada"
                 ) == "true";
+
+            string? expStr = HttpContext.Session.GetString("RecuperacionExpiracion");
 
             if (!validado)
             {
@@ -2348,6 +2726,22 @@ namespace trabajo.Controllers
                     ok = false,
                     mensaje =
                         "Primero debes validar la recuperación desde tu correo."
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(expStr) && long.TryParse(expStr, out long expUnix) &&
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() >= expUnix)
+            {
+                HttpContext.Session.Remove("RecuperacionValidada");
+                HttpContext.Session.Remove("RecuperacionDni");
+                HttpContext.Session.Remove("RecuperacionCorreo");
+                HttpContext.Session.Remove("RecuperacionToken");
+                HttpContext.Session.Remove("RecuperacionExpiracion");
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "La sesión de recuperación ha expirado. Por favor solicita un nuevo código."
                 });
             }
 
@@ -2456,6 +2850,14 @@ namespace trabajo.Controllers
 
             HttpContext.Session.Remove(
                 "RecuperacionCorreo"
+            );
+
+            HttpContext.Session.Remove(
+                "RecuperacionToken"
+            );
+
+            HttpContext.Session.Remove(
+                "RecuperacionExpiracion"
             );
 
 

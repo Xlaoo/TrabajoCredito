@@ -89,7 +89,7 @@ namespace TestTrabajoCredito
                 await runner.EvaluarAsync(
                     nombreEscenario: $"Rechazo inmediato de token vacío: '{tok ?? "null"}'",
                     datoEntrada: tok ?? "[null]",
-                    esperado: "Rechazado: Por favor completa la verificación de seguridad (CAPTCHA).",
+                    esperado: "Rechazado: Por favor completa la verificación de seguridad.",
                     accionAsync: async () =>
                     {
                         var (service, _) = CrearServicio();
