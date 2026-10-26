@@ -622,9 +622,16 @@ namespace TestTrabajoCredito
         public async System.Threading.Tasks.Task InspeccionarVadYFrames()
         {
             var servicioVoz = new trabajo.Service.ServicioEmbeddingVoz();
-            string p1 = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "trabajo", "wwwroot", "audiosRegistro", "615f047e-0ad1-47dd-8f42-d8080dda6a13.webm"));
-            string p2 = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "trabajo", "wwwroot", "audiosRegistro", "648a682c-64db-455b-85dc-3b35db81e0f4.webm"));
-            string p3 = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "trabajo", "wwwroot", "audiosRegistro", "190afa5f-d4f4-4b1d-980b-999f5b7985f6.webm"));
+            string carpetaAudios = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "trabajo", "wwwroot", "audiosRegistro"));
+            if (!Directory.Exists(carpetaAudios))
+            {
+                var candidate = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "trabajo", "wwwroot", "audiosRegistro"));
+                if (Directory.Exists(candidate)) carpetaAudios = candidate;
+            }
+
+            string p1 = Path.Combine(carpetaAudios, "6602bae5-6fee-466c-acba-484ef3aec72a.webm");
+            string p2 = Path.Combine(carpetaAudios, "648a682c-64db-455b-85dc-3b35db81e0f4.webm");
+            string p3 = Path.Combine(carpetaAudios, "190afa5f-d4f4-4b1d-980b-999f5b7985f6.webm");
 
             foreach (var path in new[] { p1, p2, p3 })
             {
@@ -645,6 +652,7 @@ namespace TestTrabajoCredito
 
                     var candidatos = await servicioVoz.GenerarEmbeddingsCandidatos(wav);
                     _output.WriteLine($"  Candidatos generados: {candidatos.Count}");
+                    Assert.NotEmpty(candidatos);
                 }
                 finally
                 {
@@ -657,8 +665,15 @@ namespace TestTrabajoCredito
         public async System.Threading.Tasks.Task ProbarSegmentosVoceadosEnAudioLargo()
         {
             var servicioVoz = new trabajo.Service.ServicioEmbeddingVoz();
-            string pReg = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "trabajo", "wwwroot", "audiosRegistro", "615f047e-0ad1-47dd-8f42-d8080dda6a13.webm"));
-            string pLargo = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "trabajo", "wwwroot", "audiosRegistro", "648a682c-64db-455b-85dc-3b35db81e0f4.webm"));
+            string carpetaAudios = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "trabajo", "wwwroot", "audiosRegistro"));
+            if (!Directory.Exists(carpetaAudios))
+            {
+                var candidate = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "trabajo", "wwwroot", "audiosRegistro"));
+                if (Directory.Exists(candidate)) carpetaAudios = candidate;
+            }
+
+            string pReg = Path.Combine(carpetaAudios, "6602bae5-6fee-466c-acba-484ef3aec72a.webm");
+            string pLargo = Path.Combine(carpetaAudios, "648a682c-64db-455b-85dc-3b35db81e0f4.webm");
 
             if (!File.Exists(pReg) || !File.Exists(pLargo)) return;
 

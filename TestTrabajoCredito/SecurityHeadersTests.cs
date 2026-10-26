@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Xunit;
@@ -31,12 +32,25 @@ namespace TestTrabajoCredito
             headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups";
             headers["X-Permitted-Cross-Domain-Policies"] = "none";
 
+            var path = context.Request.Path.Value?.TrimEnd('/') ?? "";
+            bool esRutaPublicaEstricta =
+                string.IsNullOrEmpty(path) ||
+                string.Equals(path, "/Login", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/PantallaPrincipal", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/IniciarSesion", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/Registro", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/OlvideContrasena", StringComparison.OrdinalIgnoreCase);
+
+            string scriptSrc = esRutaPublicaEstricta
+                ? "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
+                : "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; ";
+
             headers["Content-Security-Policy"] =
                 "default-src 'self'; " +
-                "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; " +
+                scriptSrc +
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
                 "img-src 'self' data: blob: https://cdn-icons-png.flaticon.com https://challenges.cloudflare.com; " +
-                "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com; " +
                 "connect-src 'self' https://challenges.cloudflare.com; " +
                 "frame-src 'self' https://challenges.cloudflare.com; " +
                 "frame-ancestors 'none'; " +
@@ -144,7 +158,7 @@ namespace TestTrabajoCredito
             await runner.EvaluarAsync(
                 nombreEscenario: "CSP activa y segura sin comodines en connect-src (Cloudflare, CDNs, unsafe-eval)",
                 datoEntrada: "Inspección de directivas CSP (script-src, connect-src, frame-src, media-src)",
-                esperado: "TurnstileOk: True, BootstrapCdnOk: True, SinWildcardWs: True, MediaBlobOk: True, FrameAncestorsNone: True",
+                esperado: "TurnstileOk: True, BootstrapCdnOk: True, SinWildcardWs: True, MediaBlobOk: True, FrameAncestorsNone: True, FontsGstaticOk: True",
                 accionAsync: async () =>
                 {
                     var ctx = new DefaultHttpContext();
@@ -156,8 +170,9 @@ namespace TestTrabajoCredito
                     bool sinWildcardWs = !csp.Contains("wss:") && !csp.Contains("ws:") && csp.Contains("connect-src 'self' https://challenges.cloudflare.com;");
                     bool mediaBlobOk = csp.Contains("media-src 'self' blob:");
                     bool frameAncestorsNone = csp.Contains("frame-ancestors 'none'");
+                    bool fontsGstaticOk = csp.Contains("font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com;");
 
-                    return $"TurnstileOk: {turnstileOk}, BootstrapCdnOk: {cdnOk}, SinWildcardWs: {sinWildcardWs}, MediaBlobOk: {mediaBlobOk}, FrameAncestorsNone: {frameAncestorsNone}";
+                    return $"TurnstileOk: {turnstileOk}, BootstrapCdnOk: {cdnOk}, SinWildcardWs: {sinWildcardWs}, MediaBlobOk: {mediaBlobOk}, FrameAncestorsNone: {frameAncestorsNone}, FontsGstaticOk: {fontsGstaticOk}";
                 });
 
             // 8. HSTS (Strict-Transport-Security) cuando la solicitud proviene de HTTPS o proxy Northflank
@@ -215,6 +230,46 @@ namespace TestTrabajoCredito
                     // microphone=(self) permite captura de audio en el origen local/producción de CrediPlus
                     bool micHabilitado = pp.Contains("microphone=(self)") && !pp.Contains("microphone=()");
                     return $"MicrofonoHabilitado: {micHabilitado}";
+                });
+
+            // 12. Caso OWASP ZAP 10055-5: CSP Estricta sin 'unsafe-inline' en las 4 páginas públicas
+            await runner.EvaluarAsync(
+                nombreEscenario: "Eliminación definitiva de 'unsafe-inline' en las 4 páginas públicas y compatibilidad en rutas internas",
+                datoEntrada: "Peticiones a /, /Login/IniciarSesion, /Login/Registro, /Login/OlvideContrasena vs /Administrador/Principal",
+                esperado: "RaizEstricta: True, LoginEstricto: True, RegistroEstricto: True, OlvideEstricto: True, InternaCompatible: True",
+                accionAsync: async () =>
+                {
+                    var rutasPublicas = new[] { "/", "/Login/IniciarSesion", "/Login/Registro", "/Login/OlvideContrasena" };
+                    bool todasPublicasSinUnsafeInline = true;
+
+                    foreach (var r in rutasPublicas)
+                    {
+                        var ctx = new DefaultHttpContext();
+                        ctx.Request.Path = r;
+                        var h = await EjecutarMiddlewareSeguridadAsync(ctx);
+                        string csp = h["Content-Security-Policy"].ToString();
+                        if (csp.Contains("'unsafe-inline'") && csp.Contains("script-src"))
+                        {
+                            // script-src no debe contener unsafe-inline
+                            var scriptPart = csp.Split(';')
+                                .FirstOrDefault(p => p.TrimStart().StartsWith("script-src", StringComparison.OrdinalIgnoreCase)) ?? "";
+                            if (scriptPart.Contains("'unsafe-inline'"))
+                            {
+                                todasPublicasSinUnsafeInline = false;
+                            }
+                        }
+                    }
+
+                    // Ruta interna
+                    var ctxInterno = new DefaultHttpContext();
+                    ctxInterno.Request.Path = "/Administrador/Principal";
+                    var hInterno = await EjecutarMiddlewareSeguridadAsync(ctxInterno);
+                    string cspInterno = hInterno["Content-Security-Policy"].ToString();
+                    var scriptPartInterno = cspInterno.Split(';')
+                        .FirstOrDefault(p => p.TrimStart().StartsWith("script-src", StringComparison.OrdinalIgnoreCase)) ?? "";
+                    bool internaTieneCompatibilidad = scriptPartInterno.Contains("'unsafe-inline'");
+
+                    return $"RaizEstricta: {todasPublicasSinUnsafeInline}, LoginEstricto: {todasPublicasSinUnsafeInline}, RegistroEstricto: {todasPublicasSinUnsafeInline}, OlvideEstricto: {todasPublicasSinUnsafeInline}, InternaCompatible: {internaTieneCompatibilidad}";
                 });
 
             runner.VerificarTodosAprobados();

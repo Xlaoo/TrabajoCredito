@@ -1099,8 +1099,7 @@
                 <div class="carousel-container">
 
                     <button id="btnLeft"
-                            class="carousel-btn"
-                            onclick="moverClientes(-1)">
+                            class="carousel-btn">
                         <i class="fas fa-chevron-left"></i>
                     </button>
 
@@ -1108,8 +1107,7 @@
                     </div>
 
                     <button id="btnRight"
-                            class="carousel-btn"
-                            onclick="moverClientes(1)">
+                            class="carousel-btn">
                         <i class="fas fa-chevron-right"></i>
                     </button>
 
@@ -1191,75 +1189,14 @@
 
         </div>
     </div>
-    <script>
-
-            const clientes = [
-
-                                    @foreach (var c in Model)
-                {
-                    <text>
-                            {
-                                nombre: "@c.NombreCompleto",
-                            comentario: "@c.Comentario",
-                            estrellas: @c.Calificacion
-                                                                    },
-                    </text>
-                                    }
-
-                                    ];
-
-            let inicio = 0;
-            const visibles = 3;
-
-            function renderClientes() {
-
-                let html = "";
-
-                for (let i = inicio; i < inicio + visibles && i < clientes.length; i++) {
-
-                    let estrellas = "";
-
-                    for (let j = 0; j < clientes[i].estrellas; j++) {
-                        estrellas += "⭐";
-                    }
-
-                    html += `
-                                            <div class="client">
-                                                <div class="client-icon">
-                                                    <i class="fas fa-user"></i>
-                                                </div>
-                                                <div>
-                                                    <b>${clientes[i].nombre}</b>
-                                                    <p>${clientes[i].comentario}</p>
-                                                    ${estrellas}
-                                                </div>
-                                            </div>`;
-                }
-
-                document.getElementById("clientGrid").innerHTML = html;
-
-                document.getElementById("btnLeft").disabled = (inicio === 0);
-
-                document.getElementById("btnRight").disabled =
-                    (inicio >= clientes.length - visibles);
-            }
-
-            function moverClientes(direccion) {
-
-                inicio += direccion;
-
-                if (inicio < 0)
-                    inicio = 0;
-
-                if (inicio > clientes.length - visibles)
-                    inicio = clientes.length - visibles;
-
-                renderClientes();
-            }
-
-            window.onload = renderClientes;
-
+    <script id="clientesData" type="application/json">
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize((Model ?? new List<prestamoscreditos.Models.ComentarioClienteViewModel>()).Select(c => new {
+            nombre = c.NombreCompleto,
+            comentario = c.Comentario,
+            estrellas = c.Calificacion
+        })))
     </script>
-    <script src="~/js/config-global.js"></script>
+    <script src="~/js/pantalla-principal.js" asp-append-version="true"></script>
+    <script src="~/js/config-global.js" asp-append-version="true"></script>
 </body>
 </html>

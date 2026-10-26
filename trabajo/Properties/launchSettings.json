@@ -16,7 +16,8 @@
       "launchBrowser": true,
       "applicationUrl": "http://0.0.0.0:5280",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_PREVENTHOSTINGSTARTUP": "true"
       }
     },
     "https": {
@@ -26,14 +27,16 @@
       "launchBrowser": true,
       "applicationUrl": "http://0.0.0.0:5280",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_PREVENTHOSTINGSTARTUP": "true"
       }
     },
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_PREVENTHOSTINGSTARTUP": "true"
       }
     }
   }
