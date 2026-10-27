@@ -74,110 +74,86 @@ if (FirebaseApp.DefaultInstance == null)
 }
 
 // ==========================================
-// NORTHFLANK: FORWARDED HEADERS — CONFIGURACIÓN SEGURA
+// NORTHFLANK / REVERSE PROXY: FORWARDED HEADERS — CONFIGURACIÓN ESTRICTA
 //
-// PROBLEMA con la configuración anterior:
-//   KnownNetworks.Clear() + KnownProxies.Clear() sin restricciones hace que
-//   ASP.NET Core acepte X-Forwarded-For de CUALQUIER cliente que se conecte
-//   directamente al contenedor. Un atacante puede falsificar su IP real.
-//
-// SOLUCIÓN:
-//   Registrar explícitamente la IP del proxy de Northflank como KnownProxy.
-//   La IP se lee de la variable de entorno NORTHFLANK_PROXY_IP para no
-//   codificarla en código fuente (Northflank usa IPs dinámicas que pueden
-//   cambiar entre despliegues).
-//
-// PARA CONFIGURAR EN NORTHFLANK:
-//   1. En el dashboard de Northflank, ve al servicio → Variables de entorno.
-//   2. Agrega:  NORTHFLANK_PROXY_IP=<IP o CIDR del proxy>
-//      Ejemplo: NORTHFLANK_PROXY_IP=10.0.0.0/8
-//      Si Northflank expone la IP exacta del ingress, úsala directamente:
-//      NORTHFLANK_PROXY_IP=203.0.113.42
-//   3. Reinicia el servicio para que tome efecto.
-//
-// INFORMACIÓN PENDIENTE:
-//   La IP o rango CIDR del proxy de Northflank no es pública ni estática.
-//   Debes obtenerla desde el panel de Northflank en:
-//     Settings → Networking → Ingress / Load Balancer IP
-//   o contactar al soporte de Northflank.
-//   Sin esa información, usa la variable de entorno con el CIDR interno
-//   que Northflank te indique (normalmente una red privada 10.x.x.x/8).
-//
-// COMPORTAMIENTO POR MODO:
-//   - Desarrollo (localhost): confía en loopback (127.0.0.1) para pruebas.
-//   - Producción + NORTHFLANK_PROXY_IP configurada: solo confía en esa IP/red.
-//   - Producción sin NORTHFLANK_PROXY_IP: NO reenvía cabeceras (seguro por defecto).
-//     Se imprime una advertencia en consola y la IP real del cliente será la
-//     del proxy de Northflank (inofensivo para la funcionalidad, pero sin
-//     IP real del cliente en logs).
+// CONFIGURACIÓN DE SEGURIDAD:
+//   1. ForwardLimit = 1: Un solo nivel de proxy inverso confiable (Ingress de Northflank).
+//   2. KnownProxies / KnownNetworks se configuran ÚNICAMENTE mediante la variable
+//      de entorno NORTHFLANK_PROXY_IP y loopback (127.0.0.1 / ::1 para local).
+//      No se confía automáticamente en todas las redes RFC 1918 ni link-local.
+//   3. El middleware nativo UseForwardedHeaders() es el único responsable de
+//      resolver Request.Scheme e IsHttps a partir de X-Forwarded-Proto.
 // ==========================================
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
         ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 
-    // Limpiar los valores por defecto (loopback) para reconfigurar
-    // solo con las redes/proxies que conocemos explícitamente.
+    // Un único nivel de proxy (Ingress de Northflank -> Contenedor Kestrel)
+    options.ForwardLimit = 1;
+
+    // Limpiar proxies por defecto para configuración explícita y verificada
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 
-    if (builder.Environment.IsDevelopment())
-    {
-        // En localhost el proxy es el propio proceso o Kestrel directo.
-        // Solo se confía en loopback.
-        options.KnownProxies.Add(System.Net.IPAddress.Loopback);      // 127.0.0.1
-        options.KnownProxies.Add(System.Net.IPAddress.IPv6Loopback);  // ::1
-    }
-    else
-    {
-        // PRODUCCIÓN: solo se confía en el proxy registrado en la variable de entorno.
-        var proxyEnv = builder.Configuration["NORTHFLANK_PROXY_IP"]
-            ?? Environment.GetEnvironmentVariable("NORTHFLANK_PROXY_IP");
+    // 1. Loopback (Localhost y pruebas locales)
+    options.KnownProxies.Add(System.Net.IPAddress.Loopback);      // 127.0.0.1
+    options.KnownProxies.Add(System.Net.IPAddress.IPv6Loopback);  // ::1
 
-        if (!string.IsNullOrWhiteSpace(proxyEnv))
+    // 2. Proxies/subredes verificados mediante la variable de entorno NORTHFLANK_PROXY_IP
+    var proxyEnv = builder.Configuration["NORTHFLANK_PROXY_IP"]
+        ?? Environment.GetEnvironmentVariable("NORTHFLANK_PROXY_IP");
+
+    if (!string.IsNullOrWhiteSpace(proxyEnv))
+    {
+        var entradas = proxyEnv.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var entrada in entradas)
         {
-            // Soporta tanto IP única ("203.0.113.42")
-            // como notación CIDR ("10.0.0.0/8").
-            if (proxyEnv.Contains('/'))
+            if (entrada.Contains('/'))
             {
-                // CIDR → registrar como KnownNetwork
-                var partes = proxyEnv.Split('/', 2);
+                var partes = entrada.Split('/', 2);
                 if (System.Net.IPAddress.TryParse(partes[0], out var redIp)
                     && int.TryParse(partes[1], out int prefixLen))
                 {
                     options.KnownNetworks.Add(
                         new Microsoft.AspNetCore.HttpOverrides.IPNetwork(redIp, prefixLen));
+
+                    // Soporte para IPv4-mapped IPv6 en contenedores Linux
+                    if (redIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    {
+                        options.KnownNetworks.Add(
+                            new Microsoft.AspNetCore.HttpOverrides.IPNetwork(redIp.MapToIPv6(), prefixLen + 96));
+                    }
                 }
                 else
                 {
-                    Console.WriteLine($"[SEGURIDAD] NORTHFLANK_PROXY_IP='{proxyEnv}' no es un CIDR válido. " +
-                        "Los Forwarded Headers NO se procesarán.");
+                    Console.WriteLine($"[SEGURIDAD] NORTHFLANK_PROXY_IP entrada '{entrada}' no es un CIDR válido.");
                 }
             }
             else
             {
-                // IP única → registrar como KnownProxy
-                if (System.Net.IPAddress.TryParse(proxyEnv, out var proxyIp))
+                if (System.Net.IPAddress.TryParse(entrada, out var proxyIp))
                 {
                     options.KnownProxies.Add(proxyIp);
+
+                    // Soporte para IPv4-mapped IPv6 en contenedores Linux (::ffff:x.x.x.x)
+                    if (proxyIp.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                    {
+                        options.KnownProxies.Add(proxyIp.MapToIPv6());
+                    }
                 }
                 else
                 {
-                    Console.WriteLine($"[SEGURIDAD] NORTHFLANK_PROXY_IP='{proxyEnv}' no es una IP válida. " +
-                        "Los Forwarded Headers NO se procesarán.");
+                    Console.WriteLine($"[SEGURIDAD] NORTHFLANK_PROXY_IP entrada '{entrada}' no es una IP válida.");
                 }
             }
         }
-        else
-        {
-            // Variable no configurada: NO procesar cabeceras reenviadas.
-            // Seguro por defecto: la IP visible será la del proxy de Northflank,
-            // pero no se aceptarán valores X-Forwarded-* de origen desconocido.
-            options.ForwardedHeaders = ForwardedHeaders.None;
-            Console.WriteLine("[SEGURIDAD] NORTHFLANK_PROXY_IP no configurada. " +
-                "UseForwardedHeaders está DESHABILITADO en producción. " +
-                "Configura la variable con la IP/CIDR del proxy de Northflank.");
-        }
+    }
+    else
+    {
+        Console.WriteLine("[SEGURIDAD] NORTHFLANK_PROXY_IP no configurada. " +
+            "UseForwardedHeaders solo procesará solicitudes de loopback (127.0.0.1 / ::1). " +
+            "En Northflank, configura NORTHFLANK_PROXY_IP con la IP o CIDR del Ingress para habilitar HTTPS.");
     }
 });
 
@@ -328,6 +304,29 @@ var app = builder.Build();
 // del pipeline (HTTPS redirect, HSTS) reciba el proto real.
 // ==========================================
 app.UseForwardedHeaders();
+
+// Log de diagnóstico pasivo (no altera el esquema de la petición ni debilita la seguridad)
+// Permite identificar con certeza en los logs de Northflank la IP exacta del Ingress
+// para configurarla en NORTHFLANK_PROXY_IP sin necesidad de adivinar ni inventar valores.
+if (!app.Environment.IsDevelopment())
+{
+    app.Use(async (context, next) =>
+    {
+        if (!context.Request.IsHttps)
+        {
+            var proto = context.Request.Headers["X-Forwarded-Proto"].ToString();
+            if (!string.IsNullOrEmpty(proto))
+            {
+                var remoteIp = context.Connection.RemoteIpAddress;
+                Console.WriteLine($"[DIAGNÓSTICO PROXY] Petición con X-Forwarded-Proto='{proto}' no procesada como HTTPS. " +
+                    $"RemoteIp de la conexión TCP: '{remoteIp}'. Si este es el Ingress de Northflank, " +
+                    $"configura NORTHFLANK_PROXY_IP={remoteIp} en las variables de entorno de Northflank.");
+            }
+        }
+
+        await next();
+    });
+}
 
 if (!app.Environment.IsDevelopment())
 {
