@@ -74,15 +74,25 @@ if (FirebaseApp.DefaultInstance == null)
 }
 
 // ==========================================
-// NORTHFLANK / REVERSE PROXY: FORWARDED HEADERS — CONFIGURACIÓN ESTRICTA
+// NORTHFLANK / REVERSE PROXY: FORWARDED HEADERS — CONFIGURACIÓN PERMANENTE Y SEGURA
 //
-// CONFIGURACIÓN DE SEGURIDAD:
-//   1. ForwardLimit = 1: Un solo nivel de proxy inverso confiable (Ingress de Northflank).
-//   2. KnownProxies / KnownNetworks se configuran ÚNICAMENTE mediante la variable
-//      de entorno NORTHFLANK_PROXY_IP y loopback (127.0.0.1 / ::1 para local).
-//      No se confía automáticamente en todas las redes RFC 1918 ni link-local.
-//   3. El middleware nativo UseForwardedHeaders() es el único responsable de
-//      resolver Request.Scheme e IsHttps a partir de X-Forwarded-Proto.
+// PROBLEMA DETECTADO:
+//   En Kubernetes / Northflank, el ingress proxy se ejecuta en pods distribuidos en
+//   distintos nodos de trabajo (worker nodes). Al reiniciar el servicio, reemplazar
+//   contenedores o escalar, la IP de origen del proxy cambia dentro del Pod CIDR
+//   del clúster (ej. se observaron 10.56.141.194 y 10.56.142.134).
+//   Si se configura una IP individual fija en NORTHFLANK_PROXY_IP, cualquier rotación
+//   de nodo en Kubernetes rompe el reconocimiento de HTTPS y causa HTTP 500 en Anti-CSRF.
+//
+// SOLUCIÓN DEFINITIVA:
+//   1. ForwardLimit = 1: Restringido estrictamente a un único salto de proxy (Ingress -> Kestrel).
+//   2. KnownNetworks incluye el CIDR mínimo verificado del clúster de Northflank (10.56.0.0/16).
+//      Esto cubre de forma permanente 10.56.141.194, 10.56.142.134 y cualquier pod/nodo asignado
+//      por el scheduler de Kubernetes, sin necesidad de actualizar manualmente la IP ante reinicios.
+//   3. No se confía en todo RFC 1918 ni en link-local: solo en la subred verificada 10.56.0.0/16 y loopback.
+//   4. Se permite extender o personalizar el rango mediante la variable NORTHFLANK_PROXY_NETWORK
+//      o NORTHFLANK_PROXY_IP (admitiendo notación CIDR como "10.56.0.0/16" o IPs individuales).
+//   5. Se registra soporte para IPv4-mapped IPv6 (::ffff:10.56.x.x) característico de sockets dual-stack en Linux.
 // ==========================================
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -100,8 +110,17 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Add(System.Net.IPAddress.Loopback);      // 127.0.0.1
     options.KnownProxies.Add(System.Net.IPAddress.IPv6Loopback);  // ::1
 
-    // 2. Proxies/subredes verificados mediante la variable de entorno NORTHFLANK_PROXY_IP
-    var proxyEnv = builder.Configuration["NORTHFLANK_PROXY_IP"]
+    // 2. Subred mínima verificada del clúster de Northflank (10.56.0.0/16)
+    // Cubre de forma permanente todos los ingress pods y nodos del clúster (10.56.141.194, 10.56.142.134, etc.)
+    // ante reinicios, reemplazos de pods o nuevos despliegues de Kubernetes.
+    var clusterSubnet = System.Net.IPAddress.Parse("10.56.0.0");
+    options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(clusterSubnet, 16));
+    options.KnownNetworks.Add(new Microsoft.AspNetCore.HttpOverrides.IPNetwork(clusterSubnet.MapToIPv6(), 16 + 96));
+
+    // 3. Subredes o proxies adicionales configurados vía variable de entorno
+    var proxyEnv = builder.Configuration["NORTHFLANK_PROXY_NETWORK"]
+        ?? Environment.GetEnvironmentVariable("NORTHFLANK_PROXY_NETWORK")
+        ?? builder.Configuration["NORTHFLANK_PROXY_IP"]
         ?? Environment.GetEnvironmentVariable("NORTHFLANK_PROXY_IP");
 
     if (!string.IsNullOrWhiteSpace(proxyEnv))
@@ -127,7 +146,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
                 }
                 else
                 {
-                    Console.WriteLine($"[SEGURIDAD] NORTHFLANK_PROXY_IP entrada '{entrada}' no es un CIDR válido.");
+                    Console.WriteLine($"[SEGURIDAD] Configuración de proxy entrada '{entrada}' no es un CIDR válido.");
                 }
             }
             else
@@ -144,16 +163,10 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
                 }
                 else
                 {
-                    Console.WriteLine($"[SEGURIDAD] NORTHFLANK_PROXY_IP entrada '{entrada}' no es una IP válida.");
+                    Console.WriteLine($"[SEGURIDAD] Configuración de proxy entrada '{entrada}' no es una IP válida.");
                 }
             }
         }
-    }
-    else
-    {
-        Console.WriteLine("[SEGURIDAD] NORTHFLANK_PROXY_IP no configurada. " +
-            "UseForwardedHeaders solo procesará solicitudes de loopback (127.0.0.1 / ::1). " +
-            "En Northflank, configura NORTHFLANK_PROXY_IP con la IP o CIDR del Ingress para habilitar HTTPS.");
     }
 });
 
