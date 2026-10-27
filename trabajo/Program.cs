@@ -382,6 +382,9 @@ app.Use(async (context, next) =>
         string.Equals(path, "/Login/PagosPendientes", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Login/SimuladorCredito", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Login/SolicitarCredito", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Login/Configuracion", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Login/PerfilPersonal", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Login/PreguntasFrecuentes", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Home/Error", StringComparison.OrdinalIgnoreCase);
 
     string scriptSrc = esRutaEstricta

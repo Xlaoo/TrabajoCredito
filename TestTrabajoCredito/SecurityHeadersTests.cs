@@ -44,7 +44,10 @@ namespace TestTrabajoCredito
                 string.Equals(path, "/Login/MisSolicitudes", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(path, "/Login/PagosPendientes", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(path, "/Login/SimuladorCredito", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(path, "/Login/SolicitarCredito", StringComparison.OrdinalIgnoreCase);
+                string.Equals(path, "/Login/SolicitarCredito", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/Configuracion", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/PerfilPersonal", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/PreguntasFrecuentes", StringComparison.OrdinalIgnoreCase);
 
             string scriptSrc = esRutaEstricta
                 ? "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
@@ -377,6 +380,64 @@ namespace TestTrabajoCredito
                     }
 
                     return $"DashboardOk: {resultados[0]}, SolicitudesOk: {resultados[1]}, PagosOk: {resultados[2]}, SimuladorOk: {resultados[3]}, SolicitarOk: {resultados[4]}";
+                });
+
+            // 16. Caso OWASP ZAP 10055-5 (Fase 2): CSP Estricta sin 'unsafe-inline' en script-src en Configuracion, PerfilPersonal y PreguntasFrecuentes
+            await runner.EvaluarAsync(
+                nombreEscenario: "Eliminación de 'unsafe-inline' en script-src en Configuracion, PerfilPersonal y PreguntasFrecuentes (OWASP ZAP 10055-5)",
+                datoEntrada: "Peticiones a /Login/Configuracion, /Login/PerfilPersonal, /Login/PreguntasFrecuentes",
+                esperado: "ConfiguracionOk: True, PerfilOk: True, FaqOk: True",
+                accionAsync: async () =>
+                {
+                    var rutasObjetivo = new[]
+                    {
+                        "/Login/Configuracion",
+                        "/Login/PerfilPersonal",
+                        "/Login/PreguntasFrecuentes"
+                    };
+
+                    var resultados = new List<bool>();
+                    foreach (var r in rutasObjetivo)
+                    {
+                        var ctx = new DefaultHttpContext();
+                        ctx.Request.Path = r;
+                        var h = await EjecutarMiddlewareSeguridadAsync(ctx);
+                        string csp = h["Content-Security-Policy"].ToString();
+                        var scriptPart = csp.Split(';')
+                            .FirstOrDefault(p => p.TrimStart().StartsWith("script-src", StringComparison.OrdinalIgnoreCase)) ?? "";
+                        resultados.Add(!scriptPart.Contains("'unsafe-inline'"));
+                    }
+
+                    return $"ConfiguracionOk: {resultados[0]}, PerfilOk: {resultados[1]}, FaqOk: {resultados[2]}";
+                });
+
+            // 17. Caso OWASP ZAP 10055-6 (Fase 2): CSP Estricta sin 'unsafe-inline' en style-src en Configuracion, PerfilPersonal y PreguntasFrecuentes
+            await runner.EvaluarAsync(
+                nombreEscenario: "Eliminación de 'unsafe-inline' en style-src en Configuracion, PerfilPersonal y PreguntasFrecuentes (OWASP ZAP 10055-6)",
+                datoEntrada: "Peticiones a /Login/Configuracion, /Login/PerfilPersonal, /Login/PreguntasFrecuentes",
+                esperado: "ConfiguracionOk: True, PerfilOk: True, FaqOk: True",
+                accionAsync: async () =>
+                {
+                    var rutasObjetivo = new[]
+                    {
+                        "/Login/Configuracion",
+                        "/Login/PerfilPersonal",
+                        "/Login/PreguntasFrecuentes"
+                    };
+
+                    var resultados = new List<bool>();
+                    foreach (var r in rutasObjetivo)
+                    {
+                        var ctx = new DefaultHttpContext();
+                        ctx.Request.Path = r;
+                        var h = await EjecutarMiddlewareSeguridadAsync(ctx);
+                        string csp = h["Content-Security-Policy"].ToString();
+                        var stylePart = csp.Split(';')
+                            .FirstOrDefault(p => p.TrimStart().StartsWith("style-src", StringComparison.OrdinalIgnoreCase)) ?? "";
+                        resultados.Add(!stylePart.Contains("'unsafe-inline'"));
+                    }
+
+                    return $"ConfiguracionOk: {resultados[0]}, PerfilOk: {resultados[1]}, FaqOk: {resultados[2]}";
                 });
 
             runner.VerificarTodosAprobados();
