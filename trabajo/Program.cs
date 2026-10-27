@@ -247,6 +247,19 @@ builder.Services.AddSignalR();
 builder.Services.AddDistributedMemoryCache();
 
 // ==========================================
+// PROTECCIÓN ANTI-FORGERY (CSRF)
+// ==========================================
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "RequestVerificationToken";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+});
+
+// ==========================================
 // SESIÓN
 // ==========================================
 builder.Services.AddSession(options =>
@@ -339,26 +352,31 @@ app.Use(async (context, next) =>
     headers["X-Permitted-Cross-Domain-Policies"] = "none";
 
     // Content Security Policy (CSP) activa y protectora para mitigar XSS y data injection
-    // En las cuatro páginas públicas migradas a JS y CSS externo (/, /Login/IniciarSesion, /Login/Registro, /Login/OlvideContrasena),
-    // se aplica CSP ESTRICTA SIN 'unsafe-inline' tanto en script-src como en style-src
-    // para resolver definitivamente las alertas OWASP ZAP 10055-5 (script-src) y 10055-6 (style-src).
-    // Para rutas internas se mantiene compatibilidad con 'unsafe-inline' en script-src y style-src.
+    // Rutas con CSP estricta (sin 'unsafe-inline' en script-src y style-src):
+    // - Páginas públicas: /, /Login, /Login/PantallaPrincipal, /Login/IniciarSesion, /Login/Registro, /Login/OlvideContrasena, /Home/Error
+    // - Pantallas internas cliente migradas: /Login/DashboardCliente, /Login/MisSolicitudes, /Login/PagosPendientes, /Login/SimuladorCredito, /Login/SolicitarCredito
+    // Para el resto de rutas (p.ej. paneles aún no migrados) se mantiene compatibilidad con 'unsafe-inline'.
     var exceptionFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
     var path = (exceptionFeature?.Path ?? context.Request.Path.Value)?.TrimEnd('/') ?? "";
-    bool esRutaPublicaEstricta =
+    bool esRutaEstricta =
         string.IsNullOrEmpty(path) ||
         string.Equals(path, "/Login", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Login/PantallaPrincipal", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Login/IniciarSesion", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Login/Registro", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Login/OlvideContrasena", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Login/DashboardCliente", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Login/MisSolicitudes", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Login/PagosPendientes", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Login/SimuladorCredito", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Login/SolicitarCredito", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Home/Error", StringComparison.OrdinalIgnoreCase);
 
-    string scriptSrc = esRutaPublicaEstricta
+    string scriptSrc = esRutaEstricta
         ? "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
         : "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; ";
 
-    string styleSrc = esRutaPublicaEstricta
+    string styleSrc = esRutaEstricta
         ? "style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
         : "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; ";
 
@@ -395,7 +413,18 @@ proveedorTiposArchivo.Mappings[".apk"] =
 
 app.UseStaticFiles(new StaticFileOptions
 {
-    ContentTypeProvider = proveedorTiposArchivo
+    ContentTypeProvider = proveedorTiposArchivo,
+    OnPrepareResponse = ctx =>
+    {
+        if (ctx.File.Name.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.ContentType = "text/css; charset=utf-8";
+        }
+        else if (ctx.File.Name.EndsWith(".js", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.ContentType = "application/javascript; charset=utf-8";
+        }
+    }
 });
 
 app.UseRouting();

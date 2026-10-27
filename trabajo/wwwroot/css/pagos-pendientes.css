@@ -1,0 +1,247 @@
+h1 {
+    font-size: 38px;
+    font-weight: 800;
+    color: #1f1235;
+}
+
+.subtitle {
+    font-size: 20px;
+    color: #51446b;
+    margin-bottom: 35px;
+}
+
+.payment-card {
+    background: white;
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    max-width: 1250px;
+}
+
+.payment-card-item {
+    margin-bottom: 25px;
+}
+
+.empty-box {
+    text-align: center;
+    padding: 70px;
+}
+
+.empty-box i {
+    font-size: 70px;
+    color: #7c3aed;
+    margin-bottom: 20px;
+}
+
+.empty-box h2 {
+    font-size: 34px;
+    font-weight: 900;
+    color: #3c096c;
+}
+
+.status {
+    background: #fef3c7;
+    color: #b45309;
+    padding: 14px 30px;
+    border-radius: 24px;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.status-paid {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.top-payment {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 35px;
+}
+
+.payment-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 22px;
+    margin-bottom: 30px;
+}
+
+.pay-box {
+    background: #f8f5ff;
+    border: 1px solid #ede9fe;
+    border-radius: 18px;
+    padding: 25px;
+}
+
+.pay-box label {
+    color: #6b7280;
+    font-size: 16px;
+}
+
+.pay-box h3 {
+    color: #4c1d95;
+    font-size: 30px;
+    font-weight: 900;
+    margin-top: 10px;
+}
+
+.detail-box {
+    background: #f8f5ff;
+    border-radius: 18px;
+    padding: 24px;
+    margin-bottom: 28px;
+}
+
+.detail-box h3 {
+    color: #3c096c;
+    font-weight: 900;
+    margin-bottom: 18px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #e9ddff;
+    font-size: 17px;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.btn-pay {
+    background: #22c55e;
+    color: white;
+    border: none;
+    padding: 17px 32px;
+    border-radius: 14px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.btn-back {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 17px 32px;
+    border-radius: 14px;
+    font-size: 18px;
+    font-weight: bold;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-pay:hover,
+.btn-back:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 22px rgba(0,0,0,.20);
+}
+
+.actions {
+    display: flex;
+    gap: 15px;
+}
+
+.modal-pay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+.modal-pay.activo {
+    display: flex;
+}
+
+.modal-content-pay {
+    background: white;
+    width: 560px;
+    border-radius: 24px;
+    padding: 35px;
+}
+
+.modal-content-pay h2 {
+    color: #3c096c;
+    font-weight: 900;
+    margin-bottom: 20px;
+}
+
+.modal-content-pay label {
+    font-weight: bold;
+    margin-top: 12px;
+    display: block;
+}
+
+.modal-content-pay input,
+.modal-content-pay select {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #ddd6fe;
+    border-radius: 12px;
+    margin-top: 8px;
+    font-size: 16px;
+}
+
+.payment-info {
+    background: #f8f5ff;
+    border: 1px solid #ddd6fe;
+    padding: 18px;
+    border-radius: 16px;
+    margin-top: 18px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.btn-close-modal {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-confirm {
+    background: #22c55e;
+    color: white;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.message-ok {
+    display: none;
+    background: #dcfce7;
+    color: #166534;
+    padding: 18px;
+    border-radius: 16px;
+    font-weight: bold;
+    margin-bottom: 22px;
+}
+
+.btn-pay:disabled,
+.btn-pay:disabled:hover {
+    background: #c9c9c9 !important;
+    color: white !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.oculto {
+    display: none !important;
+}

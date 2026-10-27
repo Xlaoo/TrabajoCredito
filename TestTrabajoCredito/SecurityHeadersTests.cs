@@ -33,19 +33,24 @@ namespace TestTrabajoCredito
             headers["X-Permitted-Cross-Domain-Policies"] = "none";
 
             var path = context.Request.Path.Value?.TrimEnd('/') ?? "";
-            bool esRutaPublicaEstricta =
+            bool esRutaEstricta =
                 string.IsNullOrEmpty(path) ||
                 string.Equals(path, "/Login", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(path, "/Login/PantallaPrincipal", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(path, "/Login/IniciarSesion", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(path, "/Login/Registro", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(path, "/Login/OlvideContrasena", StringComparison.OrdinalIgnoreCase);
+                string.Equals(path, "/Login/OlvideContrasena", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/DashboardCliente", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/MisSolicitudes", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/PagosPendientes", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/SimuladorCredito", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Login/SolicitarCredito", StringComparison.OrdinalIgnoreCase);
 
-            string scriptSrc = esRutaPublicaEstricta
+            string scriptSrc = esRutaEstricta
                 ? "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
                 : "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; ";
 
-            string styleSrc = esRutaPublicaEstricta
+            string styleSrc = esRutaEstricta
                 ? "style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
                 : "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; ";
 
@@ -310,6 +315,68 @@ namespace TestTrabajoCredito
                     bool internaTieneCompatibilidad = stylePartInterno.Contains("'unsafe-inline'");
 
                     return $"RaizEstricta: {todasPublicasSinUnsafeInlineStyle}, LoginEstricto: {todasPublicasSinUnsafeInlineStyle}, RegistroEstricto: {todasPublicasSinUnsafeInlineStyle}, OlvideEstricto: {todasPublicasSinUnsafeInlineStyle}, InternaCompatible: {internaTieneCompatibilidad}";
+                });
+
+            // 14. Caso OWASP ZAP 10055-5 (Fase 1): CSP Estricta sin 'unsafe-inline' en script-src en pantallas internas de cliente
+            await runner.EvaluarAsync(
+                nombreEscenario: "Eliminación de 'unsafe-inline' en script-src en las 5 pantallas internas de Cliente (Fase 1 OWASP ZAP 10055-5)",
+                datoEntrada: "Peticiones a /Login/DashboardCliente, /Login/MisSolicitudes, /Login/PagosPendientes, /Login/SimuladorCredito, /Login/SolicitarCredito",
+                esperado: "DashboardOk: True, SolicitudesOk: True, PagosOk: True, SimuladorOk: True, SolicitarOk: True",
+                accionAsync: async () =>
+                {
+                    var rutasCliente = new[]
+                    {
+                        "/Login/DashboardCliente",
+                        "/Login/MisSolicitudes",
+                        "/Login/PagosPendientes",
+                        "/Login/SimuladorCredito",
+                        "/Login/SolicitarCredito"
+                    };
+
+                    var resultados = new List<bool>();
+                    foreach (var r in rutasCliente)
+                    {
+                        var ctx = new DefaultHttpContext();
+                        ctx.Request.Path = r;
+                        var h = await EjecutarMiddlewareSeguridadAsync(ctx);
+                        string csp = h["Content-Security-Policy"].ToString();
+                        var scriptPart = csp.Split(';')
+                            .FirstOrDefault(p => p.TrimStart().StartsWith("script-src", StringComparison.OrdinalIgnoreCase)) ?? "";
+                        resultados.Add(!scriptPart.Contains("'unsafe-inline'"));
+                    }
+
+                    return $"DashboardOk: {resultados[0]}, SolicitudesOk: {resultados[1]}, PagosOk: {resultados[2]}, SimuladorOk: {resultados[3]}, SolicitarOk: {resultados[4]}";
+                });
+
+            // 15. Caso OWASP ZAP 10055-6 (Fase 1): CSP Estricta sin 'unsafe-inline' en style-src en pantallas internas de cliente
+            await runner.EvaluarAsync(
+                nombreEscenario: "Eliminación de 'unsafe-inline' en style-src en las 5 pantallas internas de Cliente (Fase 1 OWASP ZAP 10055-6)",
+                datoEntrada: "Peticiones a /Login/DashboardCliente, /Login/MisSolicitudes, /Login/PagosPendientes, /Login/SimuladorCredito, /Login/SolicitarCredito",
+                esperado: "DashboardOk: True, SolicitudesOk: True, PagosOk: True, SimuladorOk: True, SolicitarOk: True",
+                accionAsync: async () =>
+                {
+                    var rutasCliente = new[]
+                    {
+                        "/Login/DashboardCliente",
+                        "/Login/MisSolicitudes",
+                        "/Login/PagosPendientes",
+                        "/Login/SimuladorCredito",
+                        "/Login/SolicitarCredito"
+                    };
+
+                    var resultados = new List<bool>();
+                    foreach (var r in rutasCliente)
+                    {
+                        var ctx = new DefaultHttpContext();
+                        ctx.Request.Path = r;
+                        var h = await EjecutarMiddlewareSeguridadAsync(ctx);
+                        string csp = h["Content-Security-Policy"].ToString();
+                        var stylePart = csp.Split(';')
+                            .FirstOrDefault(p => p.TrimStart().StartsWith("style-src", StringComparison.OrdinalIgnoreCase)) ?? "";
+                        resultados.Add(!stylePart.Contains("'unsafe-inline'"));
+                    }
+
+                    return $"DashboardOk: {resultados[0]}, SolicitudesOk: {resultados[1]}, PagosOk: {resultados[2]}, SimuladorOk: {resultados[3]}, SolicitarOk: {resultados[4]}";
                 });
 
             runner.VerificarTodosAprobados();

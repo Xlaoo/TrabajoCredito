@@ -4029,6 +4029,7 @@ namespace trabajo.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Cliente")]
+        [ValidateAntiForgeryToken]
         public IActionResult RegistrarSolicitudCredito(
     decimal montoSolicitado,
 
@@ -4251,6 +4252,7 @@ string titularCuenta
 
         [HttpPost]
         [Authorize(Roles = "Cliente")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> EnviarCronograma(int idSolicitud)
         {
             try
