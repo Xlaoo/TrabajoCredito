@@ -339,9 +339,10 @@ app.Use(async (context, next) =>
     headers["X-Permitted-Cross-Domain-Policies"] = "none";
 
     // Content Security Policy (CSP) activa y protectora para mitigar XSS y data injection
-    // En las cuatro páginas públicas migradas a JS externo (/, /Login/IniciarSesion, /Login/Registro, /Login/OlvideContrasena),
-    // se aplica CSP ESTRICTA SIN 'unsafe-inline' en script-src para resolver definitivamente la alerta OWASP ZAP 10055-5.
-    // Para rutas internas se mantiene compatibilidad con 'unsafe-inline' en script-src.
+    // En las cuatro páginas públicas migradas a JS y CSS externo (/, /Login/IniciarSesion, /Login/Registro, /Login/OlvideContrasena),
+    // se aplica CSP ESTRICTA SIN 'unsafe-inline' tanto en script-src como en style-src
+    // para resolver definitivamente las alertas OWASP ZAP 10055-5 (script-src) y 10055-6 (style-src).
+    // Para rutas internas se mantiene compatibilidad con 'unsafe-inline' en script-src y style-src.
     var exceptionFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
     var path = (exceptionFeature?.Path ?? context.Request.Path.Value)?.TrimEnd('/') ?? "";
     bool esRutaPublicaEstricta =
@@ -357,10 +358,14 @@ app.Use(async (context, next) =>
         ? "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
         : "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; ";
 
+    string styleSrc = esRutaPublicaEstricta
+        ? "style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+        : "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; ";
+
     headers["Content-Security-Policy"] = 
         "default-src 'self'; " +
         scriptSrc +
-        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+        styleSrc +
         "img-src 'self' data: blob: https://cdn-icons-png.flaticon.com https://challenges.cloudflare.com; " +
         "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com; " +
         "connect-src 'self' https://challenges.cloudflare.com; " +

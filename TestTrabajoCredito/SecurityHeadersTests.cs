@@ -45,10 +45,14 @@ namespace TestTrabajoCredito
                 ? "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
                 : "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; ";
 
+            string styleSrc = esRutaPublicaEstricta
+                ? "style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+                : "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; ";
+
             headers["Content-Security-Policy"] =
                 "default-src 'self'; " +
                 scriptSrc +
-                "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " +
+                styleSrc +
                 "img-src 'self' data: blob: https://cdn-icons-png.flaticon.com https://challenges.cloudflare.com; " +
                 "font-src 'self' data: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.gstatic.com; " +
                 "connect-src 'self' https://challenges.cloudflare.com; " +
@@ -270,6 +274,42 @@ namespace TestTrabajoCredito
                     bool internaTieneCompatibilidad = scriptPartInterno.Contains("'unsafe-inline'");
 
                     return $"RaizEstricta: {todasPublicasSinUnsafeInline}, LoginEstricto: {todasPublicasSinUnsafeInline}, RegistroEstricto: {todasPublicasSinUnsafeInline}, OlvideEstricto: {todasPublicasSinUnsafeInline}, InternaCompatible: {internaTieneCompatibilidad}";
+                });
+
+            // 13. Caso OWASP ZAP 10055-6: CSP Estricta sin 'unsafe-inline' en style-src en las 4 páginas públicas
+            await runner.EvaluarAsync(
+                nombreEscenario: "Eliminación definitiva de 'unsafe-inline' en style-src en las 4 páginas públicas y compatibilidad en rutas internas (OWASP ZAP 10055-6)",
+                datoEntrada: "Peticiones a /, /Login/IniciarSesion, /Login/Registro, /Login/OlvideContrasena vs /Administrador/Principal",
+                esperado: "RaizEstricta: True, LoginEstricto: True, RegistroEstricto: True, OlvideEstricto: True, InternaCompatible: True",
+                accionAsync: async () =>
+                {
+                    var rutasPublicas = new[] { "/", "/Login/IniciarSesion", "/Login/Registro", "/Login/OlvideContrasena" };
+                    bool todasPublicasSinUnsafeInlineStyle = true;
+
+                    foreach (var r in rutasPublicas)
+                    {
+                        var ctx = new DefaultHttpContext();
+                        ctx.Request.Path = r;
+                        var h = await EjecutarMiddlewareSeguridadAsync(ctx);
+                        string csp = h["Content-Security-Policy"].ToString();
+                        var stylePart = csp.Split(';')
+                            .FirstOrDefault(p => p.TrimStart().StartsWith("style-src", StringComparison.OrdinalIgnoreCase)) ?? "";
+                        if (stylePart.Contains("'unsafe-inline'"))
+                        {
+                            todasPublicasSinUnsafeInlineStyle = false;
+                        }
+                    }
+
+                    // Ruta interna
+                    var ctxInterno = new DefaultHttpContext();
+                    ctxInterno.Request.Path = "/Administrador/Principal";
+                    var hInterno = await EjecutarMiddlewareSeguridadAsync(ctxInterno);
+                    string cspInterno = hInterno["Content-Security-Policy"].ToString();
+                    var stylePartInterno = cspInterno.Split(';')
+                        .FirstOrDefault(p => p.TrimStart().StartsWith("style-src", StringComparison.OrdinalIgnoreCase)) ?? "";
+                    bool internaTieneCompatibilidad = stylePartInterno.Contains("'unsafe-inline'");
+
+                    return $"RaizEstricta: {todasPublicasSinUnsafeInlineStyle}, LoginEstricto: {todasPublicasSinUnsafeInlineStyle}, RegistroEstricto: {todasPublicasSinUnsafeInlineStyle}, OlvideEstricto: {todasPublicasSinUnsafeInlineStyle}, InternaCompatible: {internaTieneCompatibilidad}";
                 });
 
             runner.VerificarTodosAprobados();

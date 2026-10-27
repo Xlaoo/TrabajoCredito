@@ -39,7 +39,10 @@
         const botonReenviar = document.getElementById("btnReenviarCodigo");
         const botonVerificar = document.getElementById("btnVerificarCodigo");
 
-        if (botonReenviar) botonReenviar.style.display = "none";
+        if (botonReenviar) {
+            botonReenviar.classList.add("elemento-oculto");
+            botonReenviar.style.display = "none";
+        }
         if (botonVerificar) botonVerificar.disabled = false;
 
         function actualizar() {
@@ -68,7 +71,10 @@
             segundosCodigoRecuperacion--;
         }
 
-        if (contador) contador.style.color = "#4f46e5";
+        if (contador) {
+            contador.classList.remove("contador-codigo-expirado");
+            contador.style.color = "#4f46e5";
+        }
         actualizar();
         intervaloCodigoRecuperacion = setInterval(actualizar, 1000);
     }
@@ -282,6 +288,7 @@
 
             mostrarMensaje("Te enviamos un nuevo código de seguridad.", true);
 
+            boton.classList.add("elemento-oculto");
             boton.style.display = "none";
             boton.disabled = false;
             boton.innerHTML = "🔄 Reenviar código";
@@ -322,10 +329,12 @@
         }
 
         if (botonOtraCuenta) {
+            botonOtraCuenta.classList.add("elemento-oculto");
             botonOtraCuenta.style.display = "none";
         }
 
         if (mensaje) {
+            mensaje.classList.add("elemento-oculto");
             mensaje.style.display = "none";
             mensaje.innerHTML = "";
         }
@@ -333,7 +342,10 @@
         const zonaCodigo = document.getElementById("zonaCodigoRecuperacion");
         const codigo = document.getElementById("codigoRecuperacion");
 
-        if (zonaCodigo) zonaCodigo.style.display = "none";
+        if (zonaCodigo) {
+            zonaCodigo.classList.add("elemento-oculto");
+            zonaCodigo.style.display = "none";
+        }
         if (codigo) codigo.value = "";
 
         if (dni) dni.focus();
@@ -507,9 +519,13 @@
                 if (mayus) {
                     if (/[A-Z]/.test(valor)) {
                         mayus.innerHTML = "✔ Una letra mayúscula";
+                        mayus.classList.add("regla-valida");
+                        mayus.classList.remove("regla-invalida");
                         mayus.style.color = "green";
                     } else {
                         mayus.innerHTML = "○ Una letra mayúscula";
+                        mayus.classList.add("regla-invalida");
+                        mayus.classList.remove("regla-valida");
                         mayus.style.color = "#64748b";
                     }
                 }
@@ -517,9 +533,13 @@
                 if (minus) {
                     if (/[a-z]/.test(valor)) {
                         minus.innerHTML = "✔ Una letra minúscula";
+                        minus.classList.add("regla-valida");
+                        minus.classList.remove("regla-invalida");
                         minus.style.color = "green";
                     } else {
                         minus.innerHTML = "○ Una letra minúscula";
+                        minus.classList.add("regla-invalida");
+                        minus.classList.remove("regla-valida");
                         minus.style.color = "#64748b";
                     }
                 }
@@ -527,9 +547,13 @@
                 if (numero) {
                     if (/[0-9]/.test(valor)) {
                         numero.innerHTML = "✔ Un número";
+                        numero.classList.add("regla-valida");
+                        numero.classList.remove("regla-invalida");
                         numero.style.color = "green";
                     } else {
                         numero.innerHTML = "○ Un número";
+                        numero.classList.add("regla-invalida");
+                        numero.classList.remove("regla-valida");
                         numero.style.color = "#64748b";
                     }
                 }
@@ -537,9 +561,13 @@
                 if (simbolo) {
                     if (/[^a-zA-Z0-9\s]/.test(valor)) {
                         simbolo.innerHTML = "✔ Un símbolo especial (!@#$%&*...)";
+                        simbolo.classList.add("regla-valida");
+                        simbolo.classList.remove("regla-invalida");
                         simbolo.style.color = "green";
                     } else {
                         simbolo.innerHTML = "○ Un símbolo especial (!@#$%&*...)";
+                        simbolo.classList.add("regla-invalida");
+                        simbolo.classList.remove("regla-valida");
                         simbolo.style.color = "#64748b";
                     }
                 }
@@ -547,9 +575,13 @@
                 if (longitud) {
                     if (valor.length >= 12) {
                         longitud.innerHTML = "✔ Mínimo 12 caracteres";
+                        longitud.classList.add("regla-valida");
+                        longitud.classList.remove("regla-invalida");
                         longitud.style.color = "green";
                     } else {
                         longitud.innerHTML = "○ Mínimo 12 caracteres";
+                        longitud.classList.add("regla-invalida");
+                        longitud.classList.remove("regla-valida");
                         longitud.style.color = "#64748b";
                     }
                 }

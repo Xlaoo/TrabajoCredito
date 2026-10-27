@@ -37,6 +37,7 @@
         }
         const msg = document.getElementById("otpMensajeModal");
         if (msg) {
+            msg.classList.remove("otp-msg-error", "otp-msg-success");
             msg.style.display = "none";
             msg.innerText = "";
         }
@@ -155,7 +156,11 @@
         iniciarCuentaRegresivaOtp();
 
         const modal = document.getElementById("modalOtpCorreo");
-        if (modal) modal.style.display = "flex";
+        if (modal) {
+            modal.classList.add("modal-visible");
+            modal.classList.add("modal-visible");
+        modal.style.display = "flex";
+        }
 
         setTimeout(() => {
             const primero = document.getElementById("otp-0");
@@ -166,7 +171,10 @@
     function cerrarModalOtp() {
         detenerCuentaRegresivaOtp();
         const modal = document.getElementById("modalOtpCorreo");
-        if (modal) modal.style.display = "none";
+        if (modal) {
+            modal.classList.remove("modal-visible");
+            modal.style.display = "none";
+        }
 
         const btn = document.getElementById("btnVerificarCorreo");
         if (!correoVerificado && btn) {
@@ -275,10 +283,9 @@
         if (!msg) return;
 
         msg.innerText = mensaje;
+        msg.classList.remove("otp-msg-error", "otp-msg-success");
+        msg.classList.add(esError ? "otp-msg-error" : "otp-msg-success");
         msg.style.display = "block";
-        msg.style.backgroundColor = esError ? "#fee2e2" : "#dcfce7";
-        msg.style.color = esError ? "#991b1b" : "#166534";
-        msg.style.border = esError ? "1px solid #fca5a5" : "1px solid #86efac";
     }
 
     async function confirmarOtpRegistro() {
@@ -335,7 +342,10 @@
 
             // Actualizar interfaz del formulario
             const badge = document.getElementById("badgeCorreoVerificado");
-            if (badge) badge.style.display = "inline-flex";
+            if (badge) {
+                badge.classList.add("badge-visible");
+                badge.style.display = "inline-flex";
+            }
 
             const btnVerificar = document.getElementById("btnVerificarCorreo");
             if (btnVerificar) {
@@ -371,12 +381,16 @@
             if (titulo) titulo.innerText = "CrediPlus";
         }
 
+        modal.classList.add("modal-visible");
         modal.style.display = "flex";
     }
 
     function cerrarMensajeRegistro() {
         const modal = document.getElementById("modalMensajeRegistro");
-        if (modal) modal.style.display = "none";
+        if (modal) {
+            modal.classList.remove("modal-visible");
+            modal.style.display = "none";
+        }
     }
 
     function inicializarRegistro() {
@@ -392,7 +406,10 @@
                     correoVerificado = false;
                     correoVerificadoTexto = "";
                     const badge = document.getElementById("badgeCorreoVerificado");
-                    if (badge) badge.style.display = "none";
+                    if (badge) {
+                        badge.classList.remove("badge-visible");
+                        badge.style.display = "none";
+                    }
                     const cod = document.getElementById("codigoRegistro");
                     if (cod) cod.value = "";
                     const btn = document.getElementById("btnVerificarCorreo");
@@ -485,9 +502,13 @@
                 if (mayus) {
                     if (/[A-Z]/.test(valor)) {
                         mayus.innerHTML = "✔ Una letra mayúscula";
+                        mayus.classList.add("regla-valida");
+                        mayus.classList.remove("regla-invalida");
                         mayus.style.color = "green";
                     } else {
                         mayus.innerHTML = "❌ Una letra mayúscula";
+                        mayus.classList.add("regla-invalida");
+                        mayus.classList.remove("regla-valida");
                         mayus.style.color = "#64748b";
                     }
                 }
@@ -495,9 +516,13 @@
                 if (minus) {
                     if (/[a-z]/.test(valor)) {
                         minus.innerHTML = "✔ Una letra minúscula";
+                        minus.classList.add("regla-valida");
+                        minus.classList.remove("regla-invalida");
                         minus.style.color = "green";
                     } else {
                         minus.innerHTML = "❌ Una letra minúscula";
+                        minus.classList.add("regla-invalida");
+                        minus.classList.remove("regla-valida");
                         minus.style.color = "#64748b";
                     }
                 }
@@ -505,9 +530,13 @@
                 if (numero) {
                     if (/[0-9]/.test(valor)) {
                         numero.innerHTML = "✔ Un número";
+                        numero.classList.add("regla-valida");
+                        numero.classList.remove("regla-invalida");
                         numero.style.color = "green";
                     } else {
                         numero.innerHTML = "❌ Un número";
+                        numero.classList.add("regla-invalida");
+                        numero.classList.remove("regla-valida");
                         numero.style.color = "#64748b";
                     }
                 }
@@ -515,9 +544,13 @@
                 if (simbolo) {
                     if (/[^a-zA-Z0-9\s]/.test(valor)) {
                         simbolo.innerHTML = "✔ Un símbolo especial (!@#$%&*...)";
+                        simbolo.classList.add("regla-valida");
+                        simbolo.classList.remove("regla-invalida");
                         simbolo.style.color = "green";
                     } else {
                         simbolo.innerHTML = "❌ Un símbolo especial (!@#$%&*...)";
+                        simbolo.classList.add("regla-invalida");
+                        simbolo.classList.remove("regla-valida");
                         simbolo.style.color = "#64748b";
                     }
                 }
@@ -525,9 +558,13 @@
                 if (minimo) {
                     if (valor.length >= 12) {
                         minimo.innerHTML = "✔ Mínimo 12 caracteres";
+                        minimo.classList.add("regla-valida");
+                        minimo.classList.remove("regla-invalida");
                         minimo.style.color = "green";
                     } else {
                         minimo.innerHTML = "❌ Mínimo 12 caracteres";
+                        minimo.classList.add("regla-invalida");
+                        minimo.classList.remove("regla-valida");
                         minimo.style.color = "#64748b";
                     }
                 }
@@ -618,6 +655,7 @@
                         const estado = document.getElementById("estadoVoz");
                         if (estado) {
                             estado.innerText = "✅ Usuario registrado exitosamente.";
+                            estado.classList.add("estado-voz-exito");
                             estado.style.color = "#16a34a";
                         }
 

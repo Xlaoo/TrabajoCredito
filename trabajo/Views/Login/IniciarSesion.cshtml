@@ -18,2688 +18,7 @@
             integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU"
             crossorigin="anonymous"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-    <style>
-            * {
-                box-sizing: border-box;
-            }
-
-            html,
-            body {
-                margin: 0;
-                padding: 0;
-                width: 100%;
-                min-height: 100%;
-            }
-
-            body {
-                min-height: 100vh;
-                background: linear-gradient(135deg, #240046, #3c096c, #4361ee, #00b4d8);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 24px;
-                font-family: Arial, sans-serif;
-            }
-
-            .main-box {
-                width: min(1250px, 100%);
-                min-height: 760px;
-                display: flex;
-                background: #ffffff;
-                border-radius: 28px;
-                overflow: hidden;
-                box-shadow: 0 25px 60px rgba(0, 0, 0, .35);
-            }
-
-            /* ==========================================
-                                   PANEL IZQUIERDO
-                                   ========================================== */
-
-            .left-panel {
-                width: 48%;
-                background: linear-gradient(160deg, #4cc9f0, #4361ee, #7209b7);
-                color: white;
-                padding: 45px 35px;
-                position: relative;
-                overflow: hidden;
-            }
-
-                .left-panel::before {
-                    content: "";
-                    position: absolute;
-                    width: 240px;
-                    height: 240px;
-                    border-radius: 50%;
-                    background: rgba(255, 255, 255, .18);
-                    bottom: -80px;
-                    left: -80px;
-                }
-
-                .left-panel::after {
-                    content: "";
-                    position: absolute;
-                    width: 170px;
-                    height: 170px;
-                    border-radius: 50%;
-                    background: rgba(255, 255, 255, .13);
-                    top: 70px;
-                    right: -70px;
-                }
-
-            .logo {
-                position: relative;
-                z-index: 2;
-                display: flex;
-                align-items: center;
-                width: 100%;
-            }
-
-            .logo-crediplus {
-                width: 190px;
-                max-width: 100%;
-                height: auto;
-                display: block;
-                object-fit: contain;
-                mix-blend-mode: multiply;
-                filter: contrast(1.05);
-            }
-
-            .welcome {
-                margin-top: 120px;
-                position: relative;
-                z-index: 2;
-            }
-
-                .welcome h1 {
-                    font-size: 52px;
-                    font-weight: bold;
-                    margin-bottom: 12px;
-                }
-
-                .welcome p {
-                    font-size: 20px;
-                    opacity: .95;
-                    line-height: 1.7;
-                    margin-bottom: 0;
-                }
-
-            .credit-icon {
-                font-size: 120px;
-                line-height: 1;
-                margin-top: 45px;
-            }
-
-            /* ==========================================
-                                   PANEL DERECHO
-                                   ========================================== */
-
-            .right-panel {
-                width: 52%;
-                padding: 95px 80px;
-                background: linear-gradient(135deg, #e0e7ff, #c7d2fe, #f3e8ff);
-            }
-
-                .right-panel h2 {
-                    color: #4c1d95;
-                    font-size: 42px;
-                    font-weight: bold;
-                    margin-bottom: 12px;
-                }
-
-            .subtitle {
-                color: #64748b;
-                margin-bottom: 35px;
-                font-size: 18px;
-            }
-
-            .input-util-wrap {
-                width: 100%;
-            }
-
-            .form-control {
-                width: 100%;
-                height: 60px;
-                border: none;
-                background: #eef2f7;
-                border-radius: 12px;
-                font-size: 18px;
-                padding-left: 18px;
-            }
-
-                .form-control:focus {
-                    box-shadow: 0 0 0 2px rgba(67, 97, 238, .25);
-                    background: #ffffff;
-                }
-
-            .btn-login {
-                width: 100%;
-                height: 62px;
-                border: none;
-                border-radius: 18px;
-                background: linear-gradient(135deg, #4361ee, #7209b7);
-                color: white;
-                font-size: 20px;
-                font-weight: bold;
-            }
-
-                .btn-login:hover {
-                    opacity: .9;
-                    color: white;
-                }
-
-            .register-link {
-                margin-top: 12px;
-                text-align: center;
-                font-size: 18px;
-                font-weight: 500;
-            }
-
-                .register-link a {
-                    color: #4f46e5;
-                    font-weight: bold;
-                    text-decoration: none;
-                }
-
-                    .register-link a:hover {
-                        text-decoration: underline;
-                    }
-
-            .back-btn {
-                display: block;
-                width: 100%;
-                margin-top: 30px;
-                padding: 14px 25px;
-                border-radius: 14px;
-                background: linear-gradient(135deg, #6d28d9, #7c3aed);
-                box-shadow: 0 8px 20px rgba(109, 40, 217, .35);
-                color: white;
-                text-align: center;
-                text-decoration: none;
-                font-weight: 700;
-                transition: .3s;
-            }
-
-                .back-btn:hover {
-                    background: linear-gradient(135deg, #5b21b6, #6d28d9);
-                    color: white;
-                    transform: translateY(-2px);
-                }
-
-            .btn-regresar {
-                display: inline-block !important;
-                margin-top: 20px !important;
-                padding: 14px 28px !important;
-                border-radius: 14px !important;
-                background: linear-gradient(135deg, #6d28d9, #7c3aed) !important;
-                box-shadow: 0 8px 20px rgba(109, 40, 217, .35);
-                color: white !important;
-                text-decoration: none !important;
-                font-size: 18px !important;
-                font-weight: 700 !important;
-                transition: .3s;
-            }
-
-                .btn-regresar:hover {
-                    background: linear-gradient(135deg, #5b21b6, #6d28d9) !important;
-                    color: white !important;
-                    transform: translateY(-3px);
-                }
-
-            /* ==========================================
-                                   MODALES
-                                   ========================================== */
-
-            .modal-seguridad,
-            .modal-crediplus,
-            .modal-codigo-crediplus {
-                border: none;
-                border-radius: 24px;
-                overflow: hidden;
-                background: #ffffff;
-                box-shadow: 0 25px 70px rgba(0, 0, 0, .30);
-            }
-
-                .modal-seguridad .modal-header,
-                .modal-crediplus .modal-header {
-                    padding: 28px 30px 15px;
-                    border: none;
-                }
-
-                .modal-seguridad .modal-body,
-                .modal-crediplus .modal-body {
-                    padding: 20px 30px;
-                }
-
-                .modal-seguridad .modal-footer,
-                .modal-crediplus .modal-footer {
-                    padding: 10px 30px 25px;
-                    border: none;
-                }
-
-            .icono-seguridad {
-                width: 60px;
-                height: 60px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 15px;
-                background: #e8f0ff;
-                color: #2563eb;
-                font-size: 28px;
-            }
-
-            .logo-modal-seguridad,
-            .logo-modal-codigo {
-                width: 62px;
-                height: 62px;
-                object-fit: contain;
-                border-radius: 16px;
-                padding: 7px;
-                background: #eef2ff;
-                box-shadow: 0 5px 15px rgba(67, 97, 238, .12);
-            }
-
-            .modal-crediplus .modal-title,
-            .modal-seguridad .modal-title {
-                color: #172554;
-                font-size: 22px;
-                font-weight: 800;
-            }
-
-            .texto-seguridad {
-                margin-top: 5px;
-                margin-bottom: 0;
-                color: #64748b;
-                font-size: 14px;
-                line-height: 1.5;
-            }
-
-            .opcion-seguridad {
-                display: flex;
-                align-items: center;
-                width: 100%;
-                margin-bottom: 12px;
-                padding: 16px;
-                border: 2px solid #e2e8f0;
-                border-radius: 16px;
-                background: #ffffff;
-                cursor: pointer;
-                transition: all .2s ease;
-            }
-
-                .opcion-seguridad:hover {
-                    border-color: #93c5fd;
-                    background: #f8fbff;
-                    transform: translateY(-1px);
-                }
-
-                .opcion-seguridad.seleccionada {
-                    border-color: #2563eb;
-                    background: #eff6ff;
-                    box-shadow: 0 5px 15px rgba(37, 99, 235, .08);
-                }
-
-                .btn.grabando {
-                    animation: pulsoGrabando 1.5s infinite;
-                }
-
-                @@keyframes pulsoGrabando {
-                    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
-                    70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
-                    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-                }
-
-            .opcion-icono {
-                width: 48px;
-                height: 48px;
-                min-width: 48px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin-right: 14px;
-                border-radius: 13px;
-                font-size: 22px;
-            }
-
-                .opcion-icono.correo {
-                    background: #dbeafe;
-                    color: #2563eb;
-                }
-
-                .opcion-icono.aplicacion {
-                    background: #ede9fe;
-                    color: #7c3aed;
-                }
-
-                .opcion-icono.voz {
-                    background: #dcfce7;
-                    color: #16a34a;
-                }
-
-            .opcion-contenido {
-                flex: 1;
-                min-width: 0;
-            }
-
-                .opcion-contenido h5 {
-                    margin: 0;
-                    color: #1e293b;
-                    font-size: 15px;
-                    font-weight: 800;
-                }
-
-                .opcion-contenido p {
-                    margin: 4px 0 0;
-                    color: #64748b;
-                    font-size: 12px;
-                    line-height: 1.45;
-                }
-
-            .radio-seguridad {
-                width: 22px;
-                height: 22px;
-                min-width: 22px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin-left: 12px;
-                border: 2px solid #cbd5e1;
-                border-radius: 50%;
-            }
-
-                .radio-seguridad span {
-                    width: 10px;
-                    height: 10px;
-                    display: block;
-                    border-radius: 50%;
-                }
-
-            .opcion-seguridad.seleccionada .radio-seguridad {
-                border-color: #2563eb;
-            }
-
-                .opcion-seguridad.seleccionada .radio-seguridad span {
-                    background: #2563eb;
-                }
-
-            .titulo-opcion {
-                display: flex;
-                align-items: center;
-                gap: 7px;
-                flex-wrap: wrap;
-            }
-
-            .badge-proximamente {
-                padding: 3px 7px;
-                border-radius: 20px;
-                background: #f1f5f9;
-                color: #64748b;
-                font-size: 9px;
-                font-weight: 700;
-            }
-
-            .btn-continuar-seguridad {
-                min-width: 125px;
-                border: none;
-                border-radius: 10px;
-                background: linear-gradient(135deg, #2563eb, #4f46e5);
-                font-weight: 700;
-            }
-
-                .btn-continuar-seguridad:hover {
-                    background: linear-gradient(135deg, #1d4ed8, #4338ca);
-                }
-
-            #mensajeAplicacion {
-                margin-bottom: 0;
-                border-radius: 10px;
-                font-size: 13px;
-            }
-
-            /* ==========================================
-                                   MODAL CÓDIGO
-                                   ========================================== */
-
-            .icono-correo-grande {
-                width: 75px;
-                height: 75px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin: 0 auto;
-                border-radius: 20px;
-                background: #dbeafe;
-                color: #2563eb;
-                font-size: 34px;
-            }
-
-            .codigo-input {
-                width: 100%;
-                height: 65px;
-                border: 2px solid #dbe4f0 !important;
-                border-radius: 14px !important;
-                background: #f8fafc !important;
-                color: #1e3a8a;
-                text-align: center;
-                font-size: 27px !important;
-                font-weight: 800;
-                letter-spacing: 10px;
-            }
-
-                .codigo-input:focus {
-                    border-color: #2563eb !important;
-                    background: #ffffff !important;
-                    box-shadow: 0 0 0 4px rgba(37, 99, 235, .10) !important;
-                }
-
-            .contador-codigo {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 7px;
-                margin-top: 15px;
-                color: #64748b;
-                font-size: 14px;
-            }
-
-                .contador-codigo i,
-                #tiempoCodigo {
-                    color: #2563eb;
-                }
-
-            #tiempoCodigo {
-                font-weight: 800;
-            }
-
-            .contador-expirado,
-            .contador-expirado i {
-                color: #dc2626 !important;
-            }
-
-            .btn-reenviar {
-                padding: 5px 10px;
-                border: none;
-                border-radius: 8px;
-                background: transparent;
-                color: #2563eb;
-                font-size: 14px;
-                font-weight: 700;
-                cursor: pointer;
-                transition: .2s;
-            }
-
-                .btn-reenviar:hover:not(:disabled) {
-                    background: #eff6ff;
-                }
-
-                .btn-reenviar:disabled {
-                    color: #94a3b8;
-                    cursor: not-allowed;
-                }
-
-            #mensajeCodigoLogin {
-                border-radius: 10px;
-                text-align: left;
-                font-size: 13px;
-            }
-
-            /* ==========================================
-                                   LAPTOP
-                                   ========================================== */
-
-            @@media (max-width: 1300px) {
-                body {
-                    padding: 25px;
-                }
-
-                .main-box {
-                    max-width: 1100px;
-                    min-height: 680px;
-                }
-
-                .left-panel {
-                    padding: 35px 30px;
-                }
-
-                .right-panel {
-                    padding: 70px 55px;
-                }
-
-                .welcome {
-                    margin-top: 90px;
-                }
-
-                    .welcome h1 {
-                        font-size: 46px;
-                    }
-
-                    .welcome p {
-                        font-size: 18px;
-                    }
-            }
-        /* ==========================================
-           FILTRO CREDIPLUS AUTHENTICATOR
-           ========================================== */
-
-        .modal-auth-filtro {
-            border: none;
-            border-radius: 26px;
-            overflow: hidden;
-            box-shadow: 0 25px 70px rgba(15, 23, 42, .30);
-        }
-
-            .modal-auth-filtro .modal-header {
-                padding: 28px 30px 16px;
-            }
-
-            .modal-auth-filtro .modal-body {
-                padding: 15px 30px 25px;
-            }
-
-        .auth-shield {
-            width: 54px;
-            height: 54px;
-            min-width: 54px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 16px;
-            background: linear-gradient(135deg, #dbeafe, #ede9fe);
-            color: #4f46e5;
-            font-size: 25px;
-        }
-
-        .auth-titulo {
-            margin: 0;
-            color: #172554;
-            font-size: 22px;
-            font-weight: 800;
-        }
-
-        .auth-subtitulo {
-            margin: 4px 0 0;
-            color: #64748b;
-            font-size: 13px;
-        }
-
-        .auth-pasos {
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            margin: 5px 0 28px;
-        }
-
-        .auth-paso {
-            min-width: 85px;
-            text-align: center;
-            color: #94a3b8;
-        }
-
-            .auth-paso span {
-                width: 34px;
-                height: 34px;
-                margin: auto;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 50%;
-                background: #e2e8f0;
-                font-weight: 800;
-            }
-
-            .auth-paso small {
-                display: block;
-                margin-top: 6px;
-                font-weight: 700;
-            }
-
-            .auth-paso.activo {
-                color: #2563eb;
-            }
-
-                .auth-paso.activo span {
-                    background: #2563eb;
-                    color: white;
-                    box-shadow: 0 5px 15px rgba(37, 99, 235, .25);
-                }
-
-        .auth-linea {
-            width: 100px;
-            height: 3px;
-            margin-top: 16px;
-            background: #e2e8f0;
-        }
-
-        .auth-info-box {
-            display: flex;
-            gap: 13px;
-            padding: 16px;
-            border: 1px solid #dbeafe;
-            border-radius: 16px;
-            background: #f8fbff;
-            color: #1e3a8a;
-        }
-
-            .auth-info-box > i {
-                margin-top: 2px;
-                color: #2563eb;
-                font-size: 21px;
-            }
-
-            .auth-info-box p {
-                margin: 5px 0 0;
-                color: #64748b;
-                font-size: 13px;
-                line-height: 1.5;
-            }
-
-        .auth-texto {
-            margin-top: 20px;
-            color: #64748b;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .auth-correo-box {
-            display: flex;
-            align-items: center;
-            gap: 13px;
-            margin-top: 12px;
-            padding: 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 16px;
-        }
-
-        .auth-correo-icon {
-            width: 43px;
-            height: 43px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 19px;
-        }
-
-        .auth-correo-box > div:nth-child(2) {
-            flex: 1;
-        }
-
-        .auth-correo-box small {
-            display: block;
-            color: #64748b;
-            font-size: 11px;
-        }
-
-        .auth-correo-box strong {
-            display: block;
-            margin-top: 2px;
-            color: #172554;
-            font-size: 14px;
-        }
-
-        .auth-check {
-            color: #22c55e;
-            font-size: 20px;
-        }
-
-        .auth-seguridad-nota {
-            display: flex;
-            gap: 9px;
-            margin-top: 15px;
-            padding: 12px 14px;
-            border-radius: 12px;
-            background: #f8fafc;
-            color: #64748b;
-            font-size: 12px;
-            line-height: 1.5;
-        }
-
-            .auth-seguridad-nota i {
-                color: #2563eb;
-            }
-
-        .auth-codigo-icon {
-            width: 68px;
-            height: 68px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 20px;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 30px;
-        }
-
-        .codigo-authenticator {
-            height: 64px;
-            border: 2px solid #dbe4f0 !important;
-            border-radius: 14px !important;
-            background: #f8fafc !important;
-            text-align: center;
-            font-size: 27px !important;
-            font-weight: 800;
-            letter-spacing: 9px;
-            color: #1e3a8a;
-        }
-
-            .codigo-authenticator:focus {
-                border-color: #2563eb !important;
-                background: white !important;
-                box-shadow: 0 0 0 4px rgba(37, 99, 235, .10) !important;
-            }
-
-        .auth-contador {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 7px;
-            color: #64748b;
-            font-size: 13px;
-        }
-
-            .auth-contador i,
-            .auth-contador strong {
-                color: #2563eb;
-            }
-
-        .auth-footer {
-            padding: 5px 30px 25px;
-        }
-
-        .auth-btn-principal {
-            border: none;
-            border-radius: 11px;
-            padding: 10px 18px;
-            background: linear-gradient(135deg, #2563eb, #4f46e5);
-            font-weight: 700;
-        }
-
-            /* ==========================================
-                                   TABLET
-                                   ========================================== */
-
-            @@media (max-width: 900px) {
-
-                body {
-                    align-items: flex-start;
-                    padding: 20px 14px;
-                }
-
-                .main-box {
-                    width: 100%;
-                    max-width: 700px;
-                    min-height: auto;
-                    height: auto;
-                    flex-direction: column;
-                    border-radius: 22px;
-                    overflow: hidden;
-                }
-
-                .left-panel,
-                .right-panel {
-                    width: 100%;
-                }
-                /* ================================
-                               PANEL SUPERIOR
-                               ================================ */
-
-                .left-panel {
-                    min-height: auto;
-                    height: auto;
-                    padding: 30px;
-                }
-
-                .logo-crediplus {
-                    width: 160px;
-                    max-width: 100%;
-                    height: auto;
-                }
-
-                .welcome {
-                    margin-top: 35px;
-                }
-
-                    .welcome h1 {
-                        font-size: 38px;
-                        line-height: 1.2;
-                        margin-bottom: 10px;
-                    }
-
-                    .welcome p {
-                        font-size: 17px;
-                        line-height: 1.5;
-                        margin-bottom: 0;
-                    }
-
-                .credit-icon {
-                    font-size: 75px;
-                    line-height: 1;
-                    margin-top: 20px;
-                    margin-bottom: 0;
-                }
-                /* ================================
-                               PANEL DEL FORMULARIO
-                               ================================ */
-
-                .right-panel {
-                    min-height: auto;
-                    height: auto;
-                    padding: 50px 45px;
-                }
-
-                    .right-panel h2 {
-                        font-size: 36px;
-                        line-height: 1.2;
-                        margin-bottom: 8px;
-                    }
-
-                .subtitle {
-                    font-size: 17px;
-                    margin-bottom: 28px;
-                }
-                /* ================================
-                               FORMULARIO
-                               ================================ */
-
-                .right-panel form {
-                    width: 100%;
-                    margin-bottom: 0;
-                }
-
-                    .right-panel form > *:last-child {
-                        margin-bottom: 0 !important;
-                    }
-
-                input,
-                .form-control {
-                    width: 100%;
-                    max-width: 100%;
-                    box-sizing: border-box;
-                }
-
-                .form-control {
-                    height: 58px;
-                    font-size: 17px;
-                }
-
-                .btn-login {
-                    width: 100%;
-                    height: 58px;
-                    font-size: 18px;
-                }
-
-                .register-link {
-                    font-size: 17px;
-                }
-
-                .back-btn {
-                    width: 100%;
-                    text-align: center;
-                    margin-bottom: 0;
-                }
-                /* ================================
-                               MODALES TABLET
-                               ================================ */
-
-                .modal-dialog {
-                    max-width: 560px;
-                    margin-left: auto;
-                    margin-right: auto;
-                }
-
-                .modal-content {
-                    max-width: 100%;
-                }
-
-                .modal-crediplus .modal-header,
-                .modal-crediplus .modal-body,
-                .modal-crediplus .modal-footer,
-                .modal-seguridad .modal-header,
-                .modal-seguridad .modal-body,
-                .modal-seguridad .modal-footer {
-                    padding-left: 24px;
-                    padding-right: 24px;
-                }
-
-                .opcion-seguridad {
-                    width: 100%;
-                }
-
-                .codigo-input {
-                    width: 100%;
-                    max-width: 100%;
-                    box-sizing: border-box;
-                }
-            }
-
-            /* ==========================================
-                                   CELULARES PEQUEÑOS
-                                   ========================================== */
-
-            @@media (max-width: 400px) {
-                .left-panel {
-                    padding: 18px;
-                }
-
-                .logo-crediplus {
-                    width: 120px;
-                }
-
-                .welcome {
-                    margin-top: 10px;
-                }
-
-                    .welcome h1 {
-                        font-size: 28px;
-                    }
-
-                    .welcome p {
-                        font-size: 14px;
-                    }
-
-                .credit-icon {
-                    margin-top: 8px;
-                    font-size: 42px;
-                }
-
-                .right-panel {
-                    padding: 27px 18px 24px;
-                }
-
-                    .right-panel h2 {
-                        font-size: 29px;
-                    }
-
-                .subtitle {
-                    margin-bottom: 20px;
-                    font-size: 14px;
-                }
-
-                .form-control {
-                    height: 52px;
-                    font-size: 15px;
-                }
-
-                .btn-login {
-                    height: 52px;
-                    font-size: 16px;
-                }
-
-                .codigo-input {
-                    height: 54px;
-                    font-size: 20px !important;
-                    letter-spacing: 4px;
-                }
-
-                .modal-dialog {
-                    max-width: calc(100% - 14px);
-                    margin: 7px auto;
-                }
-            }
-        /* ==========================================
-           DESCARGA CREDIPLUS AUTHENTICATOR
-           ========================================== */
-
-        .modal-auth-descarga {
-            border: none;
-            border-radius: 28px;
-            overflow: hidden;
-            background: #ffffff;
-            box-shadow: 0 30px 80px rgba(15, 23, 42, .30);
-        }
-
-        .auth-descarga-header {
-            padding: 26px 28px 20px;
-            border: none;
-            background: linear-gradient( 135deg, #eff6ff, #eef2ff, #f5f3ff );
-        }
-
-        .auth-app-presentacion {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .auth-app-logo {
-            width: 64px;
-            height: 64px;
-            min-width: 64px;
-            padding: 5px;
-            border-radius: 18px;
-            object-fit: cover;
-            background: #ffffff;
-            box-shadow: 0 8px 22px rgba(37, 99, 235, .18);
-        }
-
-        .auth-descarga-titulo {
-            margin: 0;
-            color: #172554;
-            font-size: 23px;
-            font-weight: 800;
-        }
-
-        .auth-descarga-subtitulo {
-            margin: 4px 0 0;
-            color: #64748b;
-            font-size: 13px;
-            line-height: 1.45;
-        }
-
-        .auth-descarga-body {
-            padding: 24px 28px 28px;
-        }
-
-        .auth-descarga-intro {
-            margin-bottom: 20px;
-            color: #475569;
-            font-size: 14px;
-            line-height: 1.6;
-            text-align: center;
-        }
-
-        .auth-qr-card {
-            width: 240px;
-            margin: 0 auto;
-            padding: 18px;
-            border: 1px solid #dbeafe;
-            border-radius: 22px;
-            background: #ffffff;
-            box-shadow: 0 12px 35px rgba(37, 99, 235, .10);
-            text-align: center;
-        }
-
-        .auth-qr-contenedor {
-            position: relative;
-            width: 190px;
-            height: 190px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #qrDescargaAuthenticator {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-            #qrDescargaAuthenticator img,
-            #qrDescargaAuthenticator canvas {
-                max-width: 190px;
-                max-height: 190px;
-            }
-
-        .auth-qr-logo-centro {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 42px;
-            height: 42px;
-            padding: 4px;
-            transform: translate(-50%, -50%);
-            border: 4px solid #ffffff;
-            border-radius: 12px;
-            object-fit: cover;
-            background: #ffffff;
-            box-shadow: 0 3px 10px rgba(15, 23, 42, .16);
-        }
-
-        .auth-qr-texto {
-            margin: 12px 0 0;
-            color: #64748b;
-            font-size: 12px;
-            line-height: 1.45;
-        }
-
-        .auth-descarga-separador {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 19px 0;
-            color: #94a3b8;
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-            .auth-descarga-separador::before,
-            .auth-descarga-separador::after {
-                content: "";
-                flex: 1;
-                height: 1px;
-                background: #e2e8f0;
-            }
-
-        .btn-descargar-auth {
-            width: 100%;
-            padding: 12px 18px;
-            border: none;
-            border-radius: 13px;
-            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
-            color: #ffffff;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 800;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            transition: .2s;
-        }
-
-            .btn-descargar-auth:hover {
-                color: #ffffff;
-                transform: translateY(-1px);
-                box-shadow: 0 8px 20px rgba(37, 99, 235, .22);
-            }
-
-        .auth-instalacion {
-            margin-top: 22px;
-            padding: 17px;
-            border-radius: 16px;
-            background: #f8fafc;
-        }
-
-        .auth-instalacion-titulo {
-            margin-bottom: 13px;
-            color: #1e293b;
-            font-size: 14px;
-            font-weight: 800;
-        }
-
-        .auth-instalacion-paso {
-            display: flex;
-            align-items: flex-start;
-            gap: 11px;
-            margin-bottom: 11px;
-        }
-
-            .auth-instalacion-paso:last-child {
-                margin-bottom: 0;
-            }
-
-        .auth-instalacion-numero {
-            width: 25px;
-            height: 25px;
-            min-width: 25px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .auth-instalacion-paso p {
-            margin: 2px 0 0;
-            color: #64748b;
-            font-size: 12px;
-            line-height: 1.45;
-        }
-
-        .auth-apk-seguro {
-            display: flex;
-            align-items: flex-start;
-            gap: 9px;
-            margin-top: 15px;
-            padding: 12px 13px;
-            border-radius: 12px;
-            background: #f0fdf4;
-            color: #166534;
-            font-size: 11px;
-            line-height: 1.45;
-        }
-
-        .auth-descarga-footer {
-            padding: 0 28px 25px;
-            border: none;
-        }
-
-        .btn-ya-instale {
-            border: none;
-            border-radius: 12px;
-            padding: 11px 18px;
-            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
-            font-weight: 700;
-        }
-
-        @@media (max-width: 500px) {
-
-            .auth-descarga-header,
-            .auth-descarga-body,
-            .auth-descarga-footer {
-                padding-left: 18px;
-                padding-right: 18px;
-            }
-
-            .auth-qr-card {
-                width: 220px;
-            }
-
-            .auth-qr-contenedor {
-                width: 170px;
-                height: 170px;
-            }
-
-            #qrDescargaAuthenticator img,
-            #qrDescargaAuthenticator canvas {
-                max-width: 170px;
-                max-height: 170px;
-            }
-
-            .auth-app-logo {
-                width: 56px;
-                height: 56px;
-                min-width: 56px;
-            }
-
-            .auth-descarga-titulo {
-                font-size: 20px;
-            }
-        }
-
-
-        /* ==========================================
-           GUÍA VISUAL AUTHENTICATOR
-           ========================================== */
-
-        .auth-guia-invitacion {
-            margin-top: 20px;
-            padding: 17px;
-            border: 1px solid #dbeafe;
-            border-radius: 16px;
-            background: #f8fbff;
-            text-align: center;
-        }
-
-            .auth-guia-invitacion i {
-                display: block;
-                margin-bottom: 8px;
-                color: #2563eb;
-                font-size: 27px;
-            }
-
-            .auth-guia-invitacion strong {
-                display: block;
-                color: #172554;
-                font-size: 14px;
-            }
-
-            .auth-guia-invitacion p {
-                margin: 5px 0 13px;
-                color: #64748b;
-                font-size: 12px;
-            }
-
-        .btn-ver-guia {
-            border: 1px solid #2563eb;
-            border-radius: 11px;
-            padding: 9px 16px;
-            background: #ffffff;
-            color: #2563eb;
-            font-size: 13px;
-            font-weight: 800;
-            transition: .2s;
-        }
-
-            .btn-ver-guia:hover {
-                background: #eff6ff;
-            }
-
-
-        /* MODAL GUÍA */
-
-        .modal-guia-auth {
-            border: none;
-            border-radius: 26px;
-            overflow: hidden;
-            background: white;
-            box-shadow: 0 30px 80px rgba(15, 23, 42, .30);
-        }
-
-        .guia-auth-header {
-            padding: 22px 25px;
-            border: none;
-            background: linear-gradient( 135deg, #eff6ff, #eef2ff, #f5f3ff );
-        }
-
-        .guia-auth-logo {
-            width: 48px;
-            height: 48px;
-            border-radius: 13px;
-            object-fit: cover;
-        }
-
-        .guia-auth-header h4 {
-            margin: 0;
-            color: #172554;
-            font-size: 20px;
-            font-weight: 800;
-        }
-
-        .guia-auth-header p {
-            margin: 3px 0 0;
-            color: #64748b;
-            font-size: 12px;
-        }
-
-        .guia-auth-body {
-            padding: 22px 25px;
-        }
-
-
-        /* IMAGEN */
-
-        .guia-imagen-contenedor {
-            width: 100%;
-            min-height: 330px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px;
-            border-radius: 18px;
-            background: #f8fafc;
-            overflow: hidden;
-        }
-
-        .guia-imagen {
-            display: block;
-            max-width: 100%;
-            max-height: 420px;
-            margin: auto;
-            border-radius: 14px;
-            object-fit: contain;
-            box-shadow: 0 8px 25px rgba(15, 23, 42, .12);
-        }
-
-
-        /* TEXTO DEL PASO */
-
-        .guia-paso-info {
-            margin-top: 18px;
-            text-align: center;
-        }
-
-        .guia-paso-numero {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 5px 12px;
-            border-radius: 20px;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .guia-paso-info h5 {
-            margin: 10px 0 6px;
-            color: #172554;
-            font-size: 18px;
-            font-weight: 800;
-        }
-
-        .guia-paso-info p {
-            max-width: 430px;
-            margin: 0 auto;
-            color: #64748b;
-            font-size: 13px;
-            line-height: 1.55;
-        }
-
-
-        /* BOTONES */
-
-        .guia-controles {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            margin-top: 22px;
-        }
-
-        .btn-guia-anterior,
-        .btn-guia-siguiente {
-            min-width: 120px;
-            padding: 10px 16px;
-            border-radius: 11px;
-            font-size: 13px;
-            font-weight: 800;
-        }
-
-        .btn-guia-anterior {
-            border: 1px solid #dbe4f0;
-            background: #ffffff;
-            color: #475569;
-        }
-
-        .btn-guia-siguiente {
-            border: none;
-            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
-            color: white;
-        }
-
-        .guia-indicadores {
-            display: flex;
-            justify-content: center;
-            gap: 7px;
-            margin-top: 17px;
-        }
-
-        .guia-indicador {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #cbd5e1;
-            transition: .2s;
-        }
-
-            .guia-indicador.activo {
-                width: 22px;
-                border-radius: 10px;
-                background: #2563eb;
-            }
-
-
-        /* CELULAR */
-
-        @@media (max-width: 500px) {
-
-            .guia-auth-header,
-            .guia-auth-body {
-                padding-left: 17px;
-                padding-right: 17px;
-            }
-
-            .guia-imagen-contenedor {
-                min-height: 260px;
-            }
-
-            .guia-imagen {
-                max-height: 330px;
-            }
-
-            .btn-guia-anterior,
-            .btn-guia-siguiente {
-                min-width: 105px;
-                padding: 9px 12px;
-            }
-        }
-        /* ==========================================
-           MODAL PRINCIPAL AUTHENTICATOR
-           ========================================== */
-
-        .modal-auth-descarga-principal {
-            border: none;
-            border-radius: 28px;
-            overflow: hidden;
-            background: #ffffff;
-            box-shadow: 0 30px 80px rgba(15, 23, 42, .30);
-        }
-
-        .auth-principal-header {
-            padding: 24px 28px 18px;
-            background: linear-gradient( 135deg, #eff6ff, #eef2ff, #f5f3ff );
-        }
-
-        .auth-principal-logo {
-            width: 62px;
-            height: 62px;
-            min-width: 62px;
-            padding: 5px;
-            border-radius: 17px;
-            object-fit: cover;
-            background: #ffffff;
-            box-shadow: 0 8px 22px rgba(37, 99, 235, .16);
-        }
-
-        .auth-principal-titulo {
-            margin: 0;
-            color: #172554;
-            font-size: 22px;
-            font-weight: 800;
-        }
-
-        .auth-principal-subtitulo {
-            margin: 4px 0 0;
-            color: #64748b;
-            font-size: 12px;
-        }
-
-        .auth-principal-body {
-            padding: 22px 28px 24px;
-        }
-
-        .auth-presentacion {
-            text-align: center;
-        }
-
-        .auth-presentacion-icono {
-            width: 62px;
-            height: 62px;
-            margin: 0 auto 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 18px;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 28px;
-        }
-
-        .auth-presentacion h5 {
-            margin-bottom: 7px;
-            color: #172554;
-            font-size: 19px;
-            font-weight: 800;
-        }
-
-        .auth-presentacion p {
-            max-width: 420px;
-            margin: 0 auto;
-            color: #64748b;
-            font-size: 13px;
-            line-height: 1.55;
-        }
-
-
-        /* BENEFICIOS */
-
-        .auth-beneficios {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .auth-beneficio {
-            padding: 13px;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            background: #f8fafc;
-            text-align: center;
-        }
-
-        .auth-beneficio-icono {
-            width: 38px;
-            height: 38px;
-            margin: 0 auto 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 11px;
-            background: #e0e7ff;
-            color: #4f46e5;
-            font-size: 18px;
-        }
-
-        .auth-beneficio strong {
-            display: block;
-            color: #1e293b;
-            font-size: 12px;
-        }
-
-        .auth-beneficio span {
-            display: block;
-            margin-top: 4px;
-            color: #64748b;
-            font-size: 10px;
-            line-height: 1.4;
-        }
-
-
-        /* QR */
-
-        .auth-principal-qr-seccion {
-            margin-top: 20px;
-            text-align: center;
-        }
-
-        .auth-principal-qr {
-            position: relative;
-            width: 210px;
-            height: 210px;
-            margin: 0 auto;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #dbeafe;
-            border-radius: 22px;
-            background: #ffffff;
-            box-shadow: 0 10px 30px rgba(37, 99, 235, .12);
-        }
-
-        #qrDescargaAuthenticator {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-            #qrDescargaAuthenticator img,
-            #qrDescargaAuthenticator canvas {
-                width: 190px !important;
-                height: 190px !important;
-            }
-
-        .auth-principal-qr-logo {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 44px;
-            height: 44px;
-            padding: 4px;
-            transform: translate(-50%, -50%);
-            border: 4px solid #ffffff;
-            border-radius: 12px;
-            background: #ffffff;
-            object-fit: cover;
-        }
-
-
-        /* ANDROID */
-
-        .auth-android-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-top: 18px;
-            padding: 13px 15px;
-            border-radius: 14px;
-            background: #f0fdf4;
-        }
-
-        .auth-android-icono {
-            width: 42px;
-            height: 42px;
-            min-width: 42px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            background: #dcfce7;
-            color: #16a34a;
-            font-size: 22px;
-        }
-
-        .auth-android-box strong {
-            display: block;
-            color: #166534;
-            font-size: 12px;
-        }
-
-        .auth-android-box p {
-            margin: 3px 0 0;
-            color: #4b7b5b;
-            font-size: 10px;
-            line-height: 1.4;
-        }
-
-
-        /* ADVERTENCIA */
-
-        .auth-advertencia-instalacion {
-            display: flex;
-            gap: 11px;
-            margin-top: 13px;
-            padding: 13px 15px;
-            border-radius: 14px;
-            background: #fff7ed;
-            color: #9a3412;
-        }
-
-            .auth-advertencia-instalacion > i {
-                margin-top: 2px;
-                color: #ea580c;
-                font-size: 19px;
-            }
-
-            .auth-advertencia-instalacion strong {
-                display: block;
-                font-size: 12px;
-            }
-
-            .auth-advertencia-instalacion p {
-                margin: 3px 0 0;
-                color: #9a3412;
-                font-size: 10px;
-                line-height: 1.45;
-            }
-
-
-        /* SEGURIDAD */
-
-        .auth-seguridad-apk {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            margin-top: 13px;
-            color: #64748b;
-            font-size: 10px;
-            text-align: center;
-        }
-
-            .auth-seguridad-apk i {
-                color: #2563eb;
-                font-size: 15px;
-            }
-
-
-        /* BOTÓN */
-
-        .auth-principal-footer {
-            padding: 0 28px 26px;
-        }
-
-        .auth-btn-iniciar-instalacion {
-            width: 100%;
-            padding: 13px 18px;
-            border: none;
-            border-radius: 13px;
-            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
-            color: #ffffff;
-            font-size: 14px;
-            font-weight: 800;
-            box-shadow: 0 8px 22px rgba(37, 99, 235, .22);
-        }
-
-            .auth-btn-iniciar-instalacion:hover {
-                background: linear-gradient( 135deg, #1d4ed8, #4338ca );
-                color: #ffffff;
-            }
-
-
-        /* RESPONSIVE */
-
-        @@media (max-width: 520px) {
-
-            .auth-principal-header,
-            .auth-principal-body,
-            .auth-principal-footer {
-                padding-left: 18px;
-                padding-right: 18px;
-            }
-
-            .auth-beneficios {
-                grid-template-columns: 1fr;
-            }
-
-            .auth-principal-qr {
-                width: 190px;
-                height: 190px;
-            }
-
-            #qrDescargaAuthenticator img,
-            #qrDescargaAuthenticator canvas {
-                width: 170px !important;
-                height: 170px !important;
-            }
-
-            .auth-principal-titulo {
-                font-size: 19px;
-            }
-        }
-        /* ==========================================
-           GUÍA PASO A PASO AUTHENTICATOR
-           ========================================== */
-
-        .modal-guia-instalacion {
-            border: none;
-            border-radius: 28px;
-            overflow: hidden;
-            background: #ffffff;
-            box-shadow: 0 30px 80px rgba(15, 23, 42, .30);
-        }
-
-        .guia-instalacion-header {
-            padding: 22px 26px;
-            border: none;
-            background: linear-gradient( 135deg, #eff6ff, #eef2ff, #f5f3ff );
-        }
-
-        .guia-etiqueta {
-            display: inline-block;
-            margin-bottom: 6px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: .5px;
-        }
-
-        .guia-titulo {
-            margin: 0;
-            color: #172554;
-            font-size: 22px;
-            font-weight: 800;
-        }
-
-        .guia-subtitulo {
-            margin: 4px 0 0;
-            color: #64748b;
-            font-size: 12px;
-        }
-
-        .guia-instalacion-body {
-            padding: 22px 26px 26px;
-        }
-
-        .guia-imagen-box {
-            width: 100%;
-            min-height: 340px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 14px;
-            border-radius: 20px;
-            background: #f8fafc;
-            overflow: hidden;
-        }
-
-        .guia-imagen-paso {
-            display: block;
-            max-width: 100%;
-            max-height: 430px;
-            object-fit: contain;
-            border-radius: 14px;
-            box-shadow: 0 10px 30px rgba(15, 23, 42, .15);
-        }
-
-        .guia-progreso {
-            margin-top: 18px;
-            text-align: center;
-        }
-
-        .guia-numero-paso {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 6px 14px;
-            border-radius: 20px;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .guia-paso-texto {
-            margin-top: 14px;
-            text-align: center;
-        }
-
-            .guia-paso-texto h5 {
-                margin-bottom: 7px;
-                color: #172554;
-                font-size: 20px;
-                font-weight: 800;
-            }
-
-            .guia-paso-texto p {
-                max-width: 520px;
-                margin: 0 auto;
-                color: #64748b;
-                font-size: 13px;
-                line-height: 1.55;
-            }
-
-        .guia-accion {
-            max-width: 520px;
-            margin: 14px auto 0;
-            padding: 12px 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            border-radius: 13px;
-            background: #eff6ff;
-            color: #1e40af;
-            font-size: 12px;
-        }
-
-            .guia-accion i {
-                color: #2563eb;
-                font-size: 17px;
-            }
-
-        .guia-indicadores-instalacion {
-            display: flex;
-            justify-content: center;
-            gap: 7px;
-            margin-top: 18px;
-        }
-
-        .guia-punto {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #cbd5e1;
-            transition: .2s;
-        }
-
-            .guia-punto.activo {
-                width: 24px;
-                border-radius: 10px;
-                background: #2563eb;
-            }
-
-        .guia-botones {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            margin-top: 22px;
-        }
-
-        .btn-guia-atras,
-        .btn-guia-siguiente {
-            min-width: 130px;
-            padding: 11px 18px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 800;
-        }
-
-        .btn-guia-atras {
-            border: 1px solid #dbe4f0;
-            background: #ffffff;
-            color: #64748b;
-        }
-
-            .btn-guia-atras:disabled {
-                opacity: .45;
-                cursor: not-allowed;
-            }
-
-        .btn-guia-siguiente {
-            border: none;
-            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
-            color: #ffffff;
-        }
-
-            .btn-guia-siguiente:hover {
-                background: linear-gradient( 135deg, #1d4ed8, #4338ca );
-            }
-
-
-        /* CELULAR */
-
-        @@media (max-width: 600px) {
-
-            .guia-instalacion-header,
-            .guia-instalacion-body {
-                padding-left: 17px;
-                padding-right: 17px;
-            }
-
-            .guia-imagen-box {
-                min-height: 260px;
-            }
-
-            .guia-imagen-paso {
-                max-height: 340px;
-            }
-
-            .guia-titulo {
-                font-size: 19px;
-            }
-
-            .btn-guia-atras,
-            .btn-guia-siguiente {
-                min-width: 110px;
-                padding: 10px 13px;
-            }
-        }
-        /* ==========================================
-           PASO 2 - DOS FORMAS DE ABRIR EL APK
-           ========================================== */
-
-        .guia-dos-imagenes {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        .guia-opcion-imagen {
-            position: relative;
-            padding-top: 14px;
-            text-align: center;
-        }
-
-        .guia-opcion-etiqueta {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            z-index: 2;
-            transform: translateX(-50%);
-            padding: 5px 13px;
-            border-radius: 20px;
-            background: #2563eb;
-            color: #ffffff;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: .4px;
-        }
-
-        .guia-imagen-box-doble {
-            min-height: 320px;
-        }
-
-            .guia-imagen-box-doble .guia-imagen-paso {
-                max-height: 390px;
-            }
-
-        .guia-opcion-texto {
-            max-width: 300px;
-            margin: 10px auto 0;
-            color: #64748b;
-            font-size: 11px;
-            line-height: 1.45;
-        }
-
-
-        /* CELULAR */
-
-        @@media (max-width: 650px) {
-
-            .guia-dos-imagenes {
-                grid-template-columns: 1fr;
-            }
-
-            .guia-imagen-box-doble {
-                min-height: 250px;
-            }
-
-                .guia-imagen-box-doble .guia-imagen-paso {
-                    max-height: 320px;
-                }
-        }
-        /* ==========================================
-           CONFIGURACIÓN TOTP AUTHENTICATOR
-           ========================================== */
-
-        .modal-totp-auth {
-            border: none;
-            border-radius: 26px;
-            overflow: hidden;
-            background: #ffffff;
-            box-shadow: 0 30px 80px rgba(15, 23, 42, .30);
-        }
-
-        .totp-header {
-            padding: 22px 26px;
-            border: none;
-            background: linear-gradient( 135deg, #eff6ff, #eef2ff, #f5f3ff );
-        }
-
-        .totp-icono {
-            width: 54px;
-            height: 54px;
-            min-width: 54px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 16px;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 24px;
-        }
-
-        .totp-header h4 {
-            margin: 0;
-            color: #172554;
-            font-size: 21px;
-            font-weight: 800;
-        }
-
-        .totp-header p {
-            margin: 3px 0 0;
-            color: #64748b;
-            font-size: 12px;
-        }
-
-        .totp-body {
-            padding: 23px 26px;
-        }
-
-        .totp-intro {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-            .totp-intro h5 {
-                margin-bottom: 6px;
-                color: #172554;
-                font-size: 18px;
-                font-weight: 800;
-            }
-
-            .totp-intro p {
-                margin: 0;
-                color: #64748b;
-                font-size: 12px;
-                line-height: 1.55;
-            }
-
-
-        /* DATOS */
-
-        .totp-dato-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 11px;
-            padding: 14px;
-            border: 1px solid #dbe4f0;
-            border-radius: 14px;
-            background: #f8fafc;
-        }
-
-        .totp-dato-icono {
-            width: 40px;
-            height: 40px;
-            min-width: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 11px;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 17px;
-        }
-
-            .totp-dato-icono.clave {
-                background: #ede9fe;
-                color: #7c3aed;
-            }
-
-        .totp-dato-contenido {
-            flex: 1;
-            min-width: 0;
-        }
-
-            .totp-dato-contenido span {
-                display: block;
-                color: #64748b;
-                font-size: 10px;
-            }
-
-            .totp-dato-contenido strong {
-                display: block;
-                margin-top: 3px;
-                color: #172554;
-                font-size: 13px;
-                word-break: break-all;
-            }
-
-        .totp-clave {
-            letter-spacing: 1px;
-        }
-
-        .btn-copiar-totp {
-            width: 36px;
-            height: 36px;
-            min-width: 36px;
-            border: none;
-            border-radius: 10px;
-            background: #ffffff;
-            color: #2563eb;
-            box-shadow: 0 3px 10px rgba(15, 23, 42, .08);
-        }
-
-
-        /* AYUDA */
-
-        .totp-ayuda {
-            display: flex;
-            gap: 11px;
-            margin-top: 16px;
-            padding: 13px 14px;
-            border-radius: 14px;
-            background: #eff6ff;
-        }
-
-            .totp-ayuda > i {
-                margin-top: 2px;
-                color: #2563eb;
-                font-size: 20px;
-            }
-
-            .totp-ayuda strong {
-                color: #1e40af;
-                font-size: 12px;
-            }
-
-            .totp-ayuda p {
-                margin: 4px 0 0;
-                color: #64748b;
-                font-size: 11px;
-                line-height: 1.5;
-            }
-
-        .totp-separador {
-            margin: 21px 0;
-            border-color: #e2e8f0;
-        }
-
-
-        /* VERIFICACIÓN */
-
-        .totp-verificacion {
-            text-align: center;
-        }
-
-            .totp-verificacion h6 {
-                color: #172554;
-                font-size: 15px;
-                font-weight: 800;
-            }
-
-            .totp-verificacion p {
-                max-width: 430px;
-                margin: 5px auto 14px;
-                color: #64748b;
-                font-size: 11px;
-                line-height: 1.5;
-            }
-
-        .totp-codigo-input {
-            width: 230px !important;
-            height: 58px;
-            margin: 0 auto;
-            border: 2px solid #dbe4f0 !important;
-            border-radius: 14px !important;
-            background: #f8fafc !important;
-            color: #1e3a8a;
-            text-align: center;
-            font-size: 25px !important;
-            font-weight: 800;
-            letter-spacing: 8px;
-        }
-
-            .totp-codigo-input:focus {
-                border-color: #2563eb !important;
-                background: #ffffff !important;
-                box-shadow: 0 0 0 4px rgba(37, 99, 235, .10) !important;
-            }
-
-
-        /* FOOTER */
-
-        .totp-footer {
-            padding: 5px 26px 24px;
-            border: none;
-        }
-
-        .btn-verificar-totp {
-            border: none;
-            border-radius: 11px;
-            padding: 10px 17px;
-            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
-            font-weight: 700;
-        }
-
-
-        @@media (max-width: 520px) {
-
-            .totp-header,
-            .totp-body,
-            .totp-footer {
-                padding-left: 17px;
-                padding-right: 17px;
-            }
-
-            .totp-footer {
-                gap: 8px;
-            }
-
-            .totp-codigo-input {
-                width: 100% !important;
-            }
-        }
-        /* ==========================================
-           QR CONFIGURACIÓN TOTP
-           ========================================== */
-
-        .totp-qr-seccion {
-            margin-top: 18px;
-            padding: 16px;
-            border: 1px solid #dbeafe;
-            border-radius: 16px;
-            background: #f8fbff;
-            text-align: center;
-        }
-
-        .totp-qr-titulo {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            color: #172554;
-            font-size: 13px;
-        }
-
-            .totp-qr-titulo i {
-                color: #2563eb;
-                font-size: 18px;
-            }
-
-        .totp-qr-descripcion {
-            margin: 6px 0 13px;
-            color: #64748b;
-            font-size: 11px;
-        }
-
-        .totp-qr-box {
-            position: relative;
-            width: 180px;
-            height: 180px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px;
-            border-radius: 16px;
-            background: #ffffff;
-            box-shadow: 0 7px 20px rgba(37, 99, 235, .10);
-        }
-
-        #qrConfiguracionTotp img,
-        #qrConfiguracionTotp canvas {
-            width: 164px !important;
-            height: 164px !important;
-        }
-
-        .totp-qr-logo {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 38px;
-            height: 38px;
-            transform: translate(-50%, -50%);
-            padding: 3px;
-            border: 4px solid white;
-            border-radius: 10px;
-            background: white;
-            object-fit: cover;
-        }
-
-        .totp-qr-alternativa {
-            display: block;
-            margin-top: 11px;
-            color: #64748b;
-            font-size: 10px;
-        }
-
-
-        /* BOTÓN GUÍA */
-
-        .btn-guia-vinculacion {
-            width: 100%;
-            margin-top: 12px;
-            padding: 10px 14px;
-            border: 1px solid #bfdbfe;
-            border-radius: 12px;
-            background: #ffffff;
-            color: #2563eb;
-            font-size: 12px;
-            font-weight: 800;
-        }
-
-            .btn-guia-vinculacion:hover {
-                background: #eff6ff;
-            }
-
-
-        /* MODAL GUÍA VINCULACIÓN */
-
-        .modal-guia-totp {
-            border: none;
-            border-radius: 22px;
-            overflow: hidden;
-        }
-
-        .guia-totp-header {
-            padding: 20px 22px;
-            border: none;
-            background: linear-gradient( 135deg, #eff6ff, #eef2ff );
-        }
-
-            .guia-totp-header h5 {
-                margin: 0;
-                color: #172554;
-                font-weight: 800;
-            }
-
-            .guia-totp-header p {
-                margin: 3px 0 0;
-                color: #64748b;
-                font-size: 11px;
-            }
-
-        .guia-totp-body {
-            padding: 20px 22px;
-        }
-
-        .guia-totp-opcion {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 13px;
-            padding: 13px;
-            border: 1px solid #e2e8f0;
-            border-radius: 13px;
-        }
-
-        .guia-totp-numero {
-            width: 31px;
-            height: 31px;
-            min-width: 31px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            background: #dbeafe;
-            color: #2563eb;
-            font-weight: 800;
-        }
-
-        .guia-totp-opcion strong {
-            color: #172554;
-            font-size: 12px;
-        }
-
-        .guia-totp-opcion p {
-            margin: 4px 0 0;
-            color: #64748b;
-            font-size: 11px;
-            line-height: 1.5;
-        }
-
-        .guia-totp-final {
-            display: flex;
-            gap: 11px;
-            padding: 13px;
-            border-radius: 13px;
-            background: #f0fdf4;
-        }
-
-            .guia-totp-final > i {
-                color: #16a34a;
-                font-size: 20px;
-            }
-
-            .guia-totp-final strong {
-                color: #166534;
-                font-size: 12px;
-            }
-
-            .guia-totp-final p {
-                margin: 3px 0 0;
-                color: #4b7b5b;
-                font-size: 11px;
-            }
-        /* ==========================================
-           GUÍA VISUAL VINCULACIÓN TOTP
-           ========================================== */
-
-        .guia-vinculacion-body {
-            padding: 20px 22px 22px;
-        }
-
-        .guia-totp-badge {
-            display: inline-block;
-            margin-bottom: 5px;
-            padding: 4px 9px;
-            border-radius: 20px;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 9px;
-            font-weight: 800;
-            letter-spacing: .4px;
-        }
-
-        .guia-vinculacion-paso {
-            text-align: center;
-        }
-
-        .guia-vinculacion-imagen {
-            width: 100%;
-            min-height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px;
-            border-radius: 17px;
-            background: #f8fafc;
-        }
-
-            .guia-vinculacion-imagen img {
-                display: block;
-                max-width: 100%;
-                max-height: 390px;
-                object-fit: contain;
-                border-radius: 12px;
-                box-shadow: 0 8px 25px rgba(15, 23, 42, .12);
-            }
-
-        .guia-vinculacion-numero {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 5px 12px;
-            border-radius: 20px;
-            background: #dbeafe;
-            color: #2563eb;
-            font-size: 10px;
-            font-weight: 800;
-        }
-
-        .guia-vinculacion-paso h5 {
-            margin: 10px 0 5px;
-            color: #172554;
-            font-size: 18px;
-            font-weight: 800;
-        }
-
-        .guia-vinculacion-paso > p {
-            max-width: 430px;
-            margin: 0 auto;
-            color: #64748b;
-            font-size: 11px;
-            line-height: 1.55;
-        }
-
-        .guia-vinculacion-nota {
-            max-width: 430px;
-            margin: 12px auto 0;
-            padding: 11px 13px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            border-radius: 12px;
-            background: #eff6ff;
-            color: #1e40af;
-            font-size: 11px;
-        }
-
-            .guia-vinculacion-nota i {
-                color: #2563eb;
-                font-size: 16px;
-            }
-
-        .guia-vinculacion-indicadores {
-            display: flex;
-            justify-content: center;
-            gap: 7px;
-            margin-top: 17px;
-        }
-
-        .guia-vinculacion-punto {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #cbd5e1;
-            transition: .2s;
-        }
-
-            .guia-vinculacion-punto.activo {
-                width: 23px;
-                border-radius: 10px;
-                background: #2563eb;
-            }
-
-        .guia-vinculacion-botones {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            margin-top: 18px;
-        }
-
-        .btn-guia-vinculacion-atras,
-        .btn-guia-vinculacion-siguiente {
-            min-width: 115px;
-            padding: 10px 15px;
-            border-radius: 11px;
-            font-size: 12px;
-            font-weight: 800;
-        }
-
-        .btn-guia-vinculacion-atras {
-            border: 1px solid #dbe4f0;
-            background: #ffffff;
-            color: #64748b;
-        }
-
-            .btn-guia-vinculacion-atras:disabled {
-                opacity: .45;
-            }
-
-        .btn-guia-vinculacion-siguiente {
-            border: none;
-            background: linear-gradient( 135deg, #2563eb, #4f46e5 );
-            color: #ffffff;
-        }
-
-        @@media (max-width: 520px) {
-
-            .guia-vinculacion-body {
-                padding-left: 15px;
-                padding-right: 15px;
-            }
-
-            .guia-vinculacion-imagen {
-                min-height: 240px;
-            }
-
-                .guia-vinculacion-imagen img {
-                    max-height: 310px;
-                }
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/iniciar-sesion.css" asp-append-version="true" />
 </head>
 
 <body>
@@ -2794,8 +113,7 @@
                     <button class="btn btn-login" type="submit">Iniciar Sesión</button>
                 </div>
                 <div id="mensajeLogin"
-                     class="alert alert-danger mt-3"
-                     style="display:none;">
+                     class="alert alert-danger mt-3 oculto-inicial">
                 </div>
                 @if (ViewData["Mensaje"] != null)
                 {
@@ -2852,22 +170,21 @@
                     <!-- REGISTRO DE VOZ OBLIGATORIO -->
 
                     <div id="bloqueRegistroVoz"
-                         style="display:none;">
+                         class="oculto-inicial">
 
                         <div class="text-center mb-3">
 
-                            <div class="icono-seguridad mx-auto mb-3"
-                                 style="background:#ede9fe;color:#7c3aed;">
+                            <div class="icono-seguridad icono-seguridad-morado mx-auto mb-3">
 
                                 <i class="bi bi-mic-fill"></i>
 
                             </div>
 
-                            <h5 style="font-weight:800;color:#1e293b;">
+                            <h5 class="titulo-seguridad-oscuro">
                                 Registro de voz obligatorio
                             </h5>
 
-                            <p style="color:#64748b;font-size:14px;">
+                            <p class="texto-seguridad-sub">
                                 No tienes registrada una voz de seguridad.
                                 Debes realizar una grabación para continuar.
                             </p>
@@ -2876,7 +193,7 @@
 
                         <div class="seguridad-voz-box">
 
-                            <p style="font-weight:700;color:#3c096c;">
+                            <p class="texto-palabra-clave">
                                 🎙️ Palabra o frase clave:
                             </p>
 
@@ -2894,15 +211,14 @@
                             </button>
 
                             <div id="estadoVozLogin"
-                                 class="text-center mt-3"
-                                 style="font-size:13px;color:#64748b;">
+                                 class="text-center mt-3 estado-voz-login-texto">
 
                                 ⚪ Aún no has grabado tu voz
 
                             </div>
 
-                            <div id="btnCancelarRenovacionFormulario" class="text-center mt-3" style="display:none;">
-                                <button type="button" class="btn btn-link text-decoration-none text-muted p-0" style="font-size:13px;" id="btnCancelarRenovacionDesdeFormulario">
+                            <div id="btnCancelarRenovacionFormulario" class="text-center mt-3 oculto-inicial">
+                                <button type="button" class="btn btn-link text-decoration-none text-muted p-0 btn-cancelar-renovacion-link" id="btnCancelarRenovacionDesdeFormulario">
                                     <i class="bi bi-arrow-left me-1"></i> Cancelar y volver a selección de métodos
                                 </button>
                             </div>
@@ -2913,22 +229,21 @@
                     <!-- VERIFICACIÓN DE VOZ -->
 
                     <div id="bloqueVerificacionVoz"
-                         style="display:none;">
+                         class="oculto-inicial">
 
                         <div class="text-center mb-3">
 
-                            <div class="icono-seguridad mx-auto mb-3"
-                                 style="background:#dcfce7;color:#16a34a;">
+                            <div class="icono-seguridad icono-seguridad-verde mx-auto mb-3">
 
                                 <i class="bi bi-mic-fill"></i>
 
                             </div>
 
-                            <h5 style="font-weight:800;color:#1e293b;">
+                            <h5 class="titulo-seguridad-oscuro">
                                 Verificación por voz
                             </h5>
 
-                            <p style="color:#64748b;font-size:14px;">
+                            <p class="texto-seguridad-sub">
                                 Di tu frase de seguridad para verificar tu identidad.
                             </p>
 
@@ -2936,7 +251,7 @@
 
                         <div class="seguridad-voz-box">
 
-                            <p style="font-weight:700;color:#3c096c;">
+                            <p class="texto-palabra-clave">
                                 🎙️ Palabra o frase clave registrada:
                             </p>
 
@@ -2954,8 +269,7 @@
                             </button>
 
                             <div id="estadoVerificacionVoz"
-                                 class="text-center mt-3"
-                                 style="font-size:13px;color:#64748b;">
+                                 class="text-center mt-3 estado-voz-login-texto">
 
                                 ⚪ Aún no has realizado la verificación
 
@@ -2996,7 +310,7 @@
                         <div class="opcion-icono aplicacion">
                             <img src="~/imagenes/AplicacionCrediplus.jpeg"
                                  alt="CrediPlus Authenticator"
-                                 style="width:38px;height:38px;border-radius:9px;object-fit:cover;" />
+                                 class="logo-app-authenticator-mini" />
                         </div>
 
                         <div class="opcion-contenido">
@@ -3041,13 +355,11 @@
 
                     <!-- ENLACE DISCRETO PARA ACTUALIZAR BIOMETRÍA DE VOZ -->
                     <div id="contenedorCambiarBiometria"
-                         class="text-center mt-2 mb-2"
-                         style="display:none;">
+                         class="text-center mt-2 mb-2 oculto-inicial">
                         <a href="#" id="linkCambiarBiometriaVoz"
-                           class="text-decoration-none fw-semibold"
-                           style="color:#6366f1;font-size:13px;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:10px;background:#f5f3ff;border:1px solid #ddd6fe;transition:all 0.2s ease;">
-                            <i class="bi bi-arrow-repeat fs-6" style="color:#7c3aed;"></i>
-                            <span style="color:#6d28d9;">🔄 ¿Deseas cambiar tu biometría de voz y palabra secreta?</span>
+                           class="text-decoration-none fw-semibold link-cambiar-biometria-pill">
+                            <i class="bi bi-arrow-repeat fs-6 icono-morado-biometria"></i>
+                            <span class="texto-morado-biometria">🔄 ¿Deseas cambiar tu biometría de voz y palabra secreta?</span>
                         </a>
                     </div>
 
@@ -3140,15 +452,14 @@
                         </div>
 
 
-                        <h5 class="mt-4 fw-bold"
-                            style="color:#1e293b;">
+                        <h5 class="mt-4 fw-bold titulo-revisa-correo">
 
                             Revisa tu correo
 
                         </h5>
 
 
-                        <p style="color:#64748b; font-size:14px;">
+                        <p class="texto-seguridad-sub">
 
                             Ingresa el código de 6 caracteres
                             que recibiste.
@@ -3210,8 +521,7 @@
                         <!-- MENSAJE -->
 
                         <div id="mensajeCodigoLogin"
-                             class="mt-3"
-                             style="display:none;">
+                             class="mt-3 oculto-inicial">
                         </div>
 
                     </div>
@@ -3260,46 +570,19 @@
 
         <div class="modal-dialog modal-dialog-centered modal-sm">
 
-            <div class="modal-content"
-                 style="
-                border:none;
-                border-radius:22px;
-                box-shadow:0 20px 60px rgba(0,0,0,.25);
-                ">
+            <div class="modal-content modal-voz-no-habilitada-dialog">
 
                 <div class="modal-body text-center p-4">
 
-                    <div style="
-                        width:70px;
-                        height:70px;
-                        margin:0 auto 18px;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        border-radius:50%;
-                        background:#fff7ed;
-                        color:#ea580c;
-                        font-size:31px;
-                        ">
-
+                    <div class="icono-aviso-naranja-circular">
                         <i class="bi bi-shield-lock-fill"></i>
-
                     </div>
 
-
-                    <h5 style="
-                        font-weight:800;
-                        color:#1e293b;
-                        ">
+                    <h5 class="titulo-seguridad-oscuro">
                         Acceso por voz pendiente
                     </h5>
 
-
-                    <p style="
-                        color:#64748b;
-                        font-size:14px;
-                        line-height:1.6;
-                        ">
+                    <p class="texto-seguridad-aviso">
 
                         Tu voz ya está registrada.
 
@@ -3350,18 +633,18 @@
          aria-hidden="true">
 
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content modal-auth-filtro" style="border:none;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,0.22);overflow:hidden;">
+            <div class="modal-content modal-auth-filtro modal-renovacion-card">
 
                 <div class="modal-header border-0 pb-1">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="auth-shield" style="background:#ede9fe;color:#7c3aed;width:50px;height:50px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:24px;">
+                        <div class="auth-shield auth-shield-renovacion">
                             <i class="bi bi-shield-lock-fill"></i>
                         </div>
                         <div>
-                            <h4 class="modal-title auth-titulo fw-bold mb-0" id="tituloRenovacionModal" style="color:#1e293b;font-size:18px;">
+                            <h4 class="modal-title auth-titulo fw-bold mb-0 titulo-renovacion-modal" id="tituloRenovacionModal">
                                 🔐 Actualizar biometría de voz
                             </h4>
-                            <p class="auth-subtitulo text-muted mb-0" id="subtituloRenovacionModal" style="font-size:13px;">
+                            <p class="auth-subtitulo text-muted mb-0 subtitulo-renovacion-modal" id="subtituloRenovacionModal">
                                 Verificación previa de identidad
                             </p>
                         </div>
@@ -3379,28 +662,28 @@
                     <!-- PANTALLA 1: SOLICITAR CÓDIGO DE SEGURIDAD  -->
                     <!-- ========================================== -->
                     <div id="renovacionPaso1">
-                        <div class="auth-info-box p-3 mb-3" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;">
+                        <div class="auth-info-box p-3 mb-3 info-box-renovacion">
                             <div class="d-flex align-items-start gap-3">
-                                <i class="bi bi-shield-check fs-4" style="color:#7c3aed;"></i>
+                                <i class="bi bi-shield-check fs-4 icono-morado-shield"></i>
                                 <div>
-                                    <strong style="color:#1e293b;font-size:14px;display:block;" class="mb-1">
+                                    <strong class="strong-renovacion-info mb-1">
                                         Para proteger tu cuenta, necesitamos verificar tu identidad antes de permitirte cambiar tu biometría de voz y tu palabra secreta.
                                     </strong>
-                                    <p class="mb-0 text-muted" style="font-size:13px;">
+                                    <p class="mb-0 text-muted p-renovacion-info">
                                         Enviaremos un código de seguridad al correo electrónico registrado en tu cuenta.
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="auth-correo-box p-3 mb-3 d-flex align-items-center justify-content-between" style="background:#f1f5f9;border-radius:14px;border:1px solid #e2e8f0;">
+                        <div class="auth-correo-box p-3 mb-3 d-flex align-items-center justify-content-between correo-box-renovacion">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="auth-correo-icon" style="background:#e0e7ff;color:#4f46e5;width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;">
+                                <div class="auth-correo-icon correo-icon-renovacion">
                                     <i class="bi bi-envelope-check-fill"></i>
                                 </div>
                                 <div>
-                                    <small class="text-muted d-block" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;">Correo registrado</small>
-                                    <strong id="correoOcultoRenovacion" style="color:#1e293b;font-size:14.5px;">
+                                    <small class="text-muted d-block small-correo-label">Correo registrado</small>
+                                    <strong id="correoOcultoRenovacion" class="strong-correo-texto">
                                         Cargando...
                                     </strong>
                                 </div>
@@ -3408,21 +691,21 @@
                             <i class="bi bi-check-circle-fill text-success fs-5"></i>
                         </div>
 
-                        <div class="d-flex align-items-center gap-2 mb-3" style="font-size:12px;color:#64748b;">
-                            <i class="bi bi-info-circle-fill" style="color:#7c3aed;"></i>
+                        <div class="d-flex align-items-center gap-2 mb-3 nota-info-renovacion">
+                            <i class="bi bi-info-circle-fill icono-info-morado"></i>
                             <span>El código será de un solo uso y tendrá una vigencia estricta de 60 segundos.</span>
                         </div>
 
-                        <div id="mensajeRenovacionPaso1" class="alert alert-danger py-2 px-3 mb-3" style="display:none;font-size:13px;border-radius:10px;"></div>
+                        <div id="mensajeRenovacionPaso1" class="alert alert-danger py-2 px-3 mb-3 oculto-inicial alert-renovacion-custom"></div>
 
                         <div class="d-flex gap-2 mt-4">
-                            <button type="button" id="btnCancelarRenovacionPaso1" class="btn btn-light flex-fill py-2 fw-semibold" style="border-radius:12px;color:#475569;">
+                            <button type="button" id="btnCancelarRenovacionPaso1" class="btn btn-light flex-fill py-2 fw-semibold btn-cancelar-paso-renovacion">
                                 Cancelar
                             </button>
                             <button type="button"
                                     id="btnEnviarCodigoRenovacion"
                                     class="btn btn-primary flex-fill py-2 fw-semibold shadow-sm"
-                                    style="background:#7c3aed;border-color:#7c3aed;border-radius:12px;"
+                                    class="btn btn-primary flex-fill py-2 fw-semibold shadow-sm btn-enviar-renovacion-morado"
                                     >
                                 <i class="bi bi-send-fill me-1"></i> Enviar código de verificación
                             </button>
@@ -3432,59 +715,58 @@
                     <!-- ========================================== -->
                     <!-- PANTALLA 2: INTRODUCIR OTP DE 6 CASILLAS    -->
                     <!-- ========================================== -->
-                    <div id="renovacionPaso2" style="display:none;">
+                    <div id="renovacionPaso2" class="oculto-inicial">
                         <div class="text-center mb-3">
-                            <div class="mx-auto mb-2" style="background:#ede9fe;color:#7c3aed;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;">
+                            <div class="mx-auto mb-2 icono-paso2-circular-morado">
                                 <i class="bi bi-envelope-open-fill"></i>
                             </div>
-                            <h5 class="fw-bold mb-1" style="color:#1e293b;">
+                            <h5 class="fw-bold mb-1 titulo-seguridad-oscuro">
                                 📩 Verifica tu identidad
                             </h5>
-                            <p class="text-muted mb-1" style="font-size:13px;">
+                            <p class="text-muted mb-1 subtitulo-renovacion-modal">
                                 Hemos enviado un código de seguridad a tu correo electrónico. Ingrésalo para continuar con la actualización de tu biometría.
                             </p>
-                            <strong id="correoOcultoRenovacion2" style="color:#7c3aed;font-size:14px;"></strong>
+                            <strong id="correoOcultoRenovacion2" class="strong-correo-morado"></strong>
                         </div>
 
                         <!-- SEIS CASILLAS PARA EL CÓDIGO -->
                         <div class="d-flex justify-content-center gap-2 my-3" id="contenedorCasillasOtp">
-                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="0" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
-                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="1" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
-                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="2" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
-                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="3" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
-                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="4" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
-                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion text-center fw-bold fs-4" data-index="5" style="width:46px;height:52px;border:2px solid #cbd5e1;border-radius:12px;font-size:24px;color:#1e293b;outline:none;transition:all 0.2s;" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion casilla-otp-custom text-center fw-bold fs-4" data-index="0" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion casilla-otp-custom text-center fw-bold fs-4" data-index="1" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion casilla-otp-custom text-center fw-bold fs-4" data-index="2" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion casilla-otp-custom text-center fw-bold fs-4" data-index="3" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion casilla-otp-custom text-center fw-bold fs-4" data-index="4" />
+                            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" class="casilla-otp-renovacion casilla-otp-custom text-center fw-bold fs-4" data-index="5" />
                         </div>
 
                         <!-- CONTADOR REGRESIVO 1 MINUTO -->
                         <div class="text-center my-2">
-                            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill" style="background:#f1f5f9;font-size:13px;color:#64748b;border:1px solid #e2e8f0;">
-                                <i class="bi bi-clock-fill" id="iconoRelojRenovacion" style="color:#7c3aed;"></i>
-                                <span id="textoContadorRenovacion">El código vence en <strong id="tiempoOtpRenovacion" style="color:#7c3aed;">01:00</strong></span>
+                            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill pill-contador-renovacion">
+                                <i class="bi bi-clock-fill icono-reloj-morado" id="iconoRelojRenovacion"></i>
+                                <span id="textoContadorRenovacion">El código vence en <strong id="tiempoOtpRenovacion" class="tiempo-otp-morado">01:00</strong></span>
                             </div>
                         </div>
 
                         <div class="text-center mb-2">
                             <button type="button"
                                     id="btnReenviarOtpRenovacion"
-                                    class="btn btn-link btn-sm text-decoration-none fw-semibold"
-                                    style="color:#7c3aed;"
+                                    class="btn btn-link btn-sm text-decoration-none fw-semibold btn-reenviar-morado"
 
                                     disabled>
                                 <i class="bi bi-arrow-clockwise me-1"></i> Reenviar código
                             </button>
                         </div>
 
-                        <div id="mensajeRenovacionPaso2" class="alert py-2 px-3 mb-3 text-center" style="display:none;font-size:13px;border-radius:10px;"></div>
+                        <div id="mensajeRenovacionPaso2" class="alert py-2 px-3 mb-3 text-center oculto-inicial alert-renovacion-custom"></div>
 
                         <div class="d-flex gap-2 mt-3">
-                            <button type="button" id="btnCancelarRenovacionPaso1" class="btn btn-light flex-fill py-2 fw-semibold" style="border-radius:12px;color:#475569;">
+                            <button type="button" id="btnCancelarRenovacionPaso1" class="btn btn-light flex-fill py-2 fw-semibold btn-cancelar-paso-renovacion">
                                 Regresar o cancelar
                             </button>
                             <button type="button"
                                     id="btnVerificarOtpRenovacion"
                                     class="btn btn-success flex-fill py-2 fw-semibold shadow-sm"
-                                    style="background:#16a34a;border-color:#16a34a;border-radius:12px;"
+                                    class="btn btn-success flex-fill py-2 fw-semibold shadow-sm btn-verificar-renovacion-verde"
                                     >
                                 <i class="bi bi-check-circle-fill me-1"></i> Verificar código
                             </button>
@@ -3624,8 +906,7 @@
 
 
                         <div id="mensajeAuthenticatorPaso1"
-                             class="mt-3"
-                             style="display:none;">
+                             class="mt-3 oculto-inicial">
                         </div>
 
                     </div>
@@ -3636,7 +917,7 @@
                     <!-- ============================= -->
 
                     <div id="authPaso2"
-                         style="display:none;">
+                         class="oculto-inicial">
 
                         <div class="text-center">
 
@@ -3644,8 +925,7 @@
                                 <i class="bi bi-envelope-open-fill"></i>
                             </div>
 
-                            <h5 class="mt-3 fw-bold"
-                                style="color:#172554;">
+                            <h5 class="mt-3 fw-bold titulo-revisa-correo-azul">
                                 Revisa tu correo
                             </h5>
 
@@ -3654,7 +934,7 @@
                             </p>
 
                             <strong id="correoOcultoAuthenticator2"
-                                    style="color:#2563eb;">
+                                    class="correo-authenticator-azul">
                             </strong>
 
 
@@ -3695,8 +975,7 @@
 
 
                             <div id="mensajeAuthenticatorPaso2"
-                                 class="mt-3"
-                                 style="display:none;">
+                                 class="mt-3 oculto-inicial">
                             </div>
 
                         </div>
@@ -3728,9 +1007,7 @@
 
                     <button type="button"
                             id="btnVerificarAuthenticator"
-                            class="btn btn-primary auth-btn-principal"
-
-                            style="display:none;">
+                            class="btn btn-primary auth-btn-principal oculto-inicial">
 
                         <i class="bi bi-shield-check me-1"></i>
                         Verificar identidad
@@ -3753,58 +1030,25 @@
 
         <div class="modal-dialog modal-dialog-centered modal-sm">
 
-            <div class="modal-content"
-                 style="
-                border:none;
-                border-radius:24px;
-                box-shadow:0 25px 70px rgba(15,23,42,.30);
-                overflow:hidden;
-             ">
+            <div class="modal-content modal-identidad-confirmada-dialog">
 
                 <div class="modal-body text-center p-4">
 
                     <!-- ICONO -->
 
-                    <div style="
-                    width:76px;
-                    height:76px;
-                    margin:0 auto 20px;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    border-radius:50%;
-                    background:#dcfce7;
-                    color:#16a34a;
-                    font-size:34px;
-                ">
-
+                    <div class="icono-exito-verde-circular">
                         <i class="bi bi-shield-check"></i>
-
                     </div>
-
 
                     <!-- TÍTULO -->
 
-                    <h4 style="
-                    color:#172554;
-                    font-weight:800;
-                    margin-bottom:10px;
-                ">
-
+                    <h4 class="titulo-identidad-confirmada">
                         Identidad confirmada
-
                     </h4>
-
 
                     <!-- TEXTO -->
 
-                    <p style="
-                    color:#64748b;
-                    font-size:14px;
-                    line-height:1.6;
-                    margin-bottom:18px;
-                ">
-
+                    <p class="texto-identidad-confirmada">
                         Hemos confirmado correctamente
                         que eres el propietario de esta cuenta.
 
@@ -3812,45 +1056,20 @@
 
                         Ahora puedes continuar con la configuración
                         de <strong>CrediPlus Authenticator</strong>.
-
                     </p>
-
 
                     <!-- SEGURIDAD -->
 
-                    <div style="
-                    padding:13px;
-                    border-radius:14px;
-                    background:#f0fdf4;
-                    color:#166534;
-                    font-size:12px;
-                    text-align:left;
-                    margin-bottom:20px;
-                ">
-
+                    <div class="box-identidad-seguridad">
                         <i class="bi bi-lock-fill me-1"></i>
-
                         La configuración estará vinculada únicamente
                         a tu cuenta y al dispositivo que registres.
-
                     </div>
-
 
                     <!-- BOTÓN -->
 
                     <button type="button"
-                            class="btn btn-primary w-100"
-                            style="
-                            border:none;
-                            border-radius:12px;
-                            padding:12px;
-                            font-weight:700;
-                            background:linear-gradient(
-                                135deg,
-                                #2563eb,
-                                #4f46e5
-                            );
-                        "
+                            class="btn btn-primary w-100 btn-continuar-config-auth"
                             id="btnContinuarConfiguracionAuthenticator">
 
                         Continuar configuración
@@ -4221,9 +1440,8 @@
                     PASO 2
                     ===================================================== -->
 
-                    <div class="guia-paso-pagina"
-                         id="guiaInstalacionPaso2"
-                         style="display:none;">
+                    <div class="guia-paso-pagina oculto-inicial"
+                         id="guiaInstalacionPaso2">
 
                         <!-- DOS FORMAS DE ABRIR EL APK -->
 
@@ -4327,9 +1545,8 @@
                     PASO 3
                     ===================================================== -->
 
-                    <div class="guia-paso-pagina"
-                         id="guiaInstalacionPaso3"
-                         style="display:none;">
+                    <div class="guia-paso-pagina oculto-inicial"
+                         id="guiaInstalacionPaso3">
 
                         <div class="guia-imagen-box">
                             <img src="~/PASO A PASO/paso_3.jpeg"
@@ -4372,9 +1589,8 @@
                          PASO 4
                          ===================================================== -->
 
-                    <div class="guia-paso-pagina"
-                         id="guiaInstalacionPaso4"
-                         style="display:none;">
+                    <div class="guia-paso-pagina oculto-inicial"
+                         id="guiaInstalacionPaso4">
 
                         <div class="guia-imagen-box">
                             <img src="~/PASO A PASO/paso_4.jpeg"
@@ -4417,9 +1633,8 @@
                          PASO 5
                          ===================================================== -->
 
-                    <div class="guia-paso-pagina"
-                         id="guiaInstalacionPaso5"
-                         style="display:none;">
+                    <div class="guia-paso-pagina oculto-inicial"
+                         id="guiaInstalacionPaso5">
 
                         <div class="guia-imagen-box">
                             <img src="~/PASO A PASO/paso_5.jpeg"
@@ -4464,9 +1679,8 @@
                          PASO 6
                          ===================================================== -->
 
-                    <div class="guia-paso-pagina"
-                         id="guiaInstalacionPaso6"
-                         style="display:none;">
+                    <div class="guia-paso-pagina oculto-inicial"
+                         id="guiaInstalacionPaso6">
 
                         <div class="guia-imagen-box">
                             <img src="~/PASO A PASO/paso_6.jpeg"
@@ -4510,9 +1724,8 @@
                          PASO 7
                          ===================================================== -->
 
-                    <div class="guia-paso-pagina"
-                         id="guiaInstalacionPaso7"
-                         style="display:none;">
+                    <div class="guia-paso-pagina oculto-inicial"
+                         id="guiaInstalacionPaso7">
 
                         <div class="guia-imagen-box">
                             <img src="~/PASO A PASO/paso_7.jpeg"
@@ -4555,9 +1768,8 @@
                          PASO 8
                       ===================================================== -->
 
-                    <div class="guia-paso-pagina"
-                         id="guiaInstalacionPaso8"
-                         style="display:none;">
+                    <div class="guia-paso-pagina oculto-inicial"
+                         id="guiaInstalacionPaso8">
 
                         <div class="guia-imagen-box">
                             <img src="~/PASO A PASO/paso_8.jpeg"
@@ -4862,8 +2074,7 @@
 
 
                         <div id="mensajeConfiguracionTotp"
-                             class="mt-3"
-                             style="display:none;">
+                             class="mt-3 oculto-inicial">
                         </div>
 
                     </div>
@@ -4998,9 +2209,8 @@
                          PASO 2
                          ============================= -->
 
-                    <div class="guia-vinculacion-paso"
-                         id="guiaVinculacionPaso2"
-                         style="display:none;">
+                    <div class="guia-vinculacion-paso oculto-inicial"
+                         id="guiaVinculacionPaso2">
 
                         <div class="guia-vinculacion-imagen">
 
@@ -5045,9 +2255,8 @@
                          PASO 3
                          ============================= -->
 
-                    <div class="guia-vinculacion-paso"
-                         id="guiaVinculacionPaso3"
-                         style="display:none;">
+                    <div class="guia-vinculacion-paso oculto-inicial"
+                         id="guiaVinculacionPaso3">
 
                         <div class="guia-vinculacion-imagen">
 
@@ -5090,9 +2299,8 @@
                          PASO 4
                          ============================= -->
 
-                    <div class="guia-vinculacion-paso"
-                         id="guiaVinculacionPaso4"
-                         style="display:none;">
+                    <div class="guia-vinculacion-paso oculto-inicial"
+                         id="guiaVinculacionPaso4">
 
                         <div class="guia-vinculacion-imagen">
 
@@ -5193,59 +2401,28 @@
 
         <div class="modal-dialog modal-dialog-centered">
 
-            <div class="modal-content"
-                 style="
-                border:none;
-                border-radius:22px;
-                box-shadow:0 20px 60px rgba(0,0,0,.25);
-                ">
+            <div class="modal-content modal-confirmar-voz-dialog">
 
                 <div class="modal-body text-center p-4">
 
-                    <div style="
-                        width:70px;
-                        height:70px;
-                        margin:0 auto 18px;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        border-radius:50%;
-                        background:#dcfce7;
-                        color:#16a34a;
-                        font-size:31px;
-                        ">
+                    <div class="icono-voz-detectada-verde">
                         <i class="bi bi-mic-fill"></i>
                     </div>
 
-                    <h5 style="
-                        font-weight:800;
-                        color:#1e293b;
-                        ">
+                    <h5 class="titulo-seguridad-oscuro">
                         Voz detectada
                     </h5>
 
-                    <p style="
-                        color:#64748b;
-                        font-size:14px;
-                        ">
+                    <p class="texto-seguridad-sub">
                         Detectamos que dijiste:
                     </p>
 
                     <div id="textoRegistroVozDetectado"
-                         class="alert alert-light"
-                         style="
-                        font-size:18px;
-                        font-weight:800;
-                        color:#3c096c;
-                        border-radius:14px;
-                        ">
+                         class="alert alert-light texto-voz-detectado-box">
                         ...
                     </div>
 
-                    <p style="
-                        color:#64748b;
-                        font-size:14px;
-                        ">
+                    <p class="texto-seguridad-sub">
                         ¿Deseas registrar esta frase y esta voz
                         como seguridad de tu cuenta?
                     </p>
@@ -5292,139 +2469,48 @@
 
         <div class="modal-dialog modal-dialog-centered">
 
-            <div class="modal-content"
-                 style="
-                border:none;
-                border-radius:24px;
-                overflow:hidden;
-                box-shadow:0 25px 70px rgba(15,23,42,.30);
-             ">
+            <div class="modal-content modal-esperando-auth-dialog">
 
                 <div class="modal-body text-center p-4">
 
-                    <div style="
-                        width:65px;
-                        height:65px;
-                        margin:5px auto 15px;
-                        border-radius:20px;
-                        background:#dbeafe;
-                        color:#2563eb;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        font-size:30px;
-                    ">
-
-                        <i id="iconoEstadoAuthenticator"
-                           class="bi bi-phone"></i>
-
+                    <div class="icono-esperando-auth-box">
+                        <i id="iconoEstadoAuthenticator" class="bi bi-phone"></i>
                     </div>
 
-                    <h4 id="tituloEstadoAuthenticator"
-                        style="
-                        color:#172554;
-                        font-weight:800;
-                        margin-bottom:8px;
-                    ">
+                    <h4 id="tituloEstadoAuthenticator" class="titulo-esperando-auth">
                         Confirma desde tu celular
                     </h4>
 
-                    <p id="textoEstadoAuthenticator"
-                       style="
-                        color:#64748b;
-                        font-size:14px;
-                        margin-bottom:18px;
-                   ">
-                        Hemos enviado una solicitud a
-                        CrediPlus Authenticator.
+                    <p id="textoEstadoAuthenticator" class="texto-esperando-auth">
+                        Hemos enviado una solicitud a CrediPlus Authenticator.
                     </p>
 
-
                     <div id="contenedorNumeroAuthenticator">
-
-                        <small style="
-                            color:#64748b;
-                            font-weight:600;
-                          ">
+                        <small class="small-num-verificacion">
                             NÚMERO DE VERIFICACIÓN
                         </small>
-
-                        <div id="numeroEstadoAuthenticator"
-                             style="
-                            margin:8px auto 18px;
-                            width:125px;
-                            padding:10px;
-                            border-radius:14px;
-                            background:#eff6ff;
-                            color:#1e3a8a;
-                            font-size:32px;
-                            font-weight:900;
-                            letter-spacing:5px;
-                         ">
+                        <div id="numeroEstadoAuthenticator" class="numero-verificacion-box">
                             --
                         </div>
-
                     </div>
 
-
-                    <div id="esperandoEstadoAuthenticator"
-                         class="flex-column align-items-center justify-content-center gap-2"
-                         style="display:flex;">
-
+                    <div id="esperandoEstadoAuthenticator" class="d-flex flex-column align-items-center justify-content-center gap-2">
                         <div class="d-flex align-items-center gap-2">
-
-                            <div class="spinner-border spinner-border-sm text-primary"
-                                 role="status">
-                            </div>
-
-                            <span style="
-            color:#475569;
-            font-size:13px;
-        ">
-                                Esperando confirmación...
-                            </span>
-
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="span-esperando-texto">Esperando confirmación...</span>
                         </div>
-
-                        <div style="
-        color:#64748b;
-        font-size:13px;
-        margin-top:5px;
-    ">
-                            La solicitud expira en
-                            <strong id="tiempoSolicitudAuthenticator"
-                                    style="color:#2563eb;">
-                                30 s
-                            </strong>
+                        <div class="div-expira-texto">
+                            La solicitud expira en <strong id="tiempoSolicitudAuthenticator" class="strong-tiempo-azul">30 s</strong>
                         </div>
-
                     </div>
 
-                    <button type="button"
-                            id="btnCancelarEstadoAuthenticator"
-                            class="btn btn-outline-danger mt-3 px-4"
-                            >
-
-                        <i class="bi bi-x-circle me-1"></i>
-
-                        Cancelar solicitud
-
+                    <button type="button" id="btnCancelarEstadoAuthenticator" class="btn btn-outline-danger mt-3 px-4">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar solicitud
                     </button>
-                    <button type="button"
-                            id="btnReenviarEstadoAuthenticator"
-                            class="btn btn-primary mt-3 px-4"
-                            style="display:none;"
-                            >
-
-                        <i class="bi bi-arrow-clockwise me-1"></i>
-                        Reenviar solicitud
-
+                    <button type="button" id="btnReenviarEstadoAuthenticator" class="btn btn-primary mt-3 px-4 oculto-inicial">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Reenviar solicitud
                     </button>
-                    <button type="button"
-                            id="btnCerrarEstadoAuthenticator"
-                            class="btn btn-light mt-3 px-4"
-                            data-bs-dismiss="modal"
-                            style="display:none;">
+                    <button type="button" id="btnCerrarEstadoAuthenticator" class="btn btn-light mt-3 px-4 oculto-inicial" data-bs-dismiss="modal">
                         Cerrar
                     </button>
 
