@@ -17,6 +17,17 @@ namespace trabajo.Hubs
 
         public async Task UnirseConversacion(int idAdministrador, int idAnalista)
         {
+            if (idAdministrador <= 0)
+            {
+                idAdministrador = _context.Usuario.FirstOrDefault(x => x.Rol == "Administrador")?.Id ?? 0;
+            }
+            if (idAnalista <= 0)
+            {
+                var dni = Context.User?.FindFirst("Dni")?.Value;
+                idAnalista = _context.Usuario.FirstOrDefault(x => x.Dni == dni && x.Rol == "Analista")?.Id
+                             ?? _context.Usuario.FirstOrDefault(x => x.Rol == "Analista")?.Id ?? 0;
+            }
+
             string grupo = $"admin_{idAdministrador}_analista_{idAnalista}";
             await Groups.AddToGroupAsync(Context.ConnectionId, grupo);
         }
@@ -30,8 +41,32 @@ namespace trabajo.Hubs
         {
             if (string.IsNullOrWhiteSpace(mensaje)) return;
 
+            if (idAdministrador <= 0)
+            {
+                idAdministrador = _context.Usuario.FirstOrDefault(x => x.Rol == "Administrador")?.Id ?? 0;
+            }
+            if (idAnalista <= 0)
+            {
+                var dni = Context.User?.FindFirst("Dni")?.Value;
+                idAnalista = _context.Usuario.FirstOrDefault(x => x.Dni == dni && x.Rol == "Analista")?.Id
+                             ?? _context.Usuario.FirstOrDefault(x => x.Rol == "Analista")?.Id ?? 0;
+            }
+
             // El rol del remitente lo determina el servidor, no el cliente.
-            string remitenteRol = Context.User?.FindFirst(ClaimTypes.Role)?.Value ?? "Desconocido";
+            string remitenteRol = Context.User?.FindFirst(ClaimTypes.Role)?.Value
+                                  ?? Context.User?.FindFirst("Rol")?.Value
+                                  ?? (Context.User?.IsInRole("Administrador") == true ? "Administrador" : "Analista");
+
+            if (string.IsNullOrEmpty(remitenteRol) || remitenteRol == "Desconocido")
+            {
+                var dniClaim = Context.User?.FindFirst("Dni")?.Value;
+                var correoClaim = Context.User?.FindFirst(ClaimTypes.Email)?.Value ?? Context.User?.FindFirst("Correo")?.Value;
+                var usuarioDb = _context.Usuario.FirstOrDefault(x => (dniClaim != null && x.Dni == dniClaim) || (correoClaim != null && x.Correo == correoClaim));
+                if (usuarioDb != null)
+                {
+                    remitenteRol = usuarioDb.Rol;
+                }
+            }
 
             var nuevoMensaje = new MensajeAdminAnalista
             {

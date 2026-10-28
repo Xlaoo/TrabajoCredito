@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    1. ÁREA DE CONTENIDO PRINCIPAL (Content & Top Bar)
    ========================================================================== */
 
@@ -512,3 +512,14 @@
             margin-top: 7px !important;
             text-decoration: none !important;
         }
+
+.alerta-sub-muted {
+    color: #6b7280;
+}
+
+.alerta-rapida-toggle-btn {
+    cursor: pointer;
+    font-size: 18px;
+    color: #6b7280;
+    user-select: none;
+}

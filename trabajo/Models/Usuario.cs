@@ -21,7 +21,7 @@ namespace trabajo.Models
         public string clave { get; set; } = null!;
         public string Rol { get; set; } = null!;
         public DateTime FechaRegistro { get; set; }
-        public string Genero { get; set; }
+        public string? Genero { get; set; }
         public bool EstadoActivo { get; set; }
         public DateTime? UltimaConexion { get; set; }
         public bool NotificacionCorreo { get; set; } = true;

@@ -2506,7 +2506,8 @@ namespace trabajo.Controllers
             ViewBag.CorreoAnalista = correo;
             var admin = _context.Usuario.FirstOrDefault(x => x.Rol == "Administrador");
             var dni = User.FindFirst("Dni")?.Value;
-            var analista = _context.Usuario.FirstOrDefault(x => x.Dni == dni && x.Rol == "Analista");
+            var analista = _context.Usuario.FirstOrDefault(x => x.Dni == dni && x.Rol == "Analista")
+                           ?? _context.Usuario.FirstOrDefault(x => x.Rol == "Analista");
 
             ViewBag.IdAdministrador = admin?.Id ?? 0;
             ViewBag.IdAnalista = analista?.Id ?? 0;
@@ -2516,9 +2517,27 @@ namespace trabajo.Controllers
                 .ToList();
             ViewBag.AdminActivo = admin != null &&
                                   admin.EstadoActivo &&
-                                  admin.UltimaConexion >= DateTime.Now.AddMinutes(-2);
+                                  admin.UltimaConexion.HasValue &&
+                                  admin.UltimaConexion.Value >= DateTime.Now.AddMinutes(-2);
 
             return View();
+        }
+
+        [HttpGet]
+        public IActionResult EstadoAdminActual()
+        {
+            var admin = _context.Usuario.FirstOrDefault(x => x.Rol == "Administrador");
+
+            bool activo = admin != null &&
+                          admin.EstadoActivo &&
+                          admin.UltimaConexion.HasValue &&
+                          admin.UltimaConexion.Value >= DateTime.Now.AddMinutes(-2);
+
+            return Json(new
+            {
+                activo = activo,
+                texto = activo ? "Administrador Activo" : "Administrador Inactivo"
+            });
         }
         [HttpPost]
         public IActionResult EnviarSolicitudSoporte(string asunto, string mensaje)

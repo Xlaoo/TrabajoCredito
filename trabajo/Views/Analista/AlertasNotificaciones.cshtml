@@ -5,6 +5,7 @@
     ViewData["Title"] = "Alertas y Notificaciones";
     ViewData["ActivePage"] = "AlertasNotificaciones";
 }
+
 <div class="top-bar">
 
     <div>
@@ -22,62 +23,24 @@
     </div>
 
     <a href="@Url.Action("PerfilAnalista", "Analista")"
-       style="
-        background:white;
-        border-radius:20px;
-        padding:20px 25px;
-        display:flex;
-        align-items:center;
-        gap:15px;
-        width:320px;
-        text-decoration:none;
-        color:#241041;
-        box-shadow:0 10px 30px rgba(124,58,237,.08);
-        cursor:pointer;">
+       class="profile-box profile-link">
 
-        <div style="
-        width:60px;
-        height:60px;
-        min-width:60px;
-        border-radius:50%;
-        background:linear-gradient(135deg,#6d28d9,#9333ea);
-        color:white;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:25px;">
+        <div class="avatar">
             <i class="fas fa-user"></i>
         </div>
 
-        <div style="
-        display:flex;
-        flex-direction:column;
-        align-items:flex-start;
-        gap:3px;">
-
-            <strong style="
-            color:#241041;
-            font-size:16px;
-            font-weight:800;
-            text-decoration:none;">
+        <div class="profile-info">
+            <strong>
                 @Model.AnalistaNombre
             </strong>
 
-            <span style="
-            color:#241041;
-            font-size:15px;
-            text-decoration:none;">
+            <span>
                 @Model.AnalistaCorreo
             </span>
 
-            <small style="
-            color:#6d28d9;
-            font-size:12px;
-            font-weight:800;
-            text-decoration:none;">
+            <small>
                 Ver perfil completo →
             </small>
-
         </div>
 
     </a>
@@ -118,7 +81,6 @@
         <div class="card-label">Nuevas Calificaciones de Servicio</div>
     </div>
 
-
 </div>
 
 <div class="seccion-principal">
@@ -127,7 +89,7 @@
 
         <div class="tabla-header">
             <h2>Listado Completo de Alertas y Notificaciones</h2>
-            <select class="filtro-select" onchange="filtrarTabla(this.value)">
+            <select class="filtro-select" id="filtroSelectAlertas">
                 <option value="todos">Todos</option>
                 <option value="critico">Crítico</option>
                 <option value="revision">Revisión Pendiente</option>
@@ -162,22 +124,25 @@
                         <td>
                             @alerta.ClienteNombre
                             (S/ @alerta.MontoSolicitado.ToString("N0"))<br />
-                            <span style="color:#6b7280">[SOL-@alerta.IdSolicitud.ToString("D5")]</span>
+                            <span class="alerta-sub-muted">[SOL-@alerta.IdSolicitud.ToString("D5")]</span>
                         </td>
                         <td>
                             @alerta.FechaFormateada<br />
-                            <span style="color:#6b7280">@alerta.HoraFormateada</span>
+                            <span class="alerta-sub-muted">@alerta.HoraFormateada</span>
                         </td>
                         <td>
                             <div class="accion-btns">
                                 <a href="@alerta.UrlOjo"
-                                   class="btn-accion">👁</a>
+                                   class="btn-accion"
+                                   title="Ver detalle">👁</a>
 
                                 @if (alerta.Tipo != "revision")
                                 {
                                     <button type="button"
-                                            class="btn-accion"
-                                            onclick="marcarAlertaVista('@alerta.Tipo', @alerta.IdOrigen, this)">
+                                            class="btn-accion btn-marcar-alerta"
+                                            data-tipo="@alerta.Tipo"
+                                            data-id-origen="@alerta.IdOrigen"
+                                            title="Marcar como vista">
                                         ✔
                                     </button>
                                 }
@@ -194,7 +159,7 @@
 
         <div class="alertas-rapidas-header">
             <h3>Alertas Rápidas</h3>
-            <span style="cursor:pointer; font-size:18px; color:#6b7280">&#8743;</span>
+            <span class="alerta-rapida-toggle-btn" id="toggleAlertasRapidas">&#8743;</span>
         </div>
 
         <div class="alertas-rapidas-scroll">
@@ -217,28 +182,6 @@
 
 </div>
 
-<script>
-    function filtrarTabla(valor) {
-        document.querySelectorAll('.tabla-alertas tbody tr').forEach(function(fila) {
-            var prioridad = fila.getAttribute('data-prioridad');
-            fila.style.display = (valor === 'todos' || prioridad === valor) ? '' : 'none';
-        });
-    }
-            function marcarAlertaVista(tipo, idOrigen, boton) {
-        fetch('/Analista/MarcarAlertaVista', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body:
-                'tipo=' + encodeURIComponent(tipo) +
-                '&idOrigen=' + encodeURIComponent(idOrigen)
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.ok) {
-                boton.closest('tr').remove();
-            }
-        });
-    }
-</script>
+@section Scripts {
+    <script src="~/js/analista-js/alertas-notificaciones.js" asp-append-version="true"></script>
+}
