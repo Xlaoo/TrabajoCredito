@@ -385,7 +385,13 @@ app.Use(async (context, next) =>
         string.Equals(path, "/Login/Configuracion", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Login/PerfilPersonal", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Login/PreguntasFrecuentes", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(path, "/Home/Error", StringComparison.OrdinalIgnoreCase);
+        string.Equals(path, "/Home/Error", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Analista/CalendarioRevisiones", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Analista/HistorialEvaluaciones", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Analista/ProgramaAnalista", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Analista/SolicitudesPendientes", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Analista/VerSolicitud", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("/Analista/VerSolicitud/", StringComparison.OrdinalIgnoreCase);
 
     string scriptSrc = esRutaEstricta
         ? "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "

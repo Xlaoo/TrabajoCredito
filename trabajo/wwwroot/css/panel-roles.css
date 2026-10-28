@@ -385,3 +385,72 @@ body {
     .alerta-notif-link i {
         color: #fff;
     }
+/* Menú lateral bloqueado (durante Ver Solicitud) */
+.menu a.menu-bloqueado,
+.sidebar .menu a.menu-bloqueado,
+.sidebar-help-box a.menu-bloqueado,
+.sidebar .sidebar-help-box a.menu-bloqueado,
+.btn-help-custom.menu-bloqueado,
+.sidebar a.btn-help-custom.menu-bloqueado {
+    opacity: 0.25 !important;
+    color: rgba(255, 255, 255, 0.25) !important;
+    cursor: not-allowed !important;
+    pointer-events: auto !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+/* Todos los elementos internos de las opciones bloqueadas (iconos, texto, badges) */
+.menu a.menu-bloqueado *,
+.sidebar .menu a.menu-bloqueado *,
+.sidebar-help-box a.menu-bloqueado *,
+.sidebar .sidebar-help-box a.menu-bloqueado *,
+.btn-help-custom.menu-bloqueado *,
+.sidebar a.btn-help-custom.menu-bloqueado * {
+    cursor: not-allowed !important;
+    color: inherit !important;
+    pointer-events: none !important;
+}
+
+/* Eliminar completamente cualquier efecto hover en opciones bloqueadas */
+.menu a.menu-bloqueado:hover,
+.sidebar .menu a.menu-bloqueado:hover,
+.sidebar-help-box a.menu-bloqueado:hover,
+.sidebar .sidebar-help-box a.menu-bloqueado:hover,
+.btn-help-custom.menu-bloqueado:hover,
+.sidebar a.btn-help-custom.menu-bloqueado:hover {
+    background: transparent !important;
+    color: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.menu a.menu-bloqueado:hover *,
+.sidebar .menu a.menu-bloqueado:hover *,
+.sidebar-help-box a.menu-bloqueado:hover *,
+.sidebar .sidebar-help-box a.menu-bloqueado:hover *,
+.btn-help-custom.menu-bloqueado:hover *,
+.sidebar a.btn-help-custom.menu-bloqueado:hover * {
+    cursor: not-allowed !important;
+}
+
+.menu a.menu-bloqueado i,
+.sidebar .menu a.menu-bloqueado i,
+.sidebar-help-box a.menu-bloqueado i,
+.sidebar .sidebar-help-box a.menu-bloqueado i,
+.btn-help-custom.menu-bloqueado i,
+.sidebar a.btn-help-custom.menu-bloqueado i {
+    color: rgba(255, 255, 255, 0.25) !important;
+    opacity: 0.7 !important;
+    cursor: not-allowed !important;
+}
+
+.menu a.menu-bloqueado .badge-notif,
+.sidebar .menu a.menu-bloqueado .badge-notif {
+    opacity: 0.25 !important;
+    cursor: not-allowed !important;
+    background: #4b5563 !important;
+}

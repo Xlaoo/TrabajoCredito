@@ -47,7 +47,13 @@ namespace TestTrabajoCredito
                 string.Equals(path, "/Login/SolicitarCredito", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(path, "/Login/Configuracion", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(path, "/Login/PerfilPersonal", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(path, "/Login/PreguntasFrecuentes", StringComparison.OrdinalIgnoreCase);
+                string.Equals(path, "/Login/PreguntasFrecuentes", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Analista/CalendarioRevisiones", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Analista/HistorialEvaluaciones", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Analista/ProgramaAnalista", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Analista/SolicitudesPendientes", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/Analista/VerSolicitud", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/Analista/VerSolicitud/", StringComparison.OrdinalIgnoreCase);
 
             string scriptSrc = esRutaEstricta
                 ? "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "
@@ -438,6 +444,68 @@ namespace TestTrabajoCredito
                     }
 
                     return $"ConfiguracionOk: {resultados[0]}, PerfilOk: {resultados[1]}, FaqOk: {resultados[2]}";
+                });
+
+            // 18. Caso OWASP ZAP 10055-5 (Analista): CSP Estricta sin 'unsafe-inline' en script-src en las 5 rutas del Analista
+            await runner.EvaluarAsync(
+                nombreEscenario: "Eliminación de 'unsafe-inline' en script-src en las 5 pantallas del Analista (OWASP ZAP 10055-5)",
+                datoEntrada: "Peticiones a /Analista/CalendarioRevisiones, /Analista/HistorialEvaluaciones, /Analista/ProgramaAnalista, /Analista/SolicitudesPendientes, /Analista/VerSolicitud/37",
+                esperado: "CalendarioOk: True, HistorialOk: True, ProgramaOk: True, SolicitudesOk: True, VerSolicitudOk: True",
+                accionAsync: async () =>
+                {
+                    var rutasAnalista = new[]
+                    {
+                        "/Analista/CalendarioRevisiones",
+                        "/Analista/HistorialEvaluaciones",
+                        "/Analista/ProgramaAnalista",
+                        "/Analista/SolicitudesPendientes",
+                        "/Analista/VerSolicitud/37"
+                    };
+
+                    var resultados = new List<bool>();
+                    foreach (var r in rutasAnalista)
+                    {
+                        var ctx = new DefaultHttpContext();
+                        ctx.Request.Path = r;
+                        var h = await EjecutarMiddlewareSeguridadAsync(ctx);
+                        string csp = h["Content-Security-Policy"].ToString();
+                        var scriptPart = csp.Split(';')
+                            .FirstOrDefault(p => p.TrimStart().StartsWith("script-src", StringComparison.OrdinalIgnoreCase)) ?? "";
+                        resultados.Add(!scriptPart.Contains("'unsafe-inline'"));
+                    }
+
+                    return $"CalendarioOk: {resultados[0]}, HistorialOk: {resultados[1]}, ProgramaOk: {resultados[2]}, SolicitudesOk: {resultados[3]}, VerSolicitudOk: {resultados[4]}";
+                });
+
+            // 19. Caso OWASP ZAP 10055-6 (Analista): CSP Estricta sin 'unsafe-inline' en style-src en las 5 rutas del Analista
+            await runner.EvaluarAsync(
+                nombreEscenario: "Eliminación de 'unsafe-inline' en style-src en las 5 pantallas del Analista (OWASP ZAP 10055-6)",
+                datoEntrada: "Peticiones a /Analista/CalendarioRevisiones, /Analista/HistorialEvaluaciones, /Analista/ProgramaAnalista, /Analista/SolicitudesPendientes, /Analista/VerSolicitud/37",
+                esperado: "CalendarioOk: True, HistorialOk: True, ProgramaOk: True, SolicitudesOk: True, VerSolicitudOk: True",
+                accionAsync: async () =>
+                {
+                    var rutasAnalista = new[]
+                    {
+                        "/Analista/CalendarioRevisiones",
+                        "/Analista/HistorialEvaluaciones",
+                        "/Analista/ProgramaAnalista",
+                        "/Analista/SolicitudesPendientes",
+                        "/Analista/VerSolicitud/37"
+                    };
+
+                    var resultados = new List<bool>();
+                    foreach (var r in rutasAnalista)
+                    {
+                        var ctx = new DefaultHttpContext();
+                        ctx.Request.Path = r;
+                        var h = await EjecutarMiddlewareSeguridadAsync(ctx);
+                        string csp = h["Content-Security-Policy"].ToString();
+                        var stylePart = csp.Split(';')
+                            .FirstOrDefault(p => p.TrimStart().StartsWith("style-src", StringComparison.OrdinalIgnoreCase)) ?? "";
+                        resultados.Add(!stylePart.Contains("'unsafe-inline'"));
+                    }
+
+                    return $"CalendarioOk: {resultados[0]}, HistorialOk: {resultados[1]}, ProgramaOk: {resultados[2]}, SolicitudesOk: {resultados[3]}, VerSolicitudOk: {resultados[4]}";
                 });
 
             runner.VerificarTodosAprobados();
