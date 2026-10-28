@@ -1,0 +1,396 @@
+/* ── Tarjetas de tipo de reporte ── */
+.gr-tipos-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 16px;
+    margin-bottom: 8px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.gr-tipo-card {
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 20px 12px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    gap: 10px;
+}
+
+    .gr-tipo-card:hover {
+        border-color: #7c3aed;
+        box-shadow: 0 4px 12px rgba(124,58,237,.1);
+    }
+
+    .gr-tipo-card.seleccionado {
+        border-color: #7c3aed;
+        background: #faf5ff;
+        box-shadow: 0 4px 12px rgba(124,58,237,.15);
+    }
+
+.gr-tipo-icono {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #fff;
+}
+
+/* Gradientes específicos para tipos de reporte */
+.icon-grad-clientes { background: linear-gradient(135deg, #6d28d9, #7c3aed); }
+.icon-grad-creditos { background: linear-gradient(135deg, #059669, #10b981); }
+.icon-grad-pagos { background: linear-gradient(135deg, #d97706, #f59e0b); }
+.icon-grad-desempeno { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
+.icon-grad-mora { background: linear-gradient(135deg, #b91c1c, #ef4444); }
+.icon-grad-financiero { background: linear-gradient(135deg, #0f766e, #14b8a6); }
+.icon-grad-sucursal { background: linear-gradient(135deg, #92400e, #d97706); }
+.icon-grad-tipocredito { background: linear-gradient(135deg, #be185d, #ec4899); }
+.icon-grad-periodo { background: linear-gradient(135deg, #0369a1, #0ea5e9); }
+.icon-grad-actividad { background: linear-gradient(135deg, #4338ca, #6366f1); }
+.icon-grad-exportaciones { background: linear-gradient(135deg, #065f46, #059669); }
+.icon-grad-personalizado { background: linear-gradient(135deg, #374151, #6b7280); }
+
+.gr-seccion-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #1a0035;
+    margin-bottom: 20px;
+}
+
+/* Colores mini iconos en tabla */
+.tipo-icon-clientes { background: #7c3aed; }
+.tipo-icon-creditos { background: #10b981; }
+.tipo-icon-pagos { background: #f59e0b; }
+.tipo-icon-desempeno { background: #3b82f6; }
+.tipo-icon-mora { background: #ef4444; }
+.tipo-icon-financiero { background: #14b8a6; }
+.tipo-icon-sucursal { background: #d97706; }
+.tipo-icon-tipocredito { background: #ec4899; }
+.tipo-icon-periodo { background: #0ea5e9; }
+.tipo-icon-actividad { background: #6366f1; }
+.tipo-icon-exportaciones { background: #059669; }
+.tipo-icon-personalizado { background: #6b7280; }
+
+.gr-tipo-nombre {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1a0035;
+    line-height: 1.3;
+}
+
+.gr-tipo-desc {
+    font-size: 11px;
+    color: #6b7280;
+    line-height: 1.4;
+}
+
+.gr-tipo-radio {
+    width: 16px;
+    height: 16px;
+    accent-color: #7c3aed;
+    cursor: pointer;
+}
+
+/* ── Contenedor 2: Configurar Filtros ── */
+.gr-filtros-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    align-items: end;
+    margin-bottom: 16px;
+}
+
+.gr-filtro-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+    .gr-filtro-grupo label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+    }
+
+.gr-filtro-input {
+    height: 40px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 0 12px;
+    font-size: 14px;
+    color: #1a0035;
+    background: #fff;
+    width: 100%;
+}
+
+    .gr-filtro-input:focus {
+        outline: none;
+        border-color: #7c3aed;
+    }
+
+.gr-filtros-acciones {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.btn-limpiar-filtros {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4b5563;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-decoration: none;
+}
+
+    .btn-limpiar-filtros:hover {
+        background: #f9fafb;
+    }
+
+.btn-generar-reporte {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 22px;
+    background: #7c3aed;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+    .btn-generar-reporte:hover {
+        background: #6d28d9;
+    }
+
+/* ── Contenedor 3: Reportes Recientes ── */
+.gr-recientes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+    .gr-recientes-header h2 {
+        font-size: 18px;
+        font-weight: 800;
+        color: #1a0035;
+    }
+
+.gr-link-todos {
+    font-size: 13px;
+    font-weight: 600;
+    color: #7c3aed;
+    text-decoration: none;
+}
+
+    .gr-link-todos:hover {
+        text-decoration: underline;
+    }
+
+/* Tabla de reportes recientes */
+.gr-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+    .gr-tabla thead tr {
+        border-bottom: 2px solid #f1f3f5;
+    }
+
+    .gr-tabla th {
+        text-align: left;
+        font-size: 12px;
+        font-weight: 700;
+        color: #6b7280;
+        padding: 0 12px 12px;
+        white-space: nowrap;
+    }
+
+    .gr-tabla td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #f1f3f5;
+        color: #374151;
+        vertical-align: middle;
+    }
+
+    .gr-tabla tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .gr-tabla tbody tr:hover td {
+        background: #faf5ff;
+    }
+
+.gr-badge-formato {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.gr-badge-pdf {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.gr-badge-excel {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.gr-badge-estado {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.gr-tipo-icono-mini {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #fff;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.gr-btn-accion {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: opacity 0.15s;
+    text-decoration: none;
+}
+
+    .gr-btn-accion:hover {
+        opacity: 0.8;
+    }
+
+.gr-btn-descargar {
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+.gr-btn-eliminar {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+/* Paginación */
+.gr-paginacion {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 20px;
+}
+
+.gr-pag-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4b5563;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    text-decoration: none;
+}
+
+    .gr-pag-btn:hover {
+        background: #f3e8ff;
+        border-color: #7c3aed;
+        color: #7c3aed;
+    }
+
+    .gr-pag-btn.activo {
+        background: #7c3aed;
+        border-color: #7c3aed;
+        color: #fff;
+    }
+
+    .gr-pag-btn.puntos {
+        border: none;
+        background: none;
+        cursor: default;
+        color: #9ca3af;
+    }
+
+.gr-seccion {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #f1f3f5;
+    margin-bottom: 24px;
+}
+
+/* Utilidades generales extraídas */
+.reportes-titulo-top {
+    margin-top: 32px;
+}
+
+.gr-header-card {
+    margin-top: 15px;
+}
+
+.gr-header-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #4B0082;
+    margin: 0;
+}
+
+.gr-alert {
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+.gr-acciones-derecha {
+    justify-content: flex-end;
+}
+
+.gr-acciones-btn-group {
+    display: flex;
+    gap: 10px;
+}

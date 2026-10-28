@@ -1,9 +1,13 @@
-﻿@model trabajo.Models.ViewModels.AdminCreditosViewModel
+@model trabajo.Models.ViewModels.AdminCreditosViewModel
 
 @{
     Layout = "~/Views/Shared/_LayoutAdministrador.cshtml";
     ViewData["Title"] = "Créditos";
     ViewData["ActivePage"] = "Creditos";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/administrador-css/creditos.css" asp-append-version="true" />
 }
 
 <div class="creditos-page">
@@ -95,7 +99,7 @@
 
             <div class="donut-box">
                 <div class="donut estado"
-                     style="background: conic-gradient(#22c55e 0 @e1%, #2563eb @e1% @e2%, #f97316 @e2% @e3%, #ef4444 @e3% 100%);">
+                     data-gradient="conic-gradient(#22c55e 0 @e1%, #2563eb @e1% @e2%, #f97316 @e2% @e3%, #ef4444 @e3% 100%)">
                     <span>Total<br /><strong>@Model.TotalDistribucionEstado</strong><br />créditos</span>
                 </div>
 
@@ -113,7 +117,7 @@
 
             <div class="donut-box">
                 <div class="donut tipo"
-                     style="background: conic-gradient(@gradienteTipo);">
+                     data-gradient="conic-gradient(@gradienteTipo)">
                     <span>Total<br /><strong>@Model.TotalDistribucionTipo</strong><br />créditos</span>
                 </div>
 
@@ -121,7 +125,7 @@
                     @foreach (var tipo in Model.TiposCreditoGrafico)
                     {
                         <p>
-                            <span class="dot" style="background:@tipo.Color"></span>
+                            <span class="dot" data-bg="@tipo.Color"></span>
                             @tipo.Tipo
                             <strong>@tipo.Cantidad (@tipo.Porcentaje%)</strong>
                         </p>
@@ -163,7 +167,7 @@
                 <input type="text" name="buscar" value="@Model.Buscar" placeholder="Buscar por cliente, DNI o solicitud..." />
             </div>
 
-            <select name="estado" onchange="this.form.submit()">
+            <select name="estado" id="selectEstadoCredito">
                 <option value="Todos" selected="@(Model.Estado == "Todos")">Todos</option>
                 <option value="Pendiente" selected="@(Model.Estado == "Pendiente")">Pendiente</option>
                 <option value="En Evaluación" selected="@(Model.Estado == "En Evaluación")">En Evaluación</option>
@@ -237,17 +241,17 @@
 
                                         <button type="button"
                                                 class="action-btn"
-                                                onclick="abrirDetalleCredito(
-                            '@credito.NumeroSolicitud',
-                            '@credito.Cliente',
-                            '@credito.Dni',
-                            'S/ @credito.MontoSolicitado.ToString("N2")',
-                            '@credito.PlazoMeses meses',
-                            'S/ @credito.InteresEstimado.ToString("N2")',
-                            '@credito.Estado',
-                            '@credito.FechaSolicitud.ToString("dd/MM/yyyy")',
-                            '@credito.MotivoPrestamo'
-                        )">
+                                                data-accion="detalle"
+                                                data-solicitud="@credito.NumeroSolicitud"
+                                                data-cliente="@credito.Cliente"
+                                                data-dni="@credito.Dni"
+                                                data-monto="S/ @credito.MontoSolicitado.ToString("N2")"
+                                                data-plazo="@credito.PlazoMeses meses"
+                                                data-interes="S/ @credito.InteresEstimado.ToString("N2")"
+                                                data-estado="@credito.Estado"
+                                                data-fecha="@credito.FechaSolicitud.ToString("dd/MM/yyyy")"
+                                                data-motivo="@credito.MotivoPrestamo"
+                                                title="Ver detalle">
                                             <i class="far fa-eye"></i>
                                         </button>
 
@@ -345,18 +349,6 @@
     </div>
 </div>
 
-<script>
-    function abrirDetalleCredito(solicitud, cliente, dni, monto, plazo, interes, estado, fecha, motivo) {
-        document.getElementById("detalleSolicitud").innerText = solicitud;
-        document.getElementById("detalleCliente").innerText = cliente;
-        document.getElementById("detalleDni").innerText = dni;
-        document.getElementById("detalleMonto").innerText = monto;
-        document.getElementById("detallePlazo").innerText = plazo;
-        document.getElementById("detalleInteres").innerText = interes;
-        document.getElementById("detalleEstado").innerText = estado;
-        document.getElementById("detalleFecha").innerText = fecha;
-        document.getElementById("detalleMotivo").innerText = motivo || "No especificado";
-
-        new bootstrap.Modal(document.getElementById("modalDetalleCredito")).show();
-    }
-</script>
+@section Scripts {
+    <script src="~/js/administrador-js/creditos.js" asp-append-version="true"></script>
+}

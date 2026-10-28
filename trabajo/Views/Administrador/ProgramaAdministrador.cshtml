@@ -9,6 +9,10 @@
     ViewData["ActivePage"] = "Inicio";
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/administrador-css/programa-administrador.css" asp-append-version="true" />
+}
+
 <div class="top-navbar-view">
 
     <div class="navbar-left">
@@ -177,7 +181,7 @@
     </div>
     <div class="stat-card">
         <div class="stat-header">
-            <div style="width:60px; height:60px; min-width:60px; border-radius:15px; background:linear-gradient(135deg,#1d8cf8,#0057d9); display:flex; align-items:center; justify-content:center; color:white; font-size:30px;">
+            <div class="stat-icon reportes-icon">
                 <i class="fas fa-file-alt"></i>
             </div>
 
@@ -316,7 +320,7 @@
         <div class="payment-row">
             <span>Completados</span>
             <div class="payment-bar">
-                <div class="payment-fill green" style="width:@Model.PorcentajePagosCompletados%"></div>
+                <div class="payment-fill green" data-progress="@Model.PorcentajePagosCompletados"></div>
             </div>
             <strong>@Model.PagosCompletadosMes (@Model.PorcentajePagosCompletados%)</strong>
         </div>
@@ -324,7 +328,7 @@
         <div class="payment-row">
             <span>Pendientes</span>
             <div class="payment-bar">
-                <div class="payment-fill orange" style="width:@Model.PorcentajePagosPendientes%"></div>
+                <div class="payment-fill orange" data-progress="@Model.PorcentajePagosPendientes"></div>
             </div>
             <strong>@Model.PagosPendientesMes (@Model.PorcentajePagosPendientes%)</strong>
         </div>
@@ -332,7 +336,7 @@
         <div class="payment-row">
             <span>En Mora</span>
             <div class="payment-bar">
-                <div class="payment-fill red" style="width:@Model.PorcentajePagosMora%"></div>
+                <div class="payment-fill red" data-progress="@Model.PorcentajePagosMora"></div>
             </div>
             <strong>@Model.PagosMoraMes (@Model.PorcentajePagosMora%)</strong>
         </div>
@@ -393,7 +397,7 @@
                 <span>Almacenamiento</span>
                 <strong>@Model.PorcentajeAlmacenamiento% utilizado</strong>
                 <div class="storage-bar">
-                    <div style="width:@Model.PorcentajeAlmacenamiento%"></div>
+                    <div class="storage-fill" data-progress="@Model.PorcentajeAlmacenamiento"></div>
                 </div>
             </div>
         </div>
@@ -401,107 +405,14 @@
     </div>
 </section>
 
+<div id="programaAdminDatos"
+     class="d-none"
+     data-clientes="@Model.TotalClientes"
+     data-creditos="@Model.TotalCreditosAprobados"
+     data-mora="@Model.TotalCuotasEnMora"
+     data-reportes="@Model.TotalReportesGenerados"
+     data-pagos="@Model.PagosCompletadosMes"></div>
+
 @section Scripts {
-    <script>
-             if (localStorage.getItem("ultimoTotalInicioClientes") === null) {
-            localStorage.setItem("ultimoTotalInicioClientes", "@Model.TotalClientes");
-        }
-
-                detectarCambio(
-            "ultimoTotalInicioClientes",
-            "@Model.TotalClientes",
-            "notificacionesInicio",
-            "inicioVisto"
-        );
-
-        detectarCambio(
-            "ultimoTotalInicioCreditos",
-            "@Model.TotalCreditosAprobados",
-            "notificacionesInicio",
-            "inicioVisto"
-        );
-
-        detectarCambio(
-            "ultimoTotalInicioMora",
-            "@Model.TotalCuotasEnMora",
-            "notificacionesInicio",
-            "inicioVisto"
-        );
-                detectarCambio(
-            "ultimoTotalInicioReportes",
-            "@Model.TotalReportesGenerados",
-            "notificacionesInicio",
-            "inicioVisto"
-        );
-
-        detectarCambio(
-            "ultimoTotalInicioPagos",
-            "@Model.PagosCompletadosMes",
-            "notificacionesInicio",
-            "inicioVisto"
-        );
-        const btnToggle = document.getElementById("btnToggleActividades");
-        const hiddenActivities = document.querySelectorAll(".activity-hidden");
-        const container = document.getElementById("contenedorActividades");
-
-        let mostrandoTodo = false;
-
-        if (btnToggle) {
-            btnToggle.addEventListener("click", function () {
-                mostrandoTodo = !mostrandoTodo;
-
-                hiddenActivities.forEach(item => {
-                    if (mostrandoTodo) {
-                        item.classList.add("mostrar-actividad");
-                    } else {
-                        item.classList.remove("mostrar-actividad");
-                    }
-                });
-
-                if (mostrandoTodo) {
-                    container.classList.add("expandido");
-                    btnToggle.innerHTML = '← Ver menos actividades';
-                } else {
-                    container.classList.remove("expandido");
-                    btnToggle.innerHTML = 'Ver todas las actividades <i class="fas fa-arrow-right"></i>';
-                }
-            });
-        }
-                       window.addEventListener("load", function () {
-
-            const cantidad = parseInt(localStorage.getItem("notificacionesInicio") || "0");
-
-            const badgeSuperior = document.querySelector(".navbar-notifications .badge-count");
-
-            if (badgeSuperior) {
-                badgeSuperior.innerText = cantidad;
-
-                if (cantidad > 0) {
-                    badgeSuperior.style.display = "inline-flex";
-                } else {
-                    badgeSuperior.style.display = "none";
-                }
-            }
-
-            const campana = document.querySelector(".navbar-notifications");
-
-            if (campana) {
-                campana.addEventListener("click", function () {
-                    localStorage.setItem("notificacionesInicio", "0");
-                    localStorage.setItem("inicioVisto", "true");
-
-                    if (badgeSuperior) {
-                        badgeSuperior.innerText = "0";
-                        badgeSuperior.style.display = "none";
-                    }
-
-                    const badgeMenu = document.getElementById("badgeInicioMenu");
-                    if (badgeMenu) {
-                        badgeMenu.style.display = "none";
-                        badgeMenu.innerText = "";
-                    }
-                });
-            }
-        });
-    </script>
+    <script src="~/js/administrador-js/programa-administrador.js" asp-append-version="true"></script>
 }

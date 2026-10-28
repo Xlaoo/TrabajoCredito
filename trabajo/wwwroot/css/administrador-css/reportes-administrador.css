@@ -1,0 +1,32 @@
+/* Estilos específicos para Reportes - Panel Administrador CrediPlus */
+.btn-exportar.btn-restablecer {
+    color: #6b7280;
+    border-color: #d1d5db;
+    background: #f9fafb;
+}
+
+.btn-exportar.btn-restablecer:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.stat-icon.desembolso-icon {
+    background: linear-gradient(135deg, #1d8cf8, #0057d9);
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 26px;
+}
+
+.stat-value.monto-otorgado {
+    font-size: 26px;
+}
+
+.rpt-progress-fill {
+    transition: width 0.4s ease;
+}

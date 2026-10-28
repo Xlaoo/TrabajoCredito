@@ -397,7 +397,19 @@ app.Use(async (context, next) =>
         string.Equals(path, "/Analista/GestionDePago", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Analista/PerfilAnalista", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(path, "/Analista/PoliticasRiesgo", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(path, "/Analista/ContactarSoporte", StringComparison.OrdinalIgnoreCase);
+        string.Equals(path, "/Analista/ContactarSoporte", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador/ProgramaAdministrador", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador/Clientes", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador/Creditos", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador/Pagos", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador/reportesAdministrador", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador/Exportaciones", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador/Analistas", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador/GenerarReportes", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador/CentroNotificaciones", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(path, "/Administrador/PerfilAdministrador", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("/Administrador/", StringComparison.OrdinalIgnoreCase);
 
     string scriptSrc = esRutaEstricta
         ? "script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://challenges.cloudflare.com; "

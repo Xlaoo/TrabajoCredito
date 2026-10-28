@@ -1,340 +1,11 @@
-﻿@{
+@{
     Layout = "~/Views/Shared/_LayoutAdministrador.cshtml";
     ViewData["Title"] = "Generar Reportes";
     ViewData["ActivePage"] = "GenerarReportes";
 }
 
 @section Styles {
-    <style>
-        /* ── Tarjetas de tipo de reporte ── */
-        .gr-tipos-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 16px;
-            margin-bottom: 8px;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .gr-tipo-card {
-            background: #fff;
-            border: 2px solid #e5e7eb;
-            border-radius: 14px;
-            padding: 20px 12px 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            gap: 10px;
-        }
-
-            .gr-tipo-card:hover {
-                border-color: #7c3aed;
-                box-shadow: 0 4px 12px rgba(124,58,237,.1);
-            }
-
-            .gr-tipo-card.seleccionado {
-                border-color: #7c3aed;
-                background: #faf5ff;
-                box-shadow: 0 4px 12px rgba(124,58,237,.15);
-            }
-
-        .gr-tipo-icono {
-            width: 52px;
-            height: 52px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            color: #fff;
-        }
-
-        .gr-tipo-nombre {
-            font-size: 13px;
-            font-weight: 700;
-            color: #1a0035;
-            line-height: 1.3;
-        }
-
-        .gr-tipo-desc {
-            font-size: 11px;
-            color: #6b7280;
-            line-height: 1.4;
-        }
-
-        .gr-tipo-radio {
-            width: 16px;
-            height: 16px;
-            accent-color: #7c3aed;
-            cursor: pointer;
-        }
-
-        /* ── Contenedor 2: Configurar Filtros ── */
-        .gr-filtros-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 16px;
-            align-items: end;
-            margin-bottom: 16px;
-        }
-
-        .gr-filtro-grupo {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-            .gr-filtro-grupo label {
-                font-size: 12px;
-                font-weight: 600;
-                color: #6b7280;
-            }
-
-        .gr-filtro-input {
-            height: 40px;
-            border: 1.5px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 0 12px;
-            font-size: 14px;
-            color: #1a0035;
-            background: #fff;
-            width: 100%;
-        }
-
-            .gr-filtro-input:focus {
-                outline: none;
-                border-color: #7c3aed;
-            }
-
-        .gr-filtros-acciones {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 4px;
-        }
-
-        .btn-limpiar-filtros {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 9px 16px;
-            border: 1.5px solid #e5e7eb;
-            border-radius: 10px;
-            background: #fff;
-            font-size: 13px;
-            font-weight: 600;
-            color: #4b5563;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-
-            .btn-limpiar-filtros:hover {
-                background: #f9fafb;
-            }
-
-        .btn-generar-reporte {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 22px;
-            background: #7c3aed;
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-            .btn-generar-reporte:hover {
-                background: #6d28d9;
-            }
-
-        /* ── Contenedor 3: Reportes Recientes ── */
-        .gr-recientes-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-            .gr-recientes-header h2 {
-                font-size: 18px;
-                font-weight: 800;
-                color: #1a0035;
-            }
-
-        .gr-link-todos {
-            font-size: 13px;
-            font-weight: 600;
-            color: #7c3aed;
-            text-decoration: none;
-        }
-
-            .gr-link-todos:hover {
-                text-decoration: underline;
-            }
-
-        /* Tabla de reportes recientes */
-        .gr-tabla {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-            .gr-tabla thead tr {
-                border-bottom: 2px solid #f1f3f5;
-            }
-
-            .gr-tabla th {
-                text-align: left;
-                font-size: 12px;
-                font-weight: 700;
-                color: #6b7280;
-                padding: 0 12px 12px;
-                white-space: nowrap;
-            }
-
-            .gr-tabla td {
-                padding: 14px 12px;
-                border-bottom: 1px solid #f1f3f5;
-                color: #374151;
-                vertical-align: middle;
-            }
-
-            .gr-tabla tbody tr:last-child td {
-                border-bottom: none;
-            }
-
-            .gr-tabla tbody tr:hover td {
-                background: #faf5ff;
-            }
-
-        .gr-badge-formato {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        .gr-badge-pdf {
-            background: #fee2e2;
-            color: #ef4444;
-        }
-
-        .gr-badge-excel {
-            background: #d1fae5;
-            color: #059669;
-        }
-
-        .gr-badge-estado {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .gr-tipo-icono-mini {
-            width: 24px;
-            height: 24px;
-            border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: #fff;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-
-        .gr-btn-accion {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            transition: opacity 0.15s;
-        }
-
-            .gr-btn-accion:hover {
-                opacity: 0.8;
-            }
-
-        .gr-btn-descargar {
-            background: #eff6ff;
-            color: #3b82f6;
-        }
-
-        .gr-btn-eliminar {
-            background: #fee2e2;
-            color: #ef4444;
-        }
-
-        /* Paginación */
-        .gr-paginacion {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 6px;
-            margin-top: 20px;
-        }
-
-        .gr-pag-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            border: 1.5px solid #e5e7eb;
-            background: #fff;
-            font-size: 13px;
-            font-weight: 600;
-            color: #4b5563;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.15s;
-        }
-
-            .gr-pag-btn:hover {
-                background: #f3e8ff;
-                border-color: #7c3aed;
-                color: #7c3aed;
-            }
-
-            .gr-pag-btn.activo {
-                background: #7c3aed;
-                border-color: #7c3aed;
-                color: #fff;
-            }
-
-            .gr-pag-btn.puntos {
-                border: none;
-                background: none;
-                cursor: default;
-                color: #9ca3af;
-            }
-
-        .gr-seccion {
-            background: #ffffff;
-            border-radius: 14px;
-            padding: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            border: 1px solid #f1f3f5;
-            margin-bottom: 24px;
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/administrador-css/generar-reportes.css" asp-append-version="true" />
 }
 
 <!-- Cabecera -->
@@ -359,13 +30,13 @@
     </div>
 </div>
 <!-- Título de la vista -->
-<div class="reportes-titulo" style="margin-top: 32px;">
+<div class="reportes-titulo reportes-titulo-top">
     <h1>Generar Reportes</h1>
     <p>Selecciona el tipo de reporte, configura los filtros y genera tu reporte</p>
 </div>
 @if (TempData["ErrorReporte"] != null)
 {
-    <div class="alert alert-danger" style="border-radius:12px; font-weight:700;">
+    <div class="alert alert-danger gr-alert">
         <i class="fas fa-circle-exclamation"></i>
         @TempData["ErrorReporte"]
     </div>
@@ -373,7 +44,7 @@
 
 @if (TempData["OkReporte"] != null)
 {
-    <div class="alert alert-success" style="border-radius:12px; font-weight:700;">
+    <div class="alert alert-success gr-alert">
         <i class="fas fa-check-circle"></i>
         @TempData["OkReporte"]
     </div>
@@ -381,15 +52,15 @@
 <!-- Contenedor Punto 1 -->
 <div class="gr-seccion">
     <!-- Paso 1: Tipo de Reporte -->
-    <h2 style="font-size: 16px; font-weight: 800; color: #1a0035; margin-bottom: 20px;">
+    <h2 class="gr-seccion-title">
         1. Selecciona el Tipo de Reporte
     </h2>
 
     <div class="gr-tipos-grid" id="gridTipos">
 
         <!-- Reporte de Clientes -->
-        <div class="gr-tipo-card seleccionado" onclick="seleccionarTipo(this, 'Clientes')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#6d28d9,#7c3aed);">
+        <div class="gr-tipo-card seleccionado" data-tipo="Clientes">
+            <div class="gr-tipo-icono icon-grad-clientes">
                 <i class="fas fa-users"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte de Clientes</span>
@@ -398,8 +69,8 @@
         </div>
 
         <!-- Reporte de Créditos -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'Creditos')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#059669,#10b981);">
+        <div class="gr-tipo-card" data-tipo="Creditos">
+            <div class="gr-tipo-icono icon-grad-creditos">
                 <i class="fas fa-file-invoice-dollar"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte de Créditos</span>
@@ -408,8 +79,8 @@
         </div>
 
         <!-- Reporte de Pagos -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'Pagos')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#d97706,#f59e0b);">
+        <div class="gr-tipo-card" data-tipo="Pagos">
+            <div class="gr-tipo-icono icon-grad-pagos">
                 <i class="fas fa-dollar-sign"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte de Pagos</span>
@@ -418,8 +89,8 @@
         </div>
 
         <!-- Reporte de Desempeño -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'Desempeno')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#1d4ed8,#3b82f6);">
+        <div class="gr-tipo-card" data-tipo="Desempeno">
+            <div class="gr-tipo-icono icon-grad-desempeno">
                 <i class="fas fa-chart-bar"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte de Desempeño</span>
@@ -428,8 +99,8 @@
         </div>
 
         <!-- Reporte de Mora -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'Mora')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#b91c1c,#ef4444);">
+        <div class="gr-tipo-card" data-tipo="Mora">
+            <div class="gr-tipo-icono icon-grad-mora">
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte de Mora</span>
@@ -438,8 +109,8 @@
         </div>
 
         <!-- Reporte Financiero -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'Financiero')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#0f766e,#14b8a6);">
+        <div class="gr-tipo-card" data-tipo="Financiero">
+            <div class="gr-tipo-icono icon-grad-financiero">
                 <i class="fas fa-briefcase"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte Financiero</span>
@@ -448,8 +119,8 @@
         </div>
 
         <!-- Reporte por Sucursal -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'Sucursal')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#92400e,#d97706);">
+        <div class="gr-tipo-card" data-tipo="Sucursal">
+            <div class="gr-tipo-icono icon-grad-sucursal">
                 <i class="fas fa-building"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte por Sucursal</span>
@@ -458,8 +129,8 @@
         </div>
 
         <!-- Reporte por Tipo de Crédito -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'TipoCredito')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#be185d,#ec4899);">
+        <div class="gr-tipo-card" data-tipo="TipoCredito">
+            <div class="gr-tipo-icono icon-grad-tipocredito">
                 <i class="fas fa-chart-pie"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte por Tipo de Crédito</span>
@@ -468,8 +139,8 @@
         </div>
 
         <!-- Reporte por Periodo -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'Periodo')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#0369a1,#0ea5e9);">
+        <div class="gr-tipo-card" data-tipo="Periodo">
+            <div class="gr-tipo-icono icon-grad-periodo">
                 <i class="fas fa-calendar-alt"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte por Periodo</span>
@@ -478,8 +149,8 @@
         </div>
 
         <!-- Reporte de Actividad -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'Actividad')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#4338ca,#6366f1);">
+        <div class="gr-tipo-card" data-tipo="Actividad">
+            <div class="gr-tipo-icono icon-grad-actividad">
                 <i class="fas fa-history"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte de Actividad</span>
@@ -488,8 +159,8 @@
         </div>
 
         <!-- Reporte de Exportaciones -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'Exportaciones')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#065f46,#059669);">
+        <div class="gr-tipo-card" data-tipo="Exportaciones">
+            <div class="gr-tipo-icono icon-grad-exportaciones">
                 <i class="fas fa-file-download"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte de Exportaciones</span>
@@ -498,8 +169,8 @@
         </div>
 
         <!-- Reporte Personalizado -->
-        <div class="gr-tipo-card" onclick="seleccionarTipo(this, 'Personalizado')">
-            <div class="gr-tipo-icono" style="background: linear-gradient(135deg,#374151,#6b7280);">
+        <div class="gr-tipo-card" data-tipo="Personalizado">
+            <div class="gr-tipo-icono icon-grad-personalizado">
                 <i class="fas fa-cog"></i>
             </div>
             <span class="gr-tipo-nombre">Reporte Personalizado</span>
@@ -513,7 +184,7 @@
 <!-- Contenedor Punto 2 -->
 <div class="gr-seccion">
     <!-- Paso 2: Configurar Filtros -->
-    <h2 style="font-size: 16px; font-weight: 800; color: #1a0035; margin-bottom: 20px;">
+    <h2 class="gr-seccion-title">
         2. Configurar Filtros
     </h2>
 
@@ -571,8 +242,8 @@
 
         </div>
 
-        <div class="gr-filtros-acciones" style="justify-content:flex-end;">
-            <div style="display:flex; gap:10px;">
+        <div class="gr-filtros-acciones gr-acciones-derecha">
+            <div class="gr-acciones-btn-group">
                 <button type="reset" class="btn-limpiar-filtros">
                     <i class="fas fa-times"></i> Limpiar Filtros
                 </button>
@@ -625,74 +296,73 @@
 
                         @{
                             string icono = "fa-file";
-                            string color = "#6b7280";
+                            string claseColor = "personalizado";
 
                             switch ((string)reporte.TipoReporte)
                             {
                                 case "Clientes":
                                     icono = "fa-users";
-                                    color = "#7c3aed";
+                                    claseColor = "clientes";
                                     break;
 
                                 case "Creditos":
                                     icono = "fa-file-invoice-dollar";
-                                    color = "#10b981";
+                                    claseColor = "creditos";
                                     break;
 
                                 case "Pagos":
                                     icono = "fa-dollar-sign";
-                                    color = "#f59e0b";
+                                    claseColor = "pagos";
                                     break;
 
                                 case "Desempeno":
                                     icono = "fa-chart-bar";
-                                    color = "#3b82f6";
+                                    claseColor = "desempeno";
                                     break;
 
                                 case "Mora":
                                     icono = "fa-exclamation-triangle";
-                                    color = "#ef4444";
+                                    claseColor = "mora";
                                     break;
 
                                 case "Financiero":
                                     icono = "fa-briefcase";
-                                    color = "#14b8a6";
+                                    claseColor = "financiero";
                                     break;
 
                                 case "Sucursal":
                                     icono = "fa-building";
-                                    color = "#d97706";
+                                    claseColor = "sucursal";
                                     break;
 
                                 case "TipoCredito":
                                     icono = "fa-chart-pie";
-                                    color = "#ec4899";
+                                    claseColor = "tipocredito";
                                     break;
 
                                 case "Periodo":
                                     icono = "fa-calendar-alt";
-                                    color = "#0ea5e9";
+                                    claseColor = "periodo";
                                     break;
 
                                 case "Actividad":
                                     icono = "fa-history";
-                                    color = "#6366f1";
+                                    claseColor = "actividad";
                                     break;
 
                                 case "Exportaciones":
                                     icono = "fa-file-download";
-                                    color = "#059669";
+                                    claseColor = "exportaciones";
                                     break;
 
                                 case "Personalizado":
                                     icono = "fa-cog";
-                                    color = "#6b7280";
+                                    claseColor = "personalizado";
                                     break;
                             }
                         }
 
-                        <span class="gr-tipo-icono-mini"
-                              style="background:@color;">
+                        <span class="gr-tipo-icono-mini tipo-icon-@claseColor">
                             <i class="fas @icono"></i>
                         </span>
 
@@ -746,8 +416,7 @@
 
                         <a href="@Url.Action("EliminarExportacion", "Administrador", new { id = reporte.Id })"
                            class="gr-btn-accion gr-btn-eliminar"
-                           title="Eliminar"
-                           onclick="return confirm('¿Seguro que deseas eliminar este reporte?');">
+                           title="Eliminar">
                             <i class="fas fa-trash"></i>
                         </a>
 
@@ -797,13 +466,5 @@
 </div>
 
 @section Scripts {
-    <script>
-        // Marca visualmente la tarjeta seleccionada y actualiza el input hidden
-        function seleccionarTipo(card, valor) {
-            document.querySelectorAll('.gr-tipo-card').forEach(c => c.classList.remove('seleccionado'));
-            card.classList.add('seleccionado');
-            card.querySelector('input[type=radio]').checked = true;
-            document.getElementById('tipoReporteHidden').value = valor;
-        }
-    </script>
+    <script src="~/js/administrador-js/generar-reportes.js" asp-append-version="true"></script>
 }

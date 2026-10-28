@@ -1,0 +1,423 @@
+/* clientes.css */
+.clientes-page {
+    padding: 25px;
+}
+
+.clientes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.clientes-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: #111827;
+    margin: 0;
+}
+
+.clientes-subtitle {
+    color: #6b7280;
+    margin-top: 6px;
+    font-size: 15px;
+}
+
+.clientes-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 25px;
+}
+
+.cliente-stat-card {
+    background: #fff;
+    border-radius: 22px;
+    padding: 22px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 12px 35px rgba(15, 23, 42, 0.08);
+    border: 1px solid #f1f5f9;
+}
+
+    .cliente-stat-card p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .cliente-stat-card h2 {
+        margin: 6px 0 0;
+        font-size: 26px;
+        font-weight: 800;
+        color: #111827;
+    }
+
+.cliente-stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: #fff;
+}
+
+    .cliente-stat-icon.purple {
+        background: linear-gradient(135deg, #6D28D9, #8B5CF6);
+    }
+
+    .cliente-stat-icon.green {
+        background: linear-gradient(135deg, #16a34a, #22c55e);
+    }
+
+    .cliente-stat-icon.orange {
+        background: linear-gradient(135deg, #f97316, #fb923c);
+    }
+
+    .cliente-stat-icon.blue {
+        background: linear-gradient(135deg, #2563eb, #60a5fa);
+    }
+
+.clientes-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: 0 12px 35px rgba(15, 23, 42, 0.08);
+    border: 1px solid #f1f5f9;
+}
+
+.clientes-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.clientes-search {
+    flex: 1;
+    min-width: 260px;
+    height: 46px;
+    border: 1px solid #e5e7eb;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 15px;
+    background: #f9fafb;
+}
+
+    .clientes-search i {
+        color: #6D28D9;
+    }
+
+    .clientes-search input {
+        border: none;
+        outline: none;
+        background: transparent;
+        width: 100%;
+        font-size: 14px;
+    }
+
+.clientes-toolbar select {
+    height: 46px;
+    border: 1px solid #e5e7eb;
+    border-radius: 15px;
+    padding: 0 14px;
+    background: #fff;
+    color: #374151;
+    outline: none;
+}
+
+.clientes-btn {
+    height: 46px;
+    border: none;
+    border-radius: 15px;
+    padding: 0 18px;
+    background: #f3f4f6;
+    color: #374151;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+    .clientes-btn:hover {
+        background: #e5e7eb;
+        color: #111827;
+    }
+
+    .clientes-btn.primary {
+        background: #6D28D9;
+        color: #fff;
+    }
+
+        .clientes-btn.primary:hover {
+            background: #5b21b6;
+            color: #fff;
+        }
+
+    .clientes-btn.export {
+        background: #ecfdf5;
+        color: #15803d;
+    }
+
+        .clientes-btn.export.pdf {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+    .clientes-btn.danger {
+        background: #dc2626;
+        color: #fff;
+    }
+
+        .clientes-btn.danger:hover {
+            background: #b91c1c;
+            color: #fff;
+        }
+
+.clientes-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.clientes-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 12px;
+}
+
+    .clientes-table thead th {
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 800;
+        padding: 0 14px 8px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .clientes-table tbody tr {
+        background: #f9fafb;
+        border-radius: 18px;
+    }
+
+    .clientes-table tbody td {
+        padding: 16px 14px;
+        color: #374151;
+        font-size: 14px;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+        .clientes-table tbody td:first-child {
+            border-radius: 18px 0 0 18px;
+            font-weight: 800;
+            color: #6D28D9;
+        }
+
+        .clientes-table tbody td:last-child {
+            border-radius: 0 18px 18px 0;
+        }
+
+.cliente-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cliente-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #6D28D9, #8B5CF6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+}
+
+.cliente-info strong {
+    display: block;
+    color: #111827;
+}
+
+.cliente-info span {
+    display: block;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.estado-badge {
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+    .estado-badge.activo {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .estado-badge.inactivo {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+.clientes-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 12px;
+    background: #ede9fe;
+    color: #6D28D9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+    .action-btn.edit {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .action-btn.delete {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-1px);
+    }
+
+.clientes-empty {
+    text-align: center;
+    color: #6b7280;
+    padding: 30px !important;
+    border-radius: 18px !important;
+}
+
+.clientes-footer-table {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 18px;
+    color: #6b7280;
+    font-size: 14px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.clientes-pagination {
+    display: flex;
+    gap: 8px;
+}
+
+.page-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: #f3f4f6;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    font-weight: 800;
+}
+
+    .page-btn.active,
+    .page-btn:hover {
+        background: #6D28D9;
+        color: #fff;
+    }
+
+.clientes-modal {
+    border: none;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+    .clientes-modal .modal-header {
+        border-bottom: 1px solid #f1f5f9;
+        padding: 20px 24px;
+    }
+
+    .clientes-modal .modal-title {
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .clientes-modal .modal-body {
+        padding: 24px;
+    }
+
+.clientes-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+    .clientes-form-grid input,
+    .clientes-form-grid select {
+        height: 46px;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 0 14px;
+        outline: none;
+    }
+
+        .clientes-form-grid input:focus,
+        .clientes-form-grid select:focus {
+            border-color: #6D28D9;
+            box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.12);
+        }
+
+#mensajeIcono {
+    font-size: 48px;
+}
+
+@media (max-width: 992px) {
+    .clientes-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 576px) {
+    .clientes-page {
+        padding: 16px;
+    }
+
+    .clientes-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .clientes-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .clientes-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+        .clientes-search,
+        .clientes-toolbar select,
+        .clientes-btn {
+            width: 100%;
+        }
+}

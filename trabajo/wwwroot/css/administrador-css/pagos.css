@@ -1,0 +1,5 @@
+/* Estilos complementarios para Pagos - Panel Administrador CrediPlus */
+.estado-donut,
+.metodo-donut {
+    transition: background 0.3s ease;
+}
