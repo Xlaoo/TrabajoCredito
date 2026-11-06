@@ -28,7 +28,15 @@
     <link rel="stylesheet"
           href="~/css/utilidades-ui.css" />
 
-    <!-- Cloudflare Turnstile API -->
+    <!-- 
+        CLOUDFLARE TURNSTILE API (Excepción técnica SRI / Riesgo Aceptado):
+        - OWASP ZAP Regla 90003: Sub Resource Integrity (SRI) Attribute Missing.
+        - Justificación técnica: Cloudflare Turnstile es un servicio dinámico de protección anti-bot y mitigación
+          de amenazas cuyos scripts se actualizan y compilan frecuentemente en el edge de Cloudflare.
+        - Un hash SRI fijo provocaría el bloqueo inmediato del script (DoS en autenticación) ante cualquier cambio de versión del proveedor.
+        - Control compensatorio: La integridad y origen del script están estrictamente asegurados mediante la política
+          Content Security Policy (CSP) en Program.cs (script-src, frame-src, connect-src, img-src hacia 'challenges.cloudflare.com').
+    -->
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
     <link rel="stylesheet" href="~/css/olvide-contrasena.css" asp-append-version="true" />
