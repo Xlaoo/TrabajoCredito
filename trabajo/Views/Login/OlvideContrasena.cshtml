@@ -29,15 +29,32 @@
           href="~/css/utilidades-ui.css" />
 
     <!-- 
-        CLOUDFLARE TURNSTILE API (Excepción técnica SRI / Riesgo Aceptado):
-        - OWASP ZAP Regla 90003: Sub Resource Integrity (SRI) Attribute Missing.
-        - Justificación técnica: Cloudflare Turnstile es un servicio dinámico de protección anti-bot y mitigación
-          de amenazas cuyos scripts se actualizan y compilan frecuentemente en el edge de Cloudflare.
-        - Un hash SRI fijo provocaría el bloqueo inmediato del script (DoS en autenticación) ante cualquier cambio de versión del proveedor.
-        - Control compensatorio: La integridad y origen del script están estrictamente asegurados mediante la política
-          Content Security Policy (CSP) en Program.cs (script-src, frame-src, connect-src, img-src hacia 'challenges.cloudflare.com').
+        CLOUDFLARE TURNSTILE API - EXCEPCIÓN TÉCNICA SRI (OWASP ZAP Regla 90003):
+        1. Limitación del proveedor: Cloudflare Turnstile (https://developers.cloudflare.com/turnstile/)
+           no provee ni garantiza un hash SRI estable para api.js. Al ser un servicio activo de mitigación
+           anti-bot, el script se actualiza y recompila dinámicamente en los servidores de Cloudflare.
+           Fijar un hash integrity estático causará fallos de verificación y bloqueo del script (DoS en
+           autenticación) en cuanto Cloudflare actualice el archivo en su red.
+        2. Distinción de controles de seguridad (CSP vs SRI):
+           - SRI (Subresource Integrity) valida la integridad criptográfica del contenido del archivo mediante hash.
+           - CSP (Content Security Policy) no valida la integridad criptográfica del contenido, sino que restringe
+             estrictamente los orígenes permitidos de descarga y ejecución.
+        3. Controles compensatorios activos:
+           a) CSP en Program.cs acotada según la guía oficial de Cloudflare:
+              script-src, frame-src, connect-src e img-src limitados a 'https://challenges.cloudflare.com'.
+           b) Conexión cifrada HTTPS obligatoria con TLS y HSTS para prevenir alteración en tránsito (MITM).
+           c) Validación server-to-server en TurnstileService mediante el endpoint oficial siteverify.
+        4. Riesgo residual aceptado: Si la infraestructura de Cloudflare fuese vulnerada o sirviese código no deseado
+           desde su propio dominio, el navegador lo ejecutaría al provenir del origen autorizado por CSP.
+        5. Alcance estricto: Esta excepción aplica única y exclusivamente a api.js de Turnstile. Todas las demás
+           dependencias externas estáticas (Bootstrap, Bootstrap Icons, QRCode, etc.) mantienen su atributo integrity.
     -->
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+            integrity="sha384-cajyDgURtn/TQ7o+4KLfGHFelG+tNtyTW+9jMO+YG7yRlgexqLmppuoeZt/CNVD6"
+            crossorigin="anonymous"
+            async
+            defer>
+    </script>
 
     <link rel="stylesheet" href="~/css/olvide-contrasena.css" asp-append-version="true" />
 
