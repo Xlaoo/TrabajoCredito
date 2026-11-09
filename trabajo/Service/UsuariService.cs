@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using trabajo.Models;
 
 namespace trabajo.Service
@@ -12,13 +12,29 @@ namespace trabajo.Service
             _Context = context;
         }
 
-        public async Task<Usuario> GetUsuario(string Correo, string Clave)
+        public async Task<Usuario?> GetUsuario(string Correo, string Clave)
         {
-            // Cambiado a _Context.Usuario (singular)
-            Usuario usuario = await _Context.Usuario
-                .Where(u => u.Correo == Correo && u.clave == Clave)
-                .FirstOrDefaultAsync();
-            return usuario;
+            var usuario = await _Context.Usuario
+                .FirstOrDefaultAsync(u => u.Correo == Correo);
+
+            if (usuario != null && utilidades.VerifyPassword(Clave, usuario.clave))
+            {
+                // Migración transparente si aún es SHA-256
+                if (!utilidades.EsHashBCrypt(usuario.clave))
+                {
+                    try
+                    {
+                        usuario.clave = utilidades.HashPassword(Clave);
+                        await _Context.SaveChangesAsync();
+                    }
+                    catch
+                    {
+                    }
+                }
+                return usuario;
+            }
+
+            return null;
         }
 
         public async Task<Usuario> SaveUsuario(Usuario usuario)

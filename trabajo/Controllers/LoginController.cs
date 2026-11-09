@@ -525,10 +525,7 @@ namespace trabajo.Controllers
             // CREAR USUARIO (SIN BIOMETRÍA EN REGISTRO GENERAL)
             // ==========================================
 
-            usuario.clave =
-                utilidades.EncriptarClave(
-                    usuario.clave
-                );
+            usuario.clave = utilidades.HashPassword(usuario.clave);
 
             usuario.Rol = "Cliente";
             usuario.FechaRegistro = DateTime.Now;
@@ -687,13 +684,12 @@ namespace trabajo.Controllers
                 }
 
                 // ==========================================
-                // VERIFICAR DNI + CONTRASEÑA
+                // VERIFICAR DNI + CONTRASEÑA (BCrypt / Migración SHA-256)
                 // ==========================================
 
-                string claveEncriptada =
-                    utilidades.EncriptarClave(clave);
+                bool claveValida = utilidades.VerifyPassword(clave, usuarioRegistrado.clave);
 
-                if (usuarioRegistrado.clave != claveEncriptada)
+                if (!claveValida)
                 {
                     // Alerta de seguridad preventiva: Intento de acceso fallido (Cooldown 5 min por DNI)
                     try
@@ -748,6 +744,21 @@ namespace trabajo.Controllers
                 // Credenciales correctas: limpiar registro de intentos fallidos
                 _alertasFallidasCache.TryRemove(dni, out _);
                 LimpiarIntentosFallidosLogin(dni);
+
+                // MIGRACIÓN TRANSPARENTE: Si el usuario tenía hash SHA-256 heredado, re-hashear a BCrypt
+                if (!utilidades.EsHashBCrypt(usuarioRegistrado.clave))
+                {
+                    try
+                    {
+                        usuarioRegistrado.clave = utilidades.HashPassword(clave);
+                        _Context.Usuario.Update(usuarioRegistrado);
+                        await _Context.SaveChangesAsync();
+                    }
+                    catch (Exception exMigration)
+                    {
+                        Console.WriteLine($"[CrediPlus] Error en re-hash automático a BCrypt: {exMigration.Message}");
+                    }
+                }
 
                 // Alerta de seguridad preventiva: Detectamos acceso correcto con DNI y contraseña
                 if (!string.IsNullOrWhiteSpace(usuarioRegistrado.Correo))
@@ -2811,13 +2822,7 @@ namespace trabajo.Controllers
             // NO PERMITIR MISMA CONTRASEÑA
             // ==========================================
 
-            string nuevaClaveEncriptada =
-                utilidades.EncriptarClave(
-                    nuevaClave
-                );
-
-            if (usuario.clave ==
-                nuevaClaveEncriptada)
+            if (utilidades.VerifyPassword(nuevaClave, usuario.clave))
             {
                 return Json(new
                 {
@@ -2828,11 +2833,10 @@ namespace trabajo.Controllers
             }
 
             // ==========================================
-            // GUARDAR
+            // GUARDAR (BCrypt con sal independiente)
             // ==========================================
 
-            usuario.clave =
-                nuevaClaveEncriptada;
+            usuario.clave = utilidades.HashPassword(nuevaClave);
 
             _Context.SaveChanges();
 
@@ -4055,6 +4059,56 @@ string titularCuenta
                 return RedirectToAction("IniciarSesion", "Login");
             }
 
+            // ==========================================
+            // BLINDAJE CONTRA MANIPULACIÓN DEL DOM (VALIDACIÓN SERVER-SIDE)
+            // ==========================================
+
+            // 1. Monto solicitado: mínimo S/ 1,000 - máximo S/ 50,000
+            const decimal MONTO_MINIMO = 1000m;
+            const decimal MONTO_MAXIMO = 50000m;
+            if (montoSolicitado < MONTO_MINIMO || montoSolicitado > MONTO_MAXIMO)
+            {
+                TempData["Mensaje"] = $"El monto solicitado debe estar entre S/ {MONTO_MINIMO:N0} y S/ {MONTO_MAXIMO:N0}.";
+                return RedirectToAction("SolicitarCredito");
+            }
+
+            // 2. Plazos en meses permitidos: 12, 18, 24, 30, 36, 48, 60, 72 meses
+            int[] plazosPermitidos = new[] { 12, 18, 24, 30, 36, 48, 60, 72 };
+            if (!plazosPermitidos.Contains(plazoMeses))
+            {
+                TempData["Mensaje"] = "El plazo seleccionado no es válido según las políticas de crédito.";
+                return RedirectToAction("SolicitarCredito");
+            }
+
+            // 3. Ingreso mensual mayor que cero
+            if (ingresoMensual <= 0)
+            {
+                TempData["Mensaje"] = "El ingreso mensual debe ser mayor a cero.";
+                return RedirectToAction("SolicitarCredito");
+            }
+
+            // 4. Egreso mensual igual o mayor que cero
+            if (egresoMensual < 0)
+            {
+                TempData["Mensaje"] = "El egreso mensual no puede ser un valor negativo.";
+                return RedirectToAction("SolicitarCredito");
+            }
+
+            // 5. Ingreso mensual superior al egreso mensual
+            if (ingresoMensual <= egresoMensual)
+            {
+                TempData["Mensaje"] = "El ingreso mensual debe ser estrictamente superior al egreso mensual.";
+                return RedirectToAction("SolicitarCredito");
+            }
+
+            // 6. Campos obligatorios del método de pago
+            if (string.IsNullOrWhiteSpace(metodoPago) || string.IsNullOrWhiteSpace(entidadPago) ||
+                string.IsNullOrWhiteSpace(numeroCuentaPago) || string.IsNullOrWhiteSpace(titularCuenta))
+            {
+                TempData["Mensaje"] = "Todos los campos de la cuenta y método de pago son obligatorios.";
+                return RedirectToAction("SolicitarCredito");
+            }
+
             var existeSolicitudActiva = _Context.SOLICITUD_CREDITO
  .Any(x => x.Usuario_Id_Usuario == usuario.Id &&
       (x.Estado == "Pendiente" ||
@@ -4563,7 +4617,7 @@ string titularCuenta
                     return View(usuario);
                 }
 
-                usuario.clave = utilidades.EncriptarClave(usuarioEditado.clave);
+                usuario.clave = utilidades.HashPassword(usuarioEditado.clave);
             }
 
             // ==========================================
@@ -4780,6 +4834,21 @@ string titularCuenta
                 if (solicitud == null)
                     return Json(new { ok = false, mensaje = "No se encontró la solicitud." });
 
+                if (solicitud.Estado != "Aprobado")
+                {
+                    return Json(new { ok = false, mensaje = "Solo se puede solicitar cancelación sobre créditos aprobados." });
+                }
+
+                if (montoDevuelto <= 0)
+                {
+                    return Json(new { ok = false, mensaje = "El monto a devolver debe ser mayor a cero." });
+                }
+
+                if (string.IsNullOrWhiteSpace(metodoPago) || string.IsNullOrWhiteSpace(codigoOperacion) || string.IsNullOrWhiteSpace(motivoCancelacion))
+                {
+                    return Json(new { ok = false, mensaje = "Todos los campos del pago de cancelación son obligatorios." });
+                }
+
                 var pago = new PagoCancelacion
                 {
                     MontoDevuelto = montoDevuelto,
@@ -4837,6 +4906,12 @@ string titularCuenta
                 if (nuevoMonto < 1000 || nuevoMonto > 50000)
                 {
                     return Json(new { ok = false, mensaje = "El monto debe estar entre S/ 1,000 y S/ 50,000." });
+                }
+
+                int[] plazosPermitidos = new[] { 12, 18, 24, 30, 36, 48, 60, 72 };
+                if (!plazosPermitidos.Contains(nuevoPlazo))
+                {
+                    return Json(new { ok = false, mensaje = "El plazo seleccionado no es válido según las políticas de crédito." });
                 }
 
                 solicitud.MontoSolicitado = nuevoMonto;
@@ -4922,6 +4997,24 @@ string titularCuenta
                     {
                         ok = false,
                         mensaje = "La cuota ya se encuentra pagada o en proceso de validación."
+                    });
+                }
+
+                if (montoPagado <= 0)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "El monto pagado debe ser mayor a cero."
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(metodoPago) || string.IsNullOrWhiteSpace(entidadPago) || string.IsNullOrWhiteSpace(codigoOperacion))
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "Todos los campos del pago y código de operación son obligatorios."
                     });
                 }
 
@@ -5023,9 +5116,20 @@ string titularCuenta
 
             if (imagen != null)
             {
+                string ext = Path.GetExtension(imagen.FileName).ToLowerInvariant();
+                string[] extensionesPermitidas = { ".jpg", ".jpeg", ".png", ".webp" };
+                if (!extensionesPermitidas.Contains(ext))
+                {
+                    return Json(new { ok = false, mensaje = "Solo se permiten imágenes en formato JPG, JPEG, PNG o WEBP." });
+                }
+
+                if (imagen.Length > 5 * 1024 * 1024)
+                {
+                    return Json(new { ok = false, mensaje = "La imagen no debe superar los 5 MB." });
+                }
+
                 string nombreArchivo =
-                    Guid.NewGuid().ToString() +
-                    Path.GetExtension(imagen.FileName);
+                    Guid.NewGuid().ToString() + ext;
 
                 string carpeta =
                     Path.Combine(

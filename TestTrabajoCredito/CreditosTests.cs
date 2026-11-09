@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Moq;
@@ -34,6 +36,35 @@ namespace TestTrabajoCredito
             var mockConfig = new Mock<IConfiguration>();
             var controller = new AnalistaController(context, mockConfig.Object, servicioEvaluacion ?? new ServicioEvaluacionCrediticia());
             controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+            return controller;
+        }
+
+        private LoginController CrearLoginController(UsuarioContext context)
+        {
+            var mockUsuarioService = new Mock<IusuarioServices>();
+            var mockConfig = new Mock<IConfiguration>();
+            var mockTurnstile = new Mock<ITurnstileService>();
+            var servicioVoz = (ServicioEmbeddingVoz)System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(ServicioEmbeddingVoz));
+
+            var controller = new LoginController(mockUsuarioService.Object, context, servicioVoz, mockConfig.Object, mockTurnstile.Object);
+
+            var claims = new List<Claim>
+            {
+                new Claim("Dni", "72527818"),
+                new Claim(ClaimTypes.Role, "Cliente")
+            };
+            var identity = new ClaimsIdentity(claims, "TestAuth");
+            var principal = new ClaimsPrincipal(identity);
+
+            controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = principal }
+            };
+            controller.TempData = new TempDataDictionary(
+                controller.HttpContext,
+                Mock.Of<ITempDataProvider>()
+            );
+
             return controller;
         }
 
@@ -351,6 +382,413 @@ namespace TestTrabajoCredito
                     return (success && solEnDb?.Estado == "Aprobado" && cronograma != null)
                         ? "Aprobado exitoso: Estado 'Aprobado' con cronograma generado"
                         : "Error en aprobación";
+                });
+
+            // ==========================================
+            // BLINDAJE SERVER-SIDE CONTRA MANIPULACIÓN DOM (F12)
+            // ==========================================
+
+            // Helper para registrar un cliente de prueba en la BD en memoria
+            Action<UsuarioContext> asegurarClientePrueba = (ctx) =>
+            {
+                if (!ctx.Usuario.Any(u => u.Dni == "72527818"))
+                {
+                    ctx.Usuario.Add(new Usuario
+                    {
+                        Id = 1,
+                        Nombre = "Rafael",
+                        Apellido = "Rosales",
+                        Dni = "72527818",
+                        Correo = "xlaforosalespapuico@gmail.com",
+                        Celular = "981999121",
+                        Rol = "Cliente",
+                        EstadoActivo = true,
+                        clave = "$2a$12$eXampleHashCrediPlus2026SecureBcryptHashValuePadding60"
+                    });
+                    ctx.SaveChanges();
+                }
+            };
+
+            // Escenario 16: Blindaje DOM - Monto inferior a S/ 1,000
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de monto inferior al mínimo permitido (S/ 500)",
+                datoEntrada: "Monto: 500, Plazo: 12",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarSolicitudCredito(
+                        montoSolicitado: 500m,
+                        plazoMeses: 12,
+                        ingresoMensual: 3000m,
+                        egresoMensual: 1000m,
+                        tieneOtrosCreditos: "No",
+                        motivoOtro: "",
+                        ocupacion: "Ingeniero",
+                        motivoPrestamo: "Negocio",
+                        metodoPago: "Transferencia Bancaria",
+                        entidadPago: "BCP",
+                        numeroCuentaPago: "191-12345678-0-12",
+                        titularCuenta: "Rafael Rosales"
+                    );
+
+                    var redirect = Assert.IsType<RedirectToActionResult>(res);
+                    string? mensaje = controller.TempData["Mensaje"]?.ToString();
+                    return redirect.ActionName == "SolicitarCredito" && mensaje != null && mensaje.Contains("monto solicitado debe estar entre");
+                });
+
+            // Escenario 17: Blindaje DOM - Monto superior a S/ 50,000 (manipulación con DevTools)
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de monto superior al máximo permitido (S/ 70,000)",
+                datoEntrada: "Monto: 70000, Plazo: 24",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarSolicitudCredito(
+                        montoSolicitado: 70000m,
+                        plazoMeses: 24,
+                        ingresoMensual: 10000m,
+                        egresoMensual: 2000m,
+                        tieneOtrosCreditos: "No",
+                        motivoOtro: "",
+                        ocupacion: "Ingeniero",
+                        motivoPrestamo: "Negocio",
+                        metodoPago: "Transferencia Bancaria",
+                        entidadPago: "BCP",
+                        numeroCuentaPago: "191-12345678-0-12",
+                        titularCuenta: "Rafael Rosales"
+                    );
+
+                    var redirect = Assert.IsType<RedirectToActionResult>(res);
+                    string? mensaje = controller.TempData["Mensaje"]?.ToString();
+                    return redirect.ActionName == "SolicitarCredito" && mensaje != null && mensaje.Contains("monto solicitado debe estar entre");
+                });
+
+            // Escenario 18: Blindaje DOM - Plazo no permitido (ej. 10 meses)
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de plazo no admitido en políticas (10 meses)",
+                datoEntrada: "Plazo: 10 meses",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarSolicitudCredito(
+                        montoSolicitado: 5000m,
+                        plazoMeses: 10,
+                        ingresoMensual: 3000m,
+                        egresoMensual: 1000m,
+                        tieneOtrosCreditos: "No",
+                        motivoOtro: "",
+                        ocupacion: "Ingeniero",
+                        motivoPrestamo: "Negocio",
+                        metodoPago: "Transferencia Bancaria",
+                        entidadPago: "BCP",
+                        numeroCuentaPago: "191-12345678-0-12",
+                        titularCuenta: "Rafael Rosales"
+                    );
+
+                    var redirect = Assert.IsType<RedirectToActionResult>(res);
+                    string? mensaje = controller.TempData["Mensaje"]?.ToString();
+                    return redirect.ActionName == "SolicitarCredito" && mensaje != null && mensaje.Contains("plazo seleccionado no es válido");
+                });
+
+            // Escenario 19: Blindaje DOM - Ingreso mensual cero o negativo
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de ingreso mensual menor o igual a cero (S/ 0)",
+                datoEntrada: "Ingreso: 0, Egreso: 500",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarSolicitudCredito(
+                        montoSolicitado: 5000m,
+                        plazoMeses: 12,
+                        ingresoMensual: 0m,
+                        egresoMensual: 500m,
+                        tieneOtrosCreditos: "No",
+                        motivoOtro: "",
+                        ocupacion: "Ingeniero",
+                        motivoPrestamo: "Negocio",
+                        metodoPago: "Transferencia Bancaria",
+                        entidadPago: "BCP",
+                        numeroCuentaPago: "191-12345678-0-12",
+                        titularCuenta: "Rafael Rosales"
+                    );
+
+                    var redirect = Assert.IsType<RedirectToActionResult>(res);
+                    string? mensaje = controller.TempData["Mensaje"]?.ToString();
+                    return redirect.ActionName == "SolicitarCredito" && mensaje != null && mensaje.Contains("ingreso mensual debe ser mayor a cero");
+                });
+
+            // Escenario 20: Blindaje DOM - Egreso mensual negativo
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de egreso mensual negativo (S/ -200)",
+                datoEntrada: "Ingreso: 3000, Egreso: -200",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarSolicitudCredito(
+                        montoSolicitado: 5000m,
+                        plazoMeses: 12,
+                        ingresoMensual: 3000m,
+                        egresoMensual: -200m,
+                        tieneOtrosCreditos: "No",
+                        motivoOtro: "",
+                        ocupacion: "Ingeniero",
+                        motivoPrestamo: "Negocio",
+                        metodoPago: "Transferencia Bancaria",
+                        entidadPago: "BCP",
+                        numeroCuentaPago: "191-12345678-0-12",
+                        titularCuenta: "Rafael Rosales"
+                    );
+
+                    var redirect = Assert.IsType<RedirectToActionResult>(res);
+                    string? mensaje = controller.TempData["Mensaje"]?.ToString();
+                    return redirect.ActionName == "SolicitarCredito" && mensaje != null && mensaje.Contains("egreso mensual no puede ser un valor negativo");
+                });
+
+            // Escenario 21: Blindaje DOM - Egreso superior o igual al ingreso
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de egreso superior al ingreso (Ingreso S/ 1,500 vs Egreso S/ 2,000)",
+                datoEntrada: "Ingreso: 1500, Egreso: 2000",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarSolicitudCredito(
+                        montoSolicitado: 5000m,
+                        plazoMeses: 12,
+                        ingresoMensual: 1500m,
+                        egresoMensual: 2000m,
+                        tieneOtrosCreditos: "No",
+                        motivoOtro: "",
+                        ocupacion: "Ingeniero",
+                        motivoPrestamo: "Negocio",
+                        metodoPago: "Transferencia Bancaria",
+                        entidadPago: "BCP",
+                        numeroCuentaPago: "191-12345678-0-12",
+                        titularCuenta: "Rafael Rosales"
+                    );
+
+                    var redirect = Assert.IsType<RedirectToActionResult>(res);
+                    string? mensaje = controller.TempData["Mensaje"]?.ToString();
+                    return redirect.ActionName == "SolicitarCredito" && mensaje != null && mensaje.Contains("ingreso mensual debe ser estrictamente superior");
+                });
+
+            // Escenario 22: Blindaje DOM - Campos de método de pago faltantes
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo por omisión de campos bancarios obligatorios",
+                datoEntrada: "Campos de cuenta vacíos",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarSolicitudCredito(
+                        montoSolicitado: 5000m,
+                        plazoMeses: 12,
+                        ingresoMensual: 3000m,
+                        egresoMensual: 1000m,
+                        tieneOtrosCreditos: "No",
+                        motivoOtro: "",
+                        ocupacion: "Ingeniero",
+                        motivoPrestamo: "Negocio",
+                        metodoPago: "", // Vacío
+                        entidadPago: "BCP",
+                        numeroCuentaPago: "191-12345678-0-12",
+                        titularCuenta: "Rafael Rosales"
+                    );
+
+                    var redirect = Assert.IsType<RedirectToActionResult>(res);
+                    string? mensaje = controller.TempData["Mensaje"]?.ToString();
+                    return redirect.ActionName == "SolicitarCredito" && mensaje != null && mensaje.Contains("método de pago son obligatorios");
+                });
+
+            // Escenario 23: Blindaje DOM/API - Edición de solicitud con plazo no permitido
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de edición con plazo no permitido (15 meses)",
+                datoEntrada: "Plazo: 15",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+                    var solicitud = new SolicitudCredito
+                    {
+                        Id_Solicitud = 10,
+                        NumeroSolicitud = "SOL-TEST-010",
+                        Usuario_Id_Usuario = 1,
+                        MontoSolicitado = 5000m,
+                        PlazoMeses = 12,
+                        Estado = "En Evaluación",
+                        FechaSolicitud = DateTime.UtcNow
+                    };
+                    context.SOLICITUD_CREDITO.Add(solicitud);
+                    context.SaveChanges();
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.EditarSolicitud(10, 6000m, 15);
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    var ok = ObtenerPropiedad(jsonRes.Value, "ok") as bool?;
+                    var mensaje = ObtenerPropiedad(jsonRes.Value, "mensaje") as string;
+                    return ok == false && mensaje != null && mensaje.Contains("plazo seleccionado no es válido");
+                });
+
+            // Escenario 24: Blindaje DOM/API - Cancelación con crédito en estado no aprobado
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de cancelación sobre crédito en estado 'Pendiente'",
+                datoEntrada: "Estado: Pendiente, Monto: 0",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+                    var solicitud = new SolicitudCredito
+                    {
+                        Id_Solicitud = 20,
+                        NumeroSolicitud = "SOL-TEST-020",
+                        Usuario_Id_Usuario = 1,
+                        MontoSolicitado = 5000m,
+                        PlazoMeses = 12,
+                        Estado = "Pendiente",
+                        FechaSolicitud = DateTime.UtcNow
+                    };
+                    context.SOLICITUD_CREDITO.Add(solicitud);
+                    context.SaveChanges();
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarCancelacion(20, 0m, "Transferencia", "OP-123", "Ya no necesito el préstamo");
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    var ok = ObtenerPropiedad(jsonRes.Value, "ok") as bool?;
+                    var mensaje = ObtenerPropiedad(jsonRes.Value, "mensaje") as string;
+                    return ok == false && mensaje != null && mensaje.Contains("Solo se puede solicitar cancelación sobre créditos aprobados");
+                });
+
+            // Escenario 25: Blindaje DOM/API - Pago de cuota con monto no positivo
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de pago de cuota con monto <= 0",
+                datoEntrada: "MontoPagado: -50",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+                    var solicitud = new SolicitudCredito
+                    {
+                        Id_Solicitud = 30,
+                        NumeroSolicitud = "SOL-TEST-030",
+                        Usuario_Id_Usuario = 1,
+                        MontoSolicitado = 5000m,
+                        PlazoMeses = 12,
+                        Estado = "Aprobado",
+                        FechaSolicitud = DateTime.UtcNow
+                    };
+                    context.SOLICITUD_CREDITO.Add(solicitud);
+                    var cuota = new Cuota
+                    {
+                        Id_Cuota = 101,
+                        SOLICITUD_CREDITO_Id_Solicitud = 30,
+                        NumeroCuota = 1,
+                        MontoCuota = 450m,
+                        Estado = "Pendiente",
+                        FechaVencimiento = DateTime.UtcNow.AddDays(15),
+                        FechaLimitePago = DateTime.UtcNow.AddDays(15),
+                        SOLICITUD_CREDITO = solicitud
+                    };
+                    context.CUOTA.Add(cuota);
+                    context.SaveChanges();
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarPagoCuota(101, -50m, "BCP", "BCP", "OP-999");
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    var ok = ObtenerPropiedad(jsonRes.Value, "ok") as bool?;
+                    var mensaje = ObtenerPropiedad(jsonRes.Value, "mensaje") as string;
+                    return ok == false && mensaje != null && mensaje.Contains("monto pagado debe ser mayor a cero");
+                });
+
+            // Escenario 26: Blindaje Analista - GuardarPerfilFinanciero rechaza plazo no permitido
+            runner.Evaluar(
+                nombreEscenario: "Blindaje Analista: Rechazo de perfil financiero con plazo inválido (13 meses)",
+                datoEntrada: "Plazo: 13 meses",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+                    var solicitud = new SolicitudCredito
+                    {
+                        Id_Solicitud = 40,
+                        NumeroSolicitud = "SOL-TEST-040",
+                        Usuario_Id_Usuario = 1,
+                        MontoSolicitado = 5000m,
+                        PlazoMeses = 12,
+                        Estado = "Pendiente",
+                        FechaSolicitud = DateTime.UtcNow
+                    };
+                    context.SOLICITUD_CREDITO.Add(solicitud);
+                    context.SaveChanges();
+
+                    var controller = CrearAnalistaController(context);
+                    var res = controller.GuardarPerfilFinanciero(40, 5000m, 13, 3000m, 1000m);
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    var ok = ObtenerPropiedad(jsonRes.Value, "ok") as bool?;
+                    var mensaje = ObtenerPropiedad(jsonRes.Value, "mensaje") as string;
+                    return ok == false && mensaje != null && mensaje.Contains("plazo seleccionado no es válido");
                 });
 
             runner.VerificarTodosAprobados();

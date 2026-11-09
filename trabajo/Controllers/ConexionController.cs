@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -38,7 +39,12 @@ namespace trabajo.Controllers
                 return Unauthorized();
             }
 
-            usuario.EstadoActivo = true;
+            if (!usuario.EstadoActivo)
+            {
+                await HttpContext.SignOutAsync();
+                return Unauthorized();
+            }
+
             usuario.UltimaConexion = DateTime.Now;
 
             await _context.SaveChangesAsync();

@@ -72,6 +72,89 @@ namespace TestTrabajoCredito
                     return hA != hB;
                 });
 
+            // 7. BCrypt Hashing: Longitud 60, Prefijo $2a$12$, y Sal Aleatoria
+            runner.Evaluar(
+                nombreEscenario: "BCrypt: Formato correcto, factor de costo 12 y sal aleatoria independiente",
+                datoEntrada: "PasswordSegura#2026!",
+                esperado: true,
+                accion: () =>
+                {
+                    string h1 = utilidades.HashPassword("PasswordSegura#2026!");
+                    string h2 = utilidades.HashPassword("PasswordSegura#2026!");
+
+                    bool formatoCorrecto = h1.Length == 60 && h1.StartsWith("$2a$12$");
+                    bool salAleatoria = h1 != h2; // Dos llamadas nunca deben dar el mismo hash
+                    bool esValido = utilidades.EsHashBCrypt(h1) && utilidades.EsHashBCrypt(h2);
+
+                    return formatoCorrecto && salAleatoria && esValido;
+                });
+
+            // 8. Detección de Hashes BCrypt vs SHA-256 vs Texto Plano
+            runner.Evaluar(
+                nombreEscenario: "EsHashBCrypt: Identificación precisa de BCrypt vs SHA-256 y texto plano",
+                datoEntrada: "Varios formatos de prueba",
+                esperado: true,
+                accion: () =>
+                {
+                    string bcryptHash = utilidades.HashPassword("TestPass123!");
+                    string sha256Hash = utilidades.EncriptarClave("TestPass123!");
+
+                    bool validaBcrypt = utilidades.EsHashBCrypt(bcryptHash);
+                    bool rechazaSha256 = !utilidades.EsHashBCrypt(sha256Hash);
+                    bool rechazaPlano = !utilidades.EsHashBCrypt("TestPass123!");
+                    bool rechazaVacio = !utilidades.EsHashBCrypt("") && !utilidades.EsHashBCrypt(null);
+
+                    return validaBcrypt && rechazaSha256 && rechazaPlano && rechazaVacio;
+                });
+
+            // 9. Verificación Dual: VerifyPassword con BCrypt y Legacy SHA-256
+            runner.Evaluar(
+                nombreEscenario: "VerifyPassword: Doble compatibilidad transparente con BCrypt y SHA-256",
+                datoEntrada: "Clave de prueba con ambos esquemas",
+                esperado: true,
+                accion: () =>
+                {
+                    string claveReal = "CrediPlus@Secure2026";
+                    string claveFalsa = "ClaveIncorrecta#99";
+
+                    string bcryptHash = utilidades.HashPassword(claveReal);
+                    string sha256Hash = utilidades.EncriptarClave(claveReal);
+
+                    // BCrypt
+                    bool bcryptOk = utilidades.VerifyPassword(claveReal, bcryptHash);
+                    bool bcryptFalla = !utilidades.VerifyPassword(claveFalsa, bcryptHash);
+
+                    // SHA-256 Legacy
+                    bool shaOk = utilidades.VerifyPassword(claveReal, sha256Hash);
+                    bool shaFalla = !utilidades.VerifyPassword(claveFalsa, sha256Hash);
+
+                    // Nulos o vacíos
+                    bool nuloFalla = !utilidades.VerifyPassword(claveReal, null) && !utilidades.VerifyPassword(claveReal, "");
+
+                    return bcryptOk && bcryptFalla && shaOk && shaFalla && nuloFalla;
+                });
+
+            // 10. Generación y Verificación de Hashes de Producción para Administrador y Analista
+            runner.Evaluar(
+                nombreEscenario: "Generación de hashes independientes para Administrador y Analista (Costo 12)",
+                datoEntrada: "CrediPlus#2026",
+                esperado: true,
+                accion: () =>
+                {
+                    string hashAdmin = utilidades.HashPassword("CrediPlus#2026");
+                    string hashAnalista = utilidades.HashPassword("CrediPlus#2026");
+
+                    bool distintos = hashAdmin != hashAnalista;
+                    bool ambosBcrypt = utilidades.EsHashBCrypt(hashAdmin) && utilidades.EsHashBCrypt(hashAnalista);
+                    bool verifyAdmin = utilidades.VerifyPassword("CrediPlus#2026", hashAdmin);
+                    bool verifyAnalista = utilidades.VerifyPassword("CrediPlus#2026", hashAnalista);
+
+                    _output.WriteLine($"HASH_ADMIN: {hashAdmin}");
+                    _output.WriteLine($"HASH_ANALISTA: {hashAnalista}");
+
+                    return distintos && ambosBcrypt && verifyAdmin && verifyAnalista;
+                });
+
             runner.VerificarTodosAprobados();
         }
     }

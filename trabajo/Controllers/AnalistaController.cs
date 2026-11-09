@@ -456,9 +456,25 @@ namespace trabajo.Controllers
                     return Json(new { ok = false, mensaje = "El monto solicitado debe situarse entre S/ 1,000 y S/ 50,000." });
                 }
 
-                if (plazoMeses <= 0)
+                int[] plazosPermitidos = { 12, 18, 24, 30, 36, 48, 60, 72 };
+                if (!plazosPermitidos.Contains(plazoMeses))
                 {
-                    return Json(new { ok = false, mensaje = "El plazo debe ser mayor a 0 meses." });
+                    return Json(new { ok = false, mensaje = "El plazo seleccionado no es válido. Los plazos permitidos son 12, 18, 24, 30, 36, 48, 60 o 72 meses." });
+                }
+
+                if (ingresoMensual.HasValue && ingresoMensual.Value <= 0)
+                {
+                    return Json(new { ok = false, mensaje = "El ingreso mensual debe ser mayor a 0." });
+                }
+
+                if (egresoMensual.HasValue && egresoMensual.Value < 0)
+                {
+                    return Json(new { ok = false, mensaje = "El egreso mensual no puede ser negativo." });
+                }
+
+                if (ingresoMensual.HasValue && egresoMensual.HasValue && ingresoMensual.Value <= egresoMensual.Value)
+                {
+                    return Json(new { ok = false, mensaje = "El ingreso mensual debe ser mayor a los egresos mensuales." });
                 }
 
                 // 1. Persistir cambios en la base de datos
@@ -1082,9 +1098,20 @@ namespace trabajo.Controllers
 
             if (imagen != null)
             {
+                string ext = Path.GetExtension(imagen.FileName).ToLowerInvariant();
+                string[] extensionesPermitidas = { ".jpg", ".jpeg", ".png", ".webp" };
+                if (!extensionesPermitidas.Contains(ext))
+                {
+                    return Json(new { ok = false, mensaje = "Solo se permiten imágenes en formato JPG, JPEG, PNG o WEBP." });
+                }
+
+                if (imagen.Length > 5 * 1024 * 1024)
+                {
+                    return Json(new { ok = false, mensaje = "La imagen no debe superar los 5 MB." });
+                }
+
                 string nombreArchivo =
-                    Guid.NewGuid().ToString() +
-                    Path.GetExtension(imagen.FileName);
+                    Guid.NewGuid().ToString() + ext;
 
                 string carpeta =
                     Path.Combine(
@@ -1998,7 +2025,7 @@ namespace trabajo.Controllers
                     return View(usuario);
                 }
 
-                analista.clave = utilidades.EncriptarClave(usuario.clave);
+                analista.clave = utilidades.HashPassword(usuario.clave);
             }
 
             _context.Usuario.Update(analista);

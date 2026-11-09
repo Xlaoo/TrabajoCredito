@@ -264,7 +264,7 @@ namespace trabajo.Controllers
                 EstadoActivo = false,
                 FechaRegistro = DateTime.Now,
                 UltimaConexion = null,
-                clave = utilidades.EncriptarClave(clave)
+                clave = utilidades.HashPassword(clave)
             };
 
             _context.Usuario.Add(nuevo);
@@ -519,11 +519,12 @@ namespace trabajo.Controllers
                     .OrderByDescending(x => x.Id)
                     .FirstOrDefault();
 
-                DateTime ultimaFechaCliente = _context.Usuario
-                    .Where(x => x.Rol == "Cliente")
-                    .Max(x => x.FechaRegistro);
+            DateTime ultimaFechaCliente = _context.Usuario
+                .Where(x => x.Rol == "Cliente")
+                .Select(x => (DateTime?)x.FechaRegistro)
+                .Max() ?? DateTime.MinValue;
 
-                ViewBag.ClientesPendiente = repClientes == null
+            ViewBag.ClientesPendiente = repClientes == null
                     || repClientes.Estado == "En Proceso"
                     || ultimaFechaCliente > repClientes.FechaGeneracion;
 
@@ -4698,7 +4699,7 @@ $"La notificación fue enviada correctamente a {usuario.Nombre} {usuario.Apellid
                 admin.Correo = usuario.Correo;
 
                 if (!string.IsNullOrWhiteSpace(usuario.clave))
-                    admin.clave = utilidades.EncriptarClave(usuario.clave);
+                    admin.clave = utilidades.HashPassword(usuario.clave);
 
                 _context.SaveChanges();
 
@@ -4792,7 +4793,7 @@ $"La notificación fue enviada correctamente a {usuario.Nombre} {usuario.Apellid
                         return RedirectToAction("PerfilAdministrador");
                     }
 
-                    admin.clave = utilidades.EncriptarClave(usuario.clave);
+                    admin.clave = utilidades.HashPassword(usuario.clave);
                 }
 
             // ==========================================

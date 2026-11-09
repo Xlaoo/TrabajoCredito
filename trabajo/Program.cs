@@ -271,7 +271,7 @@ var connectionString = builder.Configuration.GetConnectionString("cadenaSQL");
 builder.Services.AddDbContext<UsuarioContext>(options =>
     options.UseMySql(
         connectionString,
-        ServerVersion.Parse("9.4.0-mysql"),
+        ServerVersion.Parse("8.4.8-mysql"),
         mysqlOptions =>
         {
             mysqlOptions.EnableRetryOnFailure(
@@ -435,8 +435,7 @@ app.Use(async (context, next) =>
 
     // Si la solicitud es HTTPS o proviene de proxy HTTPS de Northflank (X-Forwarded-Proto),
     // asegurar que se emita HSTS si no está presente
-    bool esHttps = context.Request.IsHttps || 
-                   string.Equals(context.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
+    bool esHttps = context.Request.IsHttps;
 
     if (esHttps && !headers.ContainsKey("Strict-Transport-Security") && !app.Environment.IsDevelopment())
     {
