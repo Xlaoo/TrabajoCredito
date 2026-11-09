@@ -18,6 +18,7 @@ namespace trabajo.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Actualizar()
         {
             var correo =

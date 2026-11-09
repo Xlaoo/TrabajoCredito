@@ -22,7 +22,6 @@ namespace trabajo.Controllers
         private readonly IConfiguration _configuration;
         private readonly EmailService _emailService = new EmailService();
         private readonly IServicioEvaluacionCrediticia _servicioEvaluacion;
-        private static string codigoPerfilAnalista = "";
 
         public AnalistaController(
             UsuarioContext context,
@@ -1013,10 +1012,11 @@ namespace trabajo.Controllers
             }
             catch (Exception ex)
             {
+                Console.Error.WriteLine($"[AnalistaController.AprobarSolicitud] Error: {ex}");
                 return Json(new
                 {
                     success = false,
-                    mensaje = ex.ToString()
+                    mensaje = "Ocurrió un error interno al procesar la aprobación. Intente nuevamente."
                 });
             }
         }
@@ -1297,10 +1297,11 @@ namespace trabajo.Controllers
             }
             catch (Exception ex)
             {
+                Console.Error.WriteLine($"[AnalistaController.AprobarSolicitud] Error: {ex}");
                 return Json(new
                 {
                     success = false,
-                    mensaje = ex.ToString()
+                    mensaje = "Ocurrió un error interno al procesar la aprobación. Intente nuevamente."
                 });
             }
         }
@@ -1997,15 +1998,23 @@ namespace trabajo.Controllers
 
             if (usuario.Correo != analista.Correo)
             {
+                string? codigoGuardado = HttpContext.Session.GetString("CodigoPerfilAnalista");
+                string? correoGuardado = HttpContext.Session.GetString("CorreoPerfilAnalista");
+
                 if (string.IsNullOrWhiteSpace(codigoCorreo) ||
-                    codigoCorreo != codigoPerfilAnalista)
+                    string.IsNullOrWhiteSpace(codigoGuardado) ||
+                    codigoCorreo.Trim() != codigoGuardado ||
+                    !string.Equals(usuario.Correo?.Trim(), correoGuardado, StringComparison.OrdinalIgnoreCase))
                 {
-                    ViewData["Mensaje"] = "El código de verificación del correo es incorrecto.";
+                    ViewData["Mensaje"] = "El código de verificación del correo es incorrecto o ha expirado.";
                     ViewData["ModoEditar"] = true;
                     ViewData["CorreoIntentado"] = usuario.Correo;
 
                     return View(usuario);
                 }
+
+                HttpContext.Session.Remove("CodigoPerfilAnalista");
+                HttpContext.Session.Remove("CorreoPerfilAnalista");
             }
 
             analista.Nombre = usuario.Nombre;
@@ -2047,9 +2056,12 @@ namespace trabajo.Controllers
                 });
             }
 
-            codigoPerfilAnalista = rnd.Next(100000, 999999).ToString();
+            int codigoOtpNum = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000);
+            string codigoOtp = codigoOtpNum.ToString("D6");
+            HttpContext.Session.SetString("CodigoPerfilAnalista", codigoOtp);
+            HttpContext.Session.SetString("CorreoPerfilAnalista", correo.Trim().ToLowerInvariant());
 
-            await _emailService.EnviarCodigoAsync(correo, codigoPerfilAnalista);
+            await _emailService.EnviarCodigoAsync(correo, codigoOtp);
 
             return Json(new
             {
@@ -2103,10 +2115,11 @@ namespace trabajo.Controllers
             }
             catch (Exception ex)
             {
+                Console.Error.WriteLine($"[AnalistaController.CalificacionesServicio] Error: {ex}");
                 return StatusCode(500, new
                 {
                     mensaje = "Error al obtener calificaciones.",
-                    detalle = ex.Message
+                    detalle = "Consulte con el administrador del sistema."
                 });
             }
         }
@@ -2215,54 +2228,11 @@ namespace trabajo.Controllers
             ViewBag.Solicitudes = solicitudesAprobadas
                 .ToDictionary(x => x.Id_Solicitud, x => x);
 
-            // Pagos pendientes validación pasan a aprobado cuando entra analista
-            var pagosPendientes = _context.PAGO_CUOTA
-                .Where(x => x.Estado == "Pendiente validación")
-                .ToList();
-
-            foreach (var pago in pagosPendientes)
-            {
-                pago.Estado = "Aprobado";
-
-                var cuota = _context.CUOTA.FirstOrDefault(c => c.Id_Cuota == pago.Id_Cuota);
-                if (cuota != null)
-                {
-                    cuota.Estado = "Pagado";
-
-                    // Verificar si TODAS las cuotas del préstamo están pagadas para considerarlo cancelado
-                    int idSolPrestamo = cuota.SOLICITUD_CREDITO_Id_Solicitud;
-                    var cuotasPrestamo = _context.CUOTA
-                        .Where(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSolPrestamo)
-                        .ToList();
-
-                    bool todasPagadas = cuotasPrestamo.All(c => c.Id_Cuota == cuota.Id_Cuota || c.Estado == "Pagado");
-
-                    if (todasPagadas && cuotasPrestamo.Count > 0)
-                    {
-                        var solPrestamo = _context.SOLICITUD_CREDITO.FirstOrDefault(s => s.Id_Solicitud == idSolPrestamo);
-                        if (solPrestamo != null)
-                        {
-                            var resumenUser = _context.RESUMEN_CREDITICIO.FirstOrDefault(r => r.Usuario_Id == solPrestamo.Usuario_Id_Usuario);
-                            if (resumenUser != null)
-                            {
-                                resumenUser.DeudasPagadas += 1;
-                                if (resumenUser.DeudasActivas > 0)
-                                {
-                                    resumenUser.DeudasActivas -= 1;
-                                }
-                                resumenUser.UltimaActualizacion = DateTime.UtcNow;
-                            }
-                        }
-                    }
-                }
-            }
-
-            _context.SaveChanges();
-
+            // Cargar pagos registrados (estrictamente modo de lectura en petición GET)
             var pagosAprobados = _context.PAGO_CUOTA
-     .Where(x => x.Estado == "Aprobado" || x.Estado == "Pendiente validación")
-     .OrderByDescending(x => x.FechaPago)
-     .ToList();
+                .Where(x => x.Estado == "Aprobado" || x.Estado == "Pendiente validación")
+                .OrderByDescending(x => x.FechaPago)
+                .ToList();
 
             ViewBag.TotalAprobados = pagosAprobados.Count;
 
@@ -2511,6 +2481,75 @@ namespace trabajo.Controllers
                 .ToList();
 
             return View(listaGestion);
+        }
+
+        [HttpPost]
+        public IActionResult AprobarPagoCuota(int idPagoCuota)
+        {
+            var pago = _context.PAGO_CUOTA.FirstOrDefault(p => p.Id_PagoCuota == idPagoCuota);
+            if (pago == null)
+                return Json(new { success = false, mensaje = "Pago no encontrado." });
+
+            if (pago.Estado == "Aprobado")
+                return Json(new { success = false, mensaje = "El pago ya se encuentra aprobado." });
+
+            pago.Estado = "Aprobado";
+
+            var cuota = _context.CUOTA.FirstOrDefault(c => c.Id_Cuota == pago.Id_Cuota);
+            if (cuota != null)
+            {
+                cuota.Estado = "Pagado";
+
+                int idSolPrestamo = cuota.SOLICITUD_CREDITO_Id_Solicitud;
+                var cuotasPrestamo = _context.CUOTA
+                    .Where(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSolPrestamo)
+                    .ToList();
+
+                bool todasPagadas = cuotasPrestamo.All(c => c.Id_Cuota == cuota.Id_Cuota || c.Estado == "Pagado");
+
+                if (todasPagadas && cuotasPrestamo.Count > 0)
+                {
+                    var solPrestamo = _context.SOLICITUD_CREDITO.FirstOrDefault(s => s.Id_Solicitud == idSolPrestamo);
+                    if (solPrestamo != null)
+                    {
+                        var resumenUser = _context.RESUMEN_CREDITICIO.FirstOrDefault(r => r.Usuario_Id == solPrestamo.Usuario_Id_Usuario);
+                        if (resumenUser != null)
+                        {
+                            resumenUser.DeudasPagadas += 1;
+                            if (resumenUser.DeudasActivas > 0)
+                            {
+                                resumenUser.DeudasActivas -= 1;
+                            }
+                            resumenUser.UltimaActualizacion = DateTime.UtcNow;
+                        }
+                    }
+                }
+            }
+
+            _context.SaveChanges();
+            return Json(new { success = true, mensaje = "Pago de cuota aprobado exitosamente." });
+        }
+
+        [HttpPost]
+        public IActionResult RechazarPagoCuota(int idPagoCuota, string motivo)
+        {
+            var pago = _context.PAGO_CUOTA.FirstOrDefault(p => p.Id_PagoCuota == idPagoCuota);
+            if (pago == null)
+                return Json(new { success = false, mensaje = "Pago no encontrado." });
+
+            if (pago.Estado == "Aprobado")
+                return Json(new { success = false, mensaje = "No se puede rechazar un pago previamente aprobado." });
+
+            pago.Estado = "Rechazado";
+
+            var cuota = _context.CUOTA.FirstOrDefault(c => c.Id_Cuota == pago.Id_Cuota);
+            if (cuota != null)
+            {
+                cuota.Estado = "Pendiente";
+            }
+
+            _context.SaveChanges();
+            return Json(new { success = true, mensaje = "Pago de cuota rechazado." });
         }
         public IActionResult PoliticasRiesgo()
         {

@@ -25,7 +25,6 @@ namespace trabajo.Controllers
             private readonly UsuarioContext _context;
             private static readonly Random rnd = new Random();
             private readonly EmailService _emailService = new EmailService();
-            private static string codigoPerfilAdmin = "";
             public AdministradorController(UsuarioContext context)
             {
                 _context = context;
@@ -4685,11 +4684,20 @@ $"La notificación fue enviada correctamente a {usuario.Nombre} {usuario.Apellid
                 if (admin == null)
                     return RedirectToAction("IniciarSesion", "Login");
 
-                if (string.IsNullOrWhiteSpace(codigoCorreo) || codigoCorreo != codigoPerfilAdmin)
+                string? codigoGuardado = HttpContext.Session.GetString("CodigoPerfilAdmin");
+                string? correoGuardado = HttpContext.Session.GetString("CorreoPerfilAdmin");
+
+                if (string.IsNullOrWhiteSpace(codigoCorreo) ||
+                    string.IsNullOrWhiteSpace(codigoGuardado) ||
+                    codigoCorreo.Trim() != codigoGuardado ||
+                    !string.Equals(usuario.Correo?.Trim(), correoGuardado, StringComparison.OrdinalIgnoreCase))
                 {
-                    TempData["MensajeError"] = "El código de verificación es incorrecto.";
+                    TempData["MensajeError"] = "El código de verificación es incorrecto o ha expirado.";
                     return RedirectToAction("PerfilAdministrador");
                 }
+
+                HttpContext.Session.Remove("CodigoPerfilAdmin");
+                HttpContext.Session.Remove("CorreoPerfilAdmin");
 
                 admin.Nombre = usuario.Nombre;
                 admin.Apellido = usuario.Apellido;
@@ -4699,7 +4707,15 @@ $"La notificación fue enviada correctamente a {usuario.Nombre} {usuario.Apellid
                 admin.Correo = usuario.Correo;
 
                 if (!string.IsNullOrWhiteSpace(usuario.clave))
+                {
+                    var resClave = PasswordPolicyHelper.Validar(usuario.clave);
+                    if (!resClave.EsValida)
+                    {
+                        TempData["MensajeError"] = resClave.MensajeError;
+                        return RedirectToAction("PerfilAdministrador");
+                    }
                     admin.clave = utilidades.HashPassword(usuario.clave);
+                }
 
                 _context.SaveChanges();
 
@@ -4713,9 +4729,12 @@ $"La notificación fue enviada correctamente a {usuario.Nombre} {usuario.Apellid
                 if (string.IsNullOrWhiteSpace(correo))
                     return Json(new { ok = false, mensaje = "Ingrese un correo válido." });
 
-                codigoPerfilAdmin = rnd.Next(100000, 999999).ToString();
+                int codigoOtpNum = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000);
+                string codigoOtp = codigoOtpNum.ToString("D6");
+                HttpContext.Session.SetString("CodigoPerfilAdmin", codigoOtp);
+                HttpContext.Session.SetString("CorreoPerfilAdmin", correo.Trim().ToLowerInvariant());
 
-                await _emailService.EnviarCodigoAsync(correo, codigoPerfilAdmin);
+                await _emailService.EnviarCodigoAsync(correo, codigoOtp);
 
                 return Json(new { ok = true, mensaje = "Código enviado correctamente." });
             }

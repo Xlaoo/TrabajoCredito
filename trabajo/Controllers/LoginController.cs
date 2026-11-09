@@ -29,7 +29,7 @@ namespace trabajo.Controllers
         private readonly UsuarioContext _Context;
         private readonly ServicioEmbeddingVoz _ServicioEmbeddingVoz;
         private readonly EmailService _emailService = new EmailService();
-        private static string codigoLogin = "";
+        private static readonly ConcurrentDictionary<int, SemaphoreSlim> _solicitudLocks = new();
 
         // ==========================================
         // SEGURIDAD - ALERTAS DE ACCESO (RATE LIMIT 5 MIN)
@@ -222,10 +222,10 @@ namespace trabajo.Controllers
         // RECUPERACIÓN DE CONTRASEÑA
         // ==========================================
 
-        private static readonly Dictionary<string, string>
+        private static readonly ConcurrentDictionary<string, string>
             codigosRecuperacion = new();
 
-        private static readonly Dictionary<string, DateTime>
+        private static readonly ConcurrentDictionary<string, DateTime>
             expiracionesRecuperacion = new();
 
         // ==========================================
@@ -234,8 +234,6 @@ namespace trabajo.Controllers
 
         private const int MAX_INTENTOS_VOZ = 3;
         private const int MINUTOS_BLOQUEO_VOZ = 5;
-        // Hora en la que vence el código de inicio de sesión
-        private static DateTime codigoLoginExpira = DateTime.MinValue;
         private static readonly object _lockRenovacionVoz = new object();
 
         private readonly IConfiguration _configuration;
@@ -2590,13 +2588,8 @@ namespace trabajo.Controllers
                     DateTime.UtcNow >= expiracion
                 )
                 {
-                    codigosRecuperacion.Remove(
-                        claveRecuperacion
-                    );
-
-                    expiracionesRecuperacion.Remove(
-                        claveRecuperacion
-                    );
+                    codigosRecuperacion.TryRemove(claveRecuperacion, out _);
+                    expiracionesRecuperacion.TryRemove(claveRecuperacion, out _);
 
                     return Json(new
                     {
@@ -2663,13 +2656,8 @@ namespace trabajo.Controllers
                 // ELIMINAR CÓDIGO YA UTILIZADO
                 // ==========================================
 
-                codigosRecuperacion.Remove(
-                    claveRecuperacion
-                );
-
-                expiracionesRecuperacion.Remove(
-                    claveRecuperacion
-                );
+                codigosRecuperacion.TryRemove(claveRecuperacion, out _);
+                expiracionesRecuperacion.TryRemove(claveRecuperacion, out _);
 
                 TempData["MostrarModalRecuperacion"] =
                     "true";
@@ -3163,20 +3151,24 @@ namespace trabajo.Controllers
                     });
                 }
 
-                string caracteres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+                const string caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+                char[] chars = new char[6];
+                for (int i = 0; i < 6; i++)
+                {
+                    chars[i] = caracteres[RandomNumberGenerator.GetInt32(0, caracteres.Length)];
+                }
+                string codigoLoginGen = new string(chars);
 
-                Random random = new Random();
-
-                codigoLogin = new string(
-                    Enumerable.Repeat(caracteres, 6)
-                        .Select(s => s[random.Next(s.Length)])
-                        .ToArray()
-                );
                 // El código solamente será válido durante 1 minuto
-                codigoLoginExpira = DateTime.UtcNow.AddMinutes(1);
+                long expUnix = DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeSeconds();
+                string hashCodigoLogin = utilidades.EncriptarClave(codigoLoginGen);
+
+                HttpContext.Session.SetString("HashCodigoLogin", hashCodigoLogin);
+                HttpContext.Session.SetString("ExpiraCodigoLogin", expUnix.ToString());
+
                 await _emailService.EnviarCodigoAsync(
                     usuario.Correo,
-                    codigoLogin
+                    codigoLoginGen
                 );
 
                 return Json(new
@@ -3188,10 +3180,11 @@ namespace trabajo.Controllers
             }
             catch (Exception ex)
             {
+                Console.Error.WriteLine($"[LoginController.EnviarCodigoLogin] Error: {ex}");
                 return Json(new
                 {
                     ok = false,
-                    mensaje = "No se pudo enviar el código: " + ex.Message
+                    mensaje = "No se pudo enviar el código de verificación al correo."
                 });
             }
         }
@@ -3227,9 +3220,15 @@ namespace trabajo.Controllers
                 // VERIFICAR SI EL CÓDIGO YA EXPIRÓ
                 // ==========================================
 
-                if (DateTime.UtcNow > codigoLoginExpira)
+                string? hashGuardado = HttpContext.Session.GetString("HashCodigoLogin");
+                string? expStr = HttpContext.Session.GetString("ExpiraCodigoLogin");
+
+                if (string.IsNullOrWhiteSpace(hashGuardado) ||
+                    !long.TryParse(expStr, out long expUnix) ||
+                    DateTimeOffset.UtcNow.ToUnixTimeSeconds() > expUnix)
                 {
-                    codigoLogin = "";
+                    HttpContext.Session.Remove("HashCodigoLogin");
+                    HttpContext.Session.Remove("ExpiraCodigoLogin");
 
                     return Json(new
                     {
@@ -3238,7 +3237,12 @@ namespace trabajo.Controllers
                         mensaje = "El código de seguridad ha expirado. Solicita un nuevo código."
                     });
                 }
-                if (codigo != codigoLogin)
+
+                string hashIngresado = utilidades.EncriptarClave(codigo.Trim().ToUpperInvariant());
+                byte[] b1 = Encoding.UTF8.GetBytes(hashIngresado);
+                byte[] b2 = Encoding.UTF8.GetBytes(hashGuardado);
+
+                if (!CryptographicOperations.FixedTimeEquals(b1, b2))
                 {
                     return Json(new
                     {
@@ -3326,12 +3330,9 @@ namespace trabajo.Controllers
                 await _Context.SaveChangesAsync();
 
                 // Limpiar código utilizado
-                codigoLogin = "";
-
-                HttpContext.Session.Remove(
-                    "DniLoginPendiente"
-                );
-                codigoLoginExpira = DateTime.MinValue;
+                HttpContext.Session.Remove("HashCodigoLogin");
+                HttpContext.Session.Remove("ExpiraCodigoLogin");
+                HttpContext.Session.Remove("DniLoginPendiente");
                 string url;
 
                 if (usuarioEncontrado.Rol == "Analista")
@@ -4109,78 +4110,99 @@ string titularCuenta
                 return RedirectToAction("SolicitarCredito");
             }
 
-            var existeSolicitudActiva = _Context.SOLICITUD_CREDITO
- .Any(x => x.Usuario_Id_Usuario == usuario.Id &&
-      (x.Estado == "Pendiente" ||
-       x.Estado == "En Evaluación" ||
-       x.Estado == "Aprobado" ||
-       x.Estado == "Rechazado"));
-
-            if (existeSolicitudActiva)
+            var semaforo = _solicitudLocks.GetOrAdd(usuario.Id, _ => new SemaphoreSlim(1, 1));
+            semaforo.Wait();
+            try
             {
-                TempData["Mensaje"] = "Ya tienes una solicitud pendiente, aprobada o rechazada. Primero debes finalizarla o borrarla.";
-                return RedirectToAction("DashboardCliente");
+                using var transaccion = Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.IsRelational(_Context.Database)
+                    ? _Context.Database.BeginTransaction(System.Data.IsolationLevel.Serializable)
+                    : null;
+
+                try
+                {
+                    var existeSolicitudActiva = _Context.SOLICITUD_CREDITO
+                        .Any(x => x.Usuario_Id_Usuario == usuario.Id &&
+                            (x.Estado == "Pendiente" ||
+                             x.Estado == "En Evaluación" ||
+                             x.Estado == "Aprobado" ||
+                             x.Estado == "Rechazado"));
+
+                    if (existeSolicitudActiva)
+                    {
+                        transaccion?.Rollback();
+                        TempData["Mensaje"] = "Ya tienes una solicitud pendiente, aprobada o rechazada. Primero debes finalizarla o borrarla.";
+                        return RedirectToAction("DashboardCliente");
+                    }
+
+                    int cantidadSolicitudes = _Context.SOLICITUD_CREDITO.Count();
+
+                    string nuevoNumeroSolicitud = (cantidadSolicitudes + 1).ToString("D4");
+
+                    var solicitud = new SolicitudCredito
+                    {
+                        NumeroSolicitud = nuevoNumeroSolicitud,
+                        MontoSolicitado = montoSolicitado,
+                        PlazoMeses = plazoMeses,
+                        InteresEstimado = 10,
+                        FechaSolicitud = DateTime.UtcNow,
+                        Estado = "Pendiente",
+                        Usuario_Id_Usuario = usuario.Id
+                    };
+
+                    _Context.SOLICITUD_CREDITO.Add(solicitud);
+                    _Context.SaveChanges();
+
+                    var metodo = new MetodoPagoSolicitud
+                    {
+                        MetodoPago = metodoPago,
+                        EntidadPago = entidadPago,
+                        NumeroCuentaPago = numeroCuentaPago,
+                        TitularCuenta = titularCuenta,
+                        SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
+                    };
+
+                    _Context.METODO_PAGO_SOLICITUD.Add(metodo);
+
+                    var perfil = new PerfilFinanciero
+                    {
+                        IngresoMensual = ingresoMensual,
+                        EgresoMensual = egresoMensual,
+                        OtrosCreditos = tieneOtrosCreditos == "Si",
+                        MotivoPrestamo = motivoPrestamo == "Otros" ? motivoOtro : motivoPrestamo,
+                        Ocupacion = ocupacion,
+                        NivelRiesgo = null,
+                        FechaRegistro = DateTime.UtcNow,
+                        SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
+                    };
+
+                    _Context.PERFIL_FINANCIERO.Add(perfil);
+
+                    var historial = new HistorialEstado
+                    {
+                        EstadoActual = "Pendiente",
+                        MotivoCambio = "pendiente en evaluación.",
+                        FechaCambio = DateTime.UtcNow,
+                        SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
+                    };
+
+                    _Context.HISTORIAL_ESTADO.Add(historial);
+
+                    _Context.SaveChanges();
+                    transaccion?.Commit();
+
+                    TempData["MostrarConfirmacion"] = "true";
+                    return RedirectToAction("SolicitarCredito");
+                }
+                catch
+                {
+                    transaccion?.Rollback();
+                    throw;
+                }
             }
-
-            int cantidadSolicitudes = _Context.SOLICITUD_CREDITO.Count();
-
-            string nuevoNumeroSolicitud = (cantidadSolicitudes + 1).ToString("D4");
-
-            var solicitud = new SolicitudCredito
+            finally
             {
-                NumeroSolicitud = nuevoNumeroSolicitud,
-                MontoSolicitado = montoSolicitado,
-                PlazoMeses = plazoMeses,
-                InteresEstimado = 10,
-                FechaSolicitud = DateTime.UtcNow,
-                Estado = "Pendiente",
-                Usuario_Id_Usuario = usuario.Id
-            };
-
-            _Context.SOLICITUD_CREDITO.Add(solicitud);
-            _Context.SaveChanges();
-
-            var metodo = new MetodoPagoSolicitud
-            {
-                MetodoPago = metodoPago,
-                EntidadPago = entidadPago,
-                NumeroCuentaPago = numeroCuentaPago,
-                TitularCuenta = titularCuenta,
-                SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
-            };
-
-            _Context.METODO_PAGO_SOLICITUD.Add(metodo);
-
-
-
-            var perfil = new PerfilFinanciero
-            {
-                IngresoMensual = ingresoMensual,
-                EgresoMensual = egresoMensual,
-                OtrosCreditos = tieneOtrosCreditos == "Si",
-                MotivoPrestamo = motivoPrestamo == "Otros" ? motivoOtro : motivoPrestamo,
-                Ocupacion = ocupacion,
-                NivelRiesgo = null,
-                FechaRegistro = DateTime.UtcNow,
-                SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
-            };
-
-            _Context.PERFIL_FINANCIERO.Add(perfil);
-
-            var historial = new HistorialEstado
-            {
-                EstadoActual = "Pendiente",
-                MotivoCambio = "pendiente en evaluación.",
-                FechaCambio = DateTime.UtcNow,
-                SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
-            };
-
-            _Context.HISTORIAL_ESTADO.Add(historial);
-
-            _Context.SaveChanges();
-
-            TempData["MostrarConfirmacion"] = "true";
-            return RedirectToAction("SolicitarCredito");
+                semaforo.Release();
+            }
         }
 
         [HttpGet]
@@ -4898,9 +4920,10 @@ string titularCuenta
                 if (estadoActual == "pendiente" ||
                     estadoActual == "pendiente cancelación" ||
                     estadoActual == "rechazado" ||
-                    estadoActual == "cancelado")
+                    estadoActual == "cancelado" ||
+                    estadoActual == "aprobado")
                 {
-                    return Json(new { ok = false, mensaje = "No puedes editar esta solicitud." });
+                    return Json(new { ok = false, mensaje = "No puedes editar esta solicitud en su estado actual." });
                 }
 
                 if (nuevoMonto < 1000 || nuevoMonto > 50000)
@@ -4917,18 +4940,12 @@ string titularCuenta
                 solicitud.MontoSolicitado = nuevoMonto;
                 solicitud.PlazoMeses = nuevoPlazo;
 
-                string mensajeHistorial = "";
+                string mensajeHistorial = "Cliente editó monto y plazo mientras la solicitud estaba en evaluación.";
 
-                if (estadoActual == "aprobado")
-                {
-                    solicitud.Estado = "Pendiente";
-                    mensajeHistorial = "Cliente editó una solicitud aprobada. Regresa a Pendiente para nueva revisión.";
-                }
-                else if (estadoActual == "en evaluación")
+                if (estadoActual == "en evaluación")
                 {
                     solicitud.Estado = "En Evaluación";
                     solicitud.NotificacionEdicionVista = false;
-                    mensajeHistorial = "Cliente editó monto y plazo mientras la solicitud estaba en evaluación.";
                 }
 
                 var subject = new SolicitudSubject();
@@ -4948,14 +4965,13 @@ string titularCuenta
                 return Json(new
                 {
                     ok = true,
-                    mensaje = estadoActual == "aprobado"
-                        ? "Cambios guardados. La solicitud volvió a Pendiente."
-                        : "Cambios guardados. La solicitud sigue En Evaluación con el nuevo monto y plazo."
+                    mensaje = "Cambios guardados. La solicitud sigue En Evaluación con el nuevo monto y plazo."
                 });
             }
             catch (Exception ex)
             {
-                return Json(new { ok = false, mensaje = "No se pudo editar la solicitud: " + ex.Message });
+                Console.Error.WriteLine($"[LoginController.EditarSolicitud] Error: {ex}");
+                return Json(new { ok = false, mensaje = "Ocurrió un error al editar la solicitud." });
             }
         }
         [HttpPost]
@@ -5009,6 +5025,15 @@ string titularCuenta
                     });
                 }
 
+                if (cuota.MontoCuota.HasValue && montoPagado < cuota.MontoCuota.Value)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = $"El importe a pagar (S/ {montoPagado:N2}) no puede ser menor al monto de la cuota (S/ {cuota.MontoCuota.Value:N2})."
+                    });
+                }
+
                 if (string.IsNullOrWhiteSpace(metodoPago) || string.IsNullOrWhiteSpace(entidadPago) || string.IsNullOrWhiteSpace(codigoOperacion))
                 {
                     return Json(new
@@ -5041,10 +5066,11 @@ string titularCuenta
             }
             catch (Exception ex)
             {
+                Console.Error.WriteLine($"[LoginController.RegistrarPagoCuota] Error: {ex}");
                 return Json(new
                 {
                     ok = false,
-                    mensaje = ex.Message
+                    mensaje = "Ocurrió un error al registrar el pago."
                 });
             }
         }
@@ -5177,6 +5203,21 @@ string titularCuenta
         [Authorize(Roles = "Cliente")]
         public JsonResult ObtenerInfoSolicitud(int idSolicitud)
         {
+            string dni = User.FindFirst("Dni")?.Value;
+            var usuarioAutenticado = _Context.Usuario.FirstOrDefault(u => u.Dni == dni);
+            if (usuarioAutenticado == null)
+            {
+                return Json(new { analista = "", correo = "" });
+            }
+
+            bool solicitudPropia = _Context.SOLICITUD_CREDITO
+                .Any(x => x.Id_Solicitud == idSolicitud && x.Usuario_Id_Usuario == usuarioAutenticado.Id);
+
+            if (!solicitudPropia)
+            {
+                return Json(new { analista = "", correo = "" });
+            }
+
             var analista = _Context.Usuario
                 .FirstOrDefault(x => x.Rol == "Analista");
 
@@ -5290,7 +5331,8 @@ string titularCuenta
             }
             catch (Exception ex)
             {
-                return Json(new { ok = false, mensaje = ex.Message });
+                Console.Error.WriteLine($"[LoginController.CancelarEvaluacion] Error: {ex}");
+                return Json(new { ok = false, mensaje = "Ocurrió un error al cancelar la evaluación." });
             }
         }
         [HttpPost]

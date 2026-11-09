@@ -791,6 +791,177 @@ namespace TestTrabajoCredito
                     return ok == false && mensaje != null && mensaje.Contains("plazo seleccionado no es válido");
                 });
 
+            // Escenario 27: Blindaje DOM/API - Inmutabilidad de Crédito Aprobado
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de edición sobre crédito en estado 'Aprobado'",
+                datoEntrada: "Estado: Aprobado, Monto: 7000, Plazo: 24",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+                    var solicitud = new SolicitudCredito
+                    {
+                        Id_Solicitud = 50,
+                        NumeroSolicitud = "SOL-TEST-050",
+                        Usuario_Id_Usuario = 1,
+                        MontoSolicitado = 5000m,
+                        PlazoMeses = 12,
+                        Estado = "Aprobado",
+                        FechaSolicitud = DateTime.UtcNow
+                    };
+                    context.SOLICITUD_CREDITO.Add(solicitud);
+                    context.SaveChanges();
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.EditarSolicitud(50, 7000m, 24);
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    var ok = ObtenerPropiedad(jsonRes.Value, "ok") as bool?;
+                    var mensaje = ObtenerPropiedad(jsonRes.Value, "mensaje") as string;
+                    return ok == false && mensaje != null && mensaje.Contains("No puedes editar esta solicitud en su estado actual");
+                });
+
+            // Escenario 28: Blindaje DOM/API - Control de Importe de Cuota (Anti-pago parcial de céntimos)
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: Rechazo de pago con importe menor al de la cuota (S/ 0.50 vs S/ 450.00)",
+                datoEntrada: "MontoCuota: 450, MontoPagado: 0.50",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+                    var solicitud = new SolicitudCredito
+                    {
+                        Id_Solicitud = 60,
+                        NumeroSolicitud = "SOL-TEST-060",
+                        Usuario_Id_Usuario = 1,
+                        MontoSolicitado = 5000m,
+                        PlazoMeses = 12,
+                        Estado = "Aprobado",
+                        FechaSolicitud = DateTime.UtcNow
+                    };
+                    context.SOLICITUD_CREDITO.Add(solicitud);
+                    var cuota = new Cuota
+                    {
+                        Id_Cuota = 201,
+                        SOLICITUD_CREDITO_Id_Solicitud = 60,
+                        NumeroCuota = 1,
+                        MontoCuota = 450m,
+                        Estado = "Pendiente",
+                        FechaVencimiento = DateTime.UtcNow.AddDays(15),
+                        FechaLimitePago = DateTime.UtcNow.AddDays(15),
+                        SOLICITUD_CREDITO = solicitud
+                    };
+                    context.CUOTA.Add(cuota);
+                    context.SaveChanges();
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarPagoCuota(201, 0.50m, "BCP", "BCP", "OP-111");
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    var ok = ObtenerPropiedad(jsonRes.Value, "ok") as bool?;
+                    var mensaje = ObtenerPropiedad(jsonRes.Value, "mensaje") as string;
+                    return ok == false && mensaje != null && mensaje.Contains("no puede ser menor al monto de la cuota");
+                });
+
+            // Escenario 29: Blindaje Analista - No-mutación en GET GestionDePago (Idempotencia)
+            runner.Evaluar(
+                nombreEscenario: "Blindaje Analista: Invocación GET de GestionDePago no auto-aprueba pagos pendientes",
+                datoEntrada: "PAGO_CUOTA: Pendiente validación",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+                    var solicitud = new SolicitudCredito
+                    {
+                        Id_Solicitud = 70,
+                        NumeroSolicitud = "SOL-TEST-070",
+                        Usuario_Id_Usuario = 1,
+                        MontoSolicitado = 5000m,
+                        PlazoMeses = 12,
+                        Estado = "Aprobado",
+                        FechaSolicitud = DateTime.UtcNow
+                    };
+                    context.SOLICITUD_CREDITO.Add(solicitud);
+                    var cuota = new Cuota
+                    {
+                        Id_Cuota = 301,
+                        SOLICITUD_CREDITO_Id_Solicitud = 70,
+                        NumeroCuota = 1,
+                        MontoCuota = 450m,
+                        Estado = "Pendiente aprobación",
+                        FechaVencimiento = DateTime.UtcNow.AddDays(15),
+                        FechaLimitePago = DateTime.UtcNow.AddDays(15),
+                        SOLICITUD_CREDITO = solicitud
+                    };
+                    context.CUOTA.Add(cuota);
+                    var pago = new prestamoscreditos.Models.PagoCuota
+                    {
+                        Id_PagoCuota = 501,
+                        Id_Cuota = 301,
+                        MontoPagado = 450m,
+                        MetodoPago = "Transferencia",
+                        EntidadPago = "BCP",
+                        CodigoOperacion = "OP-777",
+                        FechaPago = DateTime.UtcNow,
+                        Estado = "Pendiente validación"
+                    };
+                    context.PAGO_CUOTA.Add(pago);
+                    context.SaveChanges();
+
+                    var controller = CrearAnalistaController(context);
+                    var res = controller.GestionDePago();
+
+                    // Comprobar que en la base de datos el pago siga en 'Pendiente validación' y NO haya mutado a 'Aprobado'
+                    var pagoDb = context.PAGO_CUOTA.First(p => p.Id_PagoCuota == 501);
+                    var cuotaDb = context.CUOTA.First(c => c.Id_Cuota == 301);
+
+                    return pagoDb.Estado == "Pendiente validación" && cuotaDb.Estado == "Pendiente aprobación";
+                });
+
+            // Escenario 30: Blindaje DOM/API - Anti-IDOR en ObtenerInfoSolicitud
+            runner.Evaluar(
+                nombreEscenario: "Blindaje DOM: ObtenerInfoSolicitud rechaza ID de solicitud perteneciente a otro cliente",
+                datoEntrada: "IdSolicitud: 999 (Ajena)",
+                esperado: true,
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context); // Cliente ID = 1
+                    var solicitudAjena = new SolicitudCredito
+                    {
+                        Id_Solicitud = 999,
+                        NumeroSolicitud = "SOL-TEST-999",
+                        Usuario_Id_Usuario = 99, // Otro usuario
+                        MontoSolicitado = 5000m,
+                        PlazoMeses = 12,
+                        Estado = "En Evaluación",
+                        FechaSolicitud = DateTime.UtcNow
+                    };
+                    context.SOLICITUD_CREDITO.Add(solicitudAjena);
+                    context.SaveChanges();
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.ObtenerInfoSolicitud(999);
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    var analista = ObtenerPropiedad(jsonRes.Value, "analista") as string;
+                    var correo = ObtenerPropiedad(jsonRes.Value, "correo") as string;
+
+                    return string.IsNullOrEmpty(analista) && string.IsNullOrEmpty(correo);
+                });
+
             runner.VerificarTodosAprobados();
         }
     }

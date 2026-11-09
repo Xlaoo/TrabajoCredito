@@ -307,6 +307,32 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
             ? CookieSecurePolicy.SameAsRequest
             : CookieSecurePolicy.Always;
+
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnValidatePrincipal = async context =>
+            {
+                var dni = context.Principal?.FindFirst("Dni")?.Value;
+                if (!string.IsNullOrEmpty(dni))
+                {
+                    var db = context.HttpContext.RequestServices.GetService<trabajo.Models.UsuarioContext>();
+                    if (db != null)
+                    {
+                        var user = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
+                            Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AsNoTracking(db.Usuario),
+                            u => u.Dni == dni);
+
+                        if (user == null || !user.EstadoActivo)
+                        {
+                            context.RejectPrincipal();
+                            await Microsoft.AspNetCore.Authentication.AuthenticationHttpContextExtensions.SignOutAsync(
+                                context.HttpContext,
+                                CookieAuthenticationDefaults.AuthenticationScheme);
+                        }
+                    }
+                }
+            }
+        };
     });
 
 var app = builder.Build();
@@ -449,21 +475,24 @@ var proveedorTiposArchivo = new FileExtensionContentTypeProvider();
 proveedorTiposArchivo.Mappings[".apk"] =
     "application/vnd.android.package-archive";
 
-app.UseStaticFiles(new StaticFileOptions
-{
-    ContentTypeProvider = proveedorTiposArchivo,
-    OnPrepareResponse = ctx =>
+app.UseWhen(
+    context => !context.Request.Path.StartsWithSegments("/imagenesChat", StringComparison.OrdinalIgnoreCase),
+    appBuilder => appBuilder.UseStaticFiles(new StaticFileOptions
     {
-        if (ctx.File.Name.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+        ContentTypeProvider = proveedorTiposArchivo,
+        OnPrepareResponse = ctx =>
         {
-            ctx.Context.Response.ContentType = "text/css; charset=utf-8";
+            if (ctx.File.Name.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+            {
+                ctx.Context.Response.ContentType = "text/css; charset=utf-8";
+            }
+            else if (ctx.File.Name.EndsWith(".js", StringComparison.OrdinalIgnoreCase))
+            {
+                ctx.Context.Response.ContentType = "application/javascript; charset=utf-8";
+            }
         }
-        else if (ctx.File.Name.EndsWith(".js", StringComparison.OrdinalIgnoreCase))
-        {
-            ctx.Context.Response.ContentType = "application/javascript; charset=utf-8";
-        }
-    }
-});
+    })
+);
 
 app.UseRouting();
 app.UseSession();
@@ -477,6 +506,61 @@ app.UseAuthorization();
 // Endpoint público de Liveness Health Check para Northflank.
 app.MapGet("/health", () => Results.Text("Healthy", "text/plain", statusCode: StatusCodes.Status200OK))
    .AllowAnonymous();
+
+// Endpoint seguro para imágenes adjuntas de chat con RBAC y control de acceso IDOR
+app.MapGet("/imagenesChat/{archivo}", async (string archivo, HttpContext ctx, trabajo.Models.UsuarioContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(archivo))
+        return Results.NotFound();
+
+    var fileName = Path.GetFileName(archivo);
+    if (string.IsNullOrEmpty(fileName) || fileName != archivo)
+        return Results.BadRequest();
+
+    if (!(ctx.User?.Identity?.IsAuthenticated ?? false))
+        return Results.Unauthorized();
+
+    var userRole = ctx.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+    var userDni = ctx.User.FindFirst("Dni")?.Value;
+
+    var ruta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "imagenesChat", fileName);
+    if (!File.Exists(ruta))
+        return Results.NotFound();
+
+    var ext = Path.GetExtension(fileName).ToLowerInvariant();
+    var contentType = ext switch
+    {
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".png" => "image/png",
+        ".webp" => "image/webp",
+        _ => "application/octet-stream"
+    };
+
+    if (userRole == "Administrador" || userRole == "Analista")
+    {
+        return Results.File(ruta, contentType);
+    }
+    else if (userRole == "Cliente")
+    {
+        var usuario = await db.Usuario.AsNoTracking().FirstOrDefaultAsync(u => u.Dni == userDni);
+        if (usuario == null) return Results.Unauthorized();
+
+        string rutaRelativa = "/imagenesChat/" + fileName;
+        var mensaje = await db.MENSAJE
+            .Include(m => m.SOLICITUD_CREDITO)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Imagen == rutaRelativa);
+
+        if (mensaje == null || mensaje.SOLICITUD_CREDITO == null || mensaje.SOLICITUD_CREDITO.Usuario_Id_Usuario != usuario.Id)
+        {
+            return Results.Forbid();
+        }
+
+        return Results.File(ruta, contentType);
+    }
+
+    return Results.Forbid();
+}).RequireAuthorization();
 
 app.MapControllerRoute(
     name: "default",

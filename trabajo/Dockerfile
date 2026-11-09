@@ -16,5 +16,8 @@ RUN dotnet publish "trabajo/trabajo.csproj" -c Release -o /app/publish
 FROM base AS final
 WORKDIR /app
 COPY --from=build /app/publish .
+RUN mkdir -p /app/wwwroot/imagenesChat /app/wwwroot/audiosRegistro \
+    && chown -R app:app /app
+USER app
 ENV ASPNETCORE_URLS=http://+:8080
 ENTRYPOINT ["dotnet", "trabajo.dll"]
