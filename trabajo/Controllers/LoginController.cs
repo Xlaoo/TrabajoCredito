@@ -279,7 +279,6 @@ namespace trabajo.Controllers
 
             if (usuario != null)
             {
-                usuario.EstadoActivo = false;
                 usuario.UltimaConexion = DateTime.Now;
                 _Context.SaveChanges();
             }
@@ -527,7 +526,7 @@ namespace trabajo.Controllers
 
             usuario.Rol = "Cliente";
             usuario.FechaRegistro = DateTime.Now;
-            usuario.EstadoActivo = false;
+            usuario.EstadoActivo = true;
             usuario.UltimaConexion = DateTime.Now;
 
             // Valores de voz nulos para nuevos registros
@@ -4035,25 +4034,24 @@ namespace trabajo.Controllers
         [HttpPost]
         [Authorize(Roles = "Cliente")]
         [ValidateAntiForgeryToken]
-        public IActionResult RegistrarSolicitudCredito(
-    decimal montoSolicitado,
-
-    int plazoMeses,
-    decimal ingresoMensual,
-    decimal egresoMensual,
-    string tieneOtrosCreditos,
-    string motivoOtro,
-    string ocupacion,
-    string motivoPrestamo,
-    string metodoPago,
-string entidadPago,
-string numeroCuentaPago,
-string titularCuenta
-            )
+        public async Task<IActionResult> RegistrarSolicitudCredito(
+            decimal montoSolicitado,
+            int plazoMeses,
+            decimal ingresoMensual,
+            decimal egresoMensual,
+            string tieneOtrosCreditos,
+            string motivoOtro,
+            string ocupacion,
+            string motivoPrestamo,
+            string metodoPago,
+            string entidadPago,
+            string numeroCuentaPago,
+            string titularCuenta
+        )
         {
             string dni = User.FindFirst("Dni")?.Value;
 
-            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+            var usuario = await _Context.Usuario.FirstOrDefaultAsync(x => x.Dni == dni);
 
             if (usuario == null)
             {
@@ -4111,93 +4109,113 @@ string titularCuenta
             }
 
             var semaforo = _solicitudLocks.GetOrAdd(usuario.Id, _ => new SemaphoreSlim(1, 1));
-            semaforo.Wait();
+            await semaforo.WaitAsync();
             try
             {
-                using var transaccion = Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.IsRelational(_Context.Database)
-                    ? _Context.Database.BeginTransaction(System.Data.IsolationLevel.Serializable)
-                    : null;
+                IActionResult resultadoAccion = RedirectToAction("SolicitarCredito");
 
-                try
+                var strategy = _Context.Database.CreateExecutionStrategy();
+
+                await strategy.ExecuteAsync(async () =>
                 {
-                    var existeSolicitudActiva = _Context.SOLICITUD_CREDITO
-                        .Any(x => x.Usuario_Id_Usuario == usuario.Id &&
-                            (x.Estado == "Pendiente" ||
-                             x.Estado == "En Evaluación" ||
-                             x.Estado == "Aprobado" ||
-                             x.Estado == "Rechazado"));
+                    await using var transaccion = Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.IsRelational(_Context.Database)
+                        ? await _Context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable)
+                        : null;
 
-                    if (existeSolicitudActiva)
+                    try
                     {
-                        transaccion?.Rollback();
-                        TempData["Mensaje"] = "Ya tienes una solicitud pendiente, aprobada o rechazada. Primero debes finalizarla o borrarla.";
-                        return RedirectToAction("DashboardCliente");
+                        var existeSolicitudActiva = await _Context.SOLICITUD_CREDITO
+                            .AnyAsync(x => x.Usuario_Id_Usuario == usuario.Id &&
+                                (x.Estado == "Pendiente" ||
+                                 x.Estado == "En Evaluación" ||
+                                 x.Estado == "Aprobado" ||
+                                 x.Estado == "Rechazado"));
+
+                        if (existeSolicitudActiva)
+                        {
+                            if (transaccion != null)
+                            {
+                                await transaccion.RollbackAsync();
+                            }
+                            TempData["Mensaje"] = "Ya tienes una solicitud pendiente, aprobada o rechazada. Primero debes finalizarla o borrarla.";
+                            resultadoAccion = RedirectToAction("DashboardCliente");
+                            return;
+                        }
+
+                        int cantidadSolicitudes = await _Context.SOLICITUD_CREDITO.CountAsync();
+
+                        string nuevoNumeroSolicitud = (cantidadSolicitudes + 1).ToString("D4");
+
+                        var solicitud = new SolicitudCredito
+                        {
+                            NumeroSolicitud = nuevoNumeroSolicitud,
+                            MontoSolicitado = montoSolicitado,
+                            PlazoMeses = plazoMeses,
+                            InteresEstimado = 10,
+                            FechaSolicitud = DateTime.UtcNow,
+                            Estado = "Pendiente",
+                            Usuario_Id_Usuario = usuario.Id
+                        };
+
+                        _Context.SOLICITUD_CREDITO.Add(solicitud);
+                        await _Context.SaveChangesAsync();
+
+                        var metodo = new MetodoPagoSolicitud
+                        {
+                            MetodoPago = metodoPago,
+                            EntidadPago = entidadPago,
+                            NumeroCuentaPago = numeroCuentaPago,
+                            TitularCuenta = titularCuenta,
+                            SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
+                        };
+
+                        _Context.METODO_PAGO_SOLICITUD.Add(metodo);
+
+                        var perfil = new PerfilFinanciero
+                        {
+                            IngresoMensual = ingresoMensual,
+                            EgresoMensual = egresoMensual,
+                            OtrosCreditos = tieneOtrosCreditos == "Si",
+                            MotivoPrestamo = motivoPrestamo == "Otros" ? motivoOtro : motivoPrestamo,
+                            Ocupacion = ocupacion,
+                            NivelRiesgo = null,
+                            FechaRegistro = DateTime.UtcNow,
+                            SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
+                        };
+
+                        _Context.PERFIL_FINANCIERO.Add(perfil);
+
+                        var historial = new HistorialEstado
+                        {
+                            EstadoActual = "Pendiente",
+                            MotivoCambio = "pendiente en evaluación.",
+                            FechaCambio = DateTime.UtcNow,
+                            SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
+                        };
+
+                        _Context.HISTORIAL_ESTADO.Add(historial);
+
+                        await _Context.SaveChangesAsync();
+
+                        if (transaccion != null)
+                        {
+                            await transaccion.CommitAsync();
+                        }
+
+                        TempData["MostrarConfirmacion"] = "true";
+                        resultadoAccion = RedirectToAction("SolicitarCredito");
                     }
-
-                    int cantidadSolicitudes = _Context.SOLICITUD_CREDITO.Count();
-
-                    string nuevoNumeroSolicitud = (cantidadSolicitudes + 1).ToString("D4");
-
-                    var solicitud = new SolicitudCredito
+                    catch
                     {
-                        NumeroSolicitud = nuevoNumeroSolicitud,
-                        MontoSolicitado = montoSolicitado,
-                        PlazoMeses = plazoMeses,
-                        InteresEstimado = 10,
-                        FechaSolicitud = DateTime.UtcNow,
-                        Estado = "Pendiente",
-                        Usuario_Id_Usuario = usuario.Id
-                    };
+                        if (transaccion != null)
+                        {
+                            await transaccion.RollbackAsync();
+                        }
+                        throw;
+                    }
+                });
 
-                    _Context.SOLICITUD_CREDITO.Add(solicitud);
-                    _Context.SaveChanges();
-
-                    var metodo = new MetodoPagoSolicitud
-                    {
-                        MetodoPago = metodoPago,
-                        EntidadPago = entidadPago,
-                        NumeroCuentaPago = numeroCuentaPago,
-                        TitularCuenta = titularCuenta,
-                        SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
-                    };
-
-                    _Context.METODO_PAGO_SOLICITUD.Add(metodo);
-
-                    var perfil = new PerfilFinanciero
-                    {
-                        IngresoMensual = ingresoMensual,
-                        EgresoMensual = egresoMensual,
-                        OtrosCreditos = tieneOtrosCreditos == "Si",
-                        MotivoPrestamo = motivoPrestamo == "Otros" ? motivoOtro : motivoPrestamo,
-                        Ocupacion = ocupacion,
-                        NivelRiesgo = null,
-                        FechaRegistro = DateTime.UtcNow,
-                        SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
-                    };
-
-                    _Context.PERFIL_FINANCIERO.Add(perfil);
-
-                    var historial = new HistorialEstado
-                    {
-                        EstadoActual = "Pendiente",
-                        MotivoCambio = "pendiente en evaluación.",
-                        FechaCambio = DateTime.UtcNow,
-                        SOLICITUD_CREDITO_Id_Solicitud = solicitud.Id_Solicitud
-                    };
-
-                    _Context.HISTORIAL_ESTADO.Add(historial);
-
-                    _Context.SaveChanges();
-                    transaccion?.Commit();
-
-                    TempData["MostrarConfirmacion"] = "true";
-                    return RedirectToAction("SolicitarCredito");
-                }
-                catch
-                {
-                    transaccion?.Rollback();
-                    throw;
-                }
+                return resultadoAccion;
             }
             finally
             {
@@ -4836,61 +4854,153 @@ string titularCuenta
         {
             return View();
         }
+
         [HttpPost]
         [Authorize(Roles = "Cliente")]
-        public IActionResult RegistrarCancelacion(int idSolicitud, decimal montoDevuelto, string metodoPago, string codigoOperacion, string motivoCancelacion)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RegistrarCancelacion(
+            int idSolicitud,
+            decimal montoDevuelto,
+            string metodoPago,
+            string codigoOperacion,
+            string motivoCancelacion)
         {
             try
             {
-                // ==========================================
-                // IDOR GUARD: verificar propiedad del recurso
-                // ==========================================
-                string dni = User.FindFirst("Dni")?.Value;
-                var usuarioAutenticado = _Context.Usuario.FirstOrDefault(u => u.Dni == dni);
-                if (usuarioAutenticado == null)
-                    return Json(new { ok = false, mensaje = "Sesión inválida." });
+                var strategy = _Context.Database.CreateExecutionStrategy();
 
-                var solicitud = _Context.SOLICITUD_CREDITO
-                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud && x.Usuario_Id_Usuario == usuarioAutenticado.Id);
-
-                if (solicitud == null)
-                    return Json(new { ok = false, mensaje = "No se encontró la solicitud." });
-
-                if (solicitud.Estado != "Aprobado")
+                var resultado = await strategy.ExecuteAsync(async () =>
                 {
-                    return Json(new { ok = false, mensaje = "Solo se puede solicitar cancelación sobre créditos aprobados." });
-                }
+                    await using var transaccion =
+                        await _Context.Database.BeginTransactionAsync(
+                            System.Data.IsolationLevel.Serializable);
 
-                if (montoDevuelto <= 0)
-                {
-                    return Json(new { ok = false, mensaje = "El monto a devolver debe ser mayor a cero." });
-                }
+                    try
+                    {
+                        // 1. Verificar usuario
+                        string dni = User.FindFirst("Dni")?.Value;
 
-                if (string.IsNullOrWhiteSpace(metodoPago) || string.IsNullOrWhiteSpace(codigoOperacion) || string.IsNullOrWhiteSpace(motivoCancelacion))
-                {
-                    return Json(new { ok = false, mensaje = "Todos los campos del pago de cancelación son obligatorios." });
-                }
+                        if (string.IsNullOrWhiteSpace(dni))
+                            return new { ok = false, mensaje = "Sesión inválida." };
 
-                var pago = new PagoCancelacion
-                {
-                    MontoDevuelto = montoDevuelto,
-                    MetodoPago = metodoPago,
-                    CodigoOperacion = codigoOperacion,
-                    MotivoCancelacion = motivoCancelacion,
-                    FechaPago = DateTime.UtcNow,
-                    Estado = "Pendiente",
-                    SOLICITUD_CREDITO_Id_Solicitud = idSolicitud
-                };
+                        var usuario = await _Context.Usuario
+                            .FirstOrDefaultAsync(u => u.Dni == dni);
 
-                _Context.PAGO_CANCELACION.Add(pago);
-                solicitud.Estado = "Pendiente cancelación";
-                _Context.SaveChanges();
+                        if (usuario == null)
+                            return new { ok = false, mensaje = "Usuario no encontrado." };
 
-                return Json(new { ok = true, mensaje = "Pago registrado correctamente. La cancelación queda pendiente de aprobación." });
+                        // 2. Verificar propiedad de la solicitud
+                        var solicitud = await _Context.SOLICITUD_CREDITO
+                            .FirstOrDefaultAsync(x => x.Id_Solicitud == idSolicitud);
+
+                        if (solicitud == null ||
+                            solicitud.Usuario_Id_Usuario != usuario.Id)
+                        {
+                            return new { ok = false, mensaje = "No tiene autorización para esta solicitud." };
+                        }
+
+                        if (solicitud.Estado != "Aprobado")
+                            return new { ok = false, mensaje = "Solo se pueden cancelar créditos aprobados." };
+
+                        // 3. Evitar duplicados
+                        bool existe = await _Context.PAGO_CANCELACION.AnyAsync(p =>
+                            p.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud &&
+                            (p.Estado == "Pendiente" || p.Estado == "Aprobado"));
+
+                        if (existe)
+                            return new { ok = false, mensaje = "Ya existe una cancelación en proceso." };
+
+                        // 4. Validar datos
+                        if (montoDevuelto <= 0)
+                            return new { ok = false, mensaje = "El importe debe ser mayor a cero." };
+
+                        if (string.IsNullOrWhiteSpace(metodoPago) ||
+                            string.IsNullOrWhiteSpace(codigoOperacion) ||
+                            string.IsNullOrWhiteSpace(motivoCancelacion))
+                        {
+                            return new { ok = false, mensaje = "Todos los campos son obligatorios." };
+                        }
+
+                        // 5. Calcular importe en el servidor
+                        var cuotas = await _Context.CUOTA
+                            .Where(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud)
+                            .ToListAsync();
+
+                        decimal saldoRequerido;
+
+                        if (cuotas.Count > 0)
+                        {
+                            var pendientes = cuotas
+                                .Where(c => c.Estado != "Pagado")
+                                .ToList();
+
+                            decimal capitalPendiente = pendientes
+                                .Sum(c => c.Capital.GetValueOrDefault());
+
+                            saldoRequerido = capitalPendiente > 0
+                                ? capitalPendiente
+                                : solicitud.MontoSolicitado;
+                        }
+                        else
+                        {
+                            saldoRequerido = solicitud.MontoSolicitado;
+                        }
+
+                        saldoRequerido = Math.Round(saldoRequerido, 2);
+
+                        // 6. Rechazar importes manipulados
+                        if (Math.Abs(montoDevuelto - saldoRequerido) > 0.01m)
+                        {
+                            return new
+                            {
+                                ok = false,
+                                mensaje = $"Importe incorrecto. El importe requerido es S/ {saldoRequerido:N2}."
+                            };
+                        }
+
+                        // 7. Registrar importe calculado por el servidor
+                        var pago = new PagoCancelacion
+                        {
+                            MontoDevuelto = saldoRequerido,
+                            MetodoPago = metodoPago.Trim(),
+                            CodigoOperacion = codigoOperacion.Trim(),
+                            MotivoCancelacion = motivoCancelacion.Trim(),
+                            FechaPago = DateTime.UtcNow,
+                            Estado = "Pendiente",
+                            SOLICITUD_CREDITO_Id_Solicitud = idSolicitud
+                        };
+
+                        _Context.PAGO_CANCELACION.Add(pago);
+                        solicitud.Estado = "Pendiente cancelación";
+
+                        await _Context.SaveChangesAsync();
+                        await transaccion.CommitAsync();
+
+                        return new
+                        {
+                            ok = true,
+                            mensaje = "Pago registrado correctamente. La cancelación queda pendiente de aprobación."
+                        };
+                    }
+                    catch
+                    {
+                        await transaccion.RollbackAsync();
+                        throw;
+                    }
+                });
+
+                return Json(resultado);
             }
-            catch
+            catch (Exception ex)
             {
-                return Json(new { ok = false, mensaje = "No se pudo registrar la cancelación." });
+                System.Diagnostics.Debug.WriteLine(
+                    $"Error RegistrarCancelacion: {ex}");
+
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "No se pudo registrar la cancelación. Revisa el registro de errores."
+                });
             }
         }
         [HttpPost]
@@ -5390,7 +5500,6 @@ string titularCuenta
 
             if (usuario != null && usuario.Rol == "Cliente")
             {
-                usuario.EstadoActivo = false;
                 usuario.UltimaConexion = DateTime.Now;
                 _Context.SaveChanges();
             }

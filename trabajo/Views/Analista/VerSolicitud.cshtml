@@ -198,6 +198,7 @@
         <div class="acciones">
 
             <button id="btnValidar"
+                    type="button"
                     class="btn-validar">
                 VALIDAR CLIENTE
             </button>
@@ -459,7 +460,7 @@
                     <div class="header-deuda">
                         <h3>DEUDA ACTUAL Y DEUDOR</h3>
 
-                        <button class="btn-editar-deuda">
+                        <button type="button" class="btn-editar-deuda">
                             ✏️
                         </button>
                     </div>
@@ -491,7 +492,7 @@
                                 </div>
                             </div>
 
-                            <button class="btnHistorialCredito btn-historial"
+                            <button type="button" class="btnHistorialCredito btn-historial"
                                     data-id="@Model.Id_Solicitud">
 
                                 👁 Ver historial crediticio
@@ -529,7 +530,7 @@
 
                                     </table>
 
-                                    <button id="cerrarHistorial"
+                                    <button type="button" id="cerrarHistorial"
                                             class="btnCerrarHistorial">
                                         Cerrar
                                     </button>
@@ -605,22 +606,22 @@
             </div>
             <div class="acciones-evaluacion">
 
-                <button id="btnNoValidar" class="btn-no-validar">
+                <button id="btnNoValidar" type="button" class="btn-no-validar">
                     <span class="icono-no-validar">👤</span>
                     NO VALIDAR CLIENTE
                 </button>
 
-                <button id="btnRechazar" class="btn-rechazar">
+                <button id="btnRechazar" type="button" class="btn-rechazar">
                     ✖ RECHAZAR
                 </button>
 
-                <button id="btnAprobar" class="btn-aprobar">
+                <button id="btnAprobar" type="button" class="btn-aprobar">
                     ✔ APROBAR
                 </button>
 
                 @if (!estaEnEvaluacion)
                 {
-                    <button id="btnEvaluacion" class="btn-evaluacion">
+                    <button id="btnEvaluacion" type="button" class="btn-evaluacion">
                         🕒 EN EVALUACIÓN
                     </button>
                 }
@@ -680,7 +681,8 @@
 
             </div>
 
-            <button class="btn-cerrar-chat"
+            <button type="button"
+                    class="btn-cerrar-chat"
                     id="btnCerrarChat">
                 <i class="fas fa-times"></i>
             </button>
@@ -715,12 +717,14 @@
                    accept="image/*"
                    class="elemento-oculto">
 
-            <button class="btn-chat-icon"
+            <button type="button"
+                    class="btn-chat-icon"
                     id="btnSubirImagenChat">
                 <i class="far fa-image"></i>
             </button>
 
-            <button class="btn-enviar-chat"
+            <button type="button"
+                    class="btn-enviar-chat"
                     id="btnEnviarChat">
 
                 <i class="fas fa-paper-plane"></i>

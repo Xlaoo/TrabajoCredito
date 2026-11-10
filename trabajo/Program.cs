@@ -331,6 +331,30 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
                         }
                     }
                 }
+            },
+            OnRedirectToLogin = context =>
+            {
+                if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
+                    context.Request.Headers.Accept.ToString().Contains("application/json") ||
+                    context.Request.Path.StartsWithSegments("/api"))
+                {
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return Task.CompletedTask;
+                }
+                context.Response.Redirect(context.RedirectUri);
+                return Task.CompletedTask;
+            },
+            OnRedirectToAccessDenied = context =>
+            {
+                if (context.Request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
+                    context.Request.Headers.Accept.ToString().Contains("application/json") ||
+                    context.Request.Path.StartsWithSegments("/api"))
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return Task.CompletedTask;
+                }
+                context.Response.Redirect(context.RedirectUri);
+                return Task.CompletedTask;
             }
         };
     });

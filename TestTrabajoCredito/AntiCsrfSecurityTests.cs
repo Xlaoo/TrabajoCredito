@@ -59,6 +59,22 @@ namespace TestTrabajoCredito
                     return $"TieneHttpPost: {tienePost}, TieneValidateAntiForgeryToken: {tieneAntiCsrf}";
                 });
 
+            // 2.1 Verificar [ValidateAntiForgeryToken] en RegistrarCancelacion
+            runner.Evaluar(
+                nombreEscenario: "Acción POST RegistrarCancelacion decorada con [ValidateAntiForgeryToken]",
+                datoEntrada: "Reflexión sobre método LoginController.RegistrarCancelacion",
+                esperado: "TieneHttpPost: True, TieneValidateAntiForgeryToken: True",
+                accion: () =>
+                {
+                    var metodo = typeof(LoginController).GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                        .FirstOrDefault(m => m.Name == "RegistrarCancelacion" && m.GetCustomAttribute<HttpPostAttribute>() != null);
+
+                    bool tienePost = metodo != null;
+                    bool tieneAntiCsrf = metodo?.GetCustomAttribute<ValidateAntiForgeryTokenAttribute>() != null;
+
+                    return $"TieneHttpPost: {tienePost}, TieneValidateAntiForgeryToken: {tieneAntiCsrf}";
+                });
+
             // 3. Verificar que MisSolicitudes.cshtml contiene @Html.AntiForgeryToken()
             runner.Evaluar(
                 nombreEscenario: "Vista MisSolicitudes.cshtml incluye token Anti-CSRF en formulario EnviarCronograma",

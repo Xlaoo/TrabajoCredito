@@ -436,7 +436,7 @@ namespace TestTrabajoCredito
                         entidadPago: "BCP",
                         numeroCuentaPago: "191-12345678-0-12",
                         titularCuenta: "Rafael Rosales"
-                    );
+                    ).GetAwaiter().GetResult();
 
                     var redirect = Assert.IsType<RedirectToActionResult>(res);
                     string? mensaje = controller.TempData["Mensaje"]?.ToString();
@@ -470,7 +470,7 @@ namespace TestTrabajoCredito
                         entidadPago: "BCP",
                         numeroCuentaPago: "191-12345678-0-12",
                         titularCuenta: "Rafael Rosales"
-                    );
+                    ).GetAwaiter().GetResult();
 
                     var redirect = Assert.IsType<RedirectToActionResult>(res);
                     string? mensaje = controller.TempData["Mensaje"]?.ToString();
@@ -504,7 +504,7 @@ namespace TestTrabajoCredito
                         entidadPago: "BCP",
                         numeroCuentaPago: "191-12345678-0-12",
                         titularCuenta: "Rafael Rosales"
-                    );
+                    ).GetAwaiter().GetResult();
 
                     var redirect = Assert.IsType<RedirectToActionResult>(res);
                     string? mensaje = controller.TempData["Mensaje"]?.ToString();
@@ -538,7 +538,7 @@ namespace TestTrabajoCredito
                         entidadPago: "BCP",
                         numeroCuentaPago: "191-12345678-0-12",
                         titularCuenta: "Rafael Rosales"
-                    );
+                    ).GetAwaiter().GetResult();
 
                     var redirect = Assert.IsType<RedirectToActionResult>(res);
                     string? mensaje = controller.TempData["Mensaje"]?.ToString();
@@ -572,7 +572,7 @@ namespace TestTrabajoCredito
                         entidadPago: "BCP",
                         numeroCuentaPago: "191-12345678-0-12",
                         titularCuenta: "Rafael Rosales"
-                    );
+                    ).GetAwaiter().GetResult();
 
                     var redirect = Assert.IsType<RedirectToActionResult>(res);
                     string? mensaje = controller.TempData["Mensaje"]?.ToString();
@@ -606,7 +606,7 @@ namespace TestTrabajoCredito
                         entidadPago: "BCP",
                         numeroCuentaPago: "191-12345678-0-12",
                         titularCuenta: "Rafael Rosales"
-                    );
+                    ).GetAwaiter().GetResult();
 
                     var redirect = Assert.IsType<RedirectToActionResult>(res);
                     string? mensaje = controller.TempData["Mensaje"]?.ToString();
@@ -640,11 +640,104 @@ namespace TestTrabajoCredito
                         entidadPago: "BCP",
                         numeroCuentaPago: "191-12345678-0-12",
                         titularCuenta: "Rafael Rosales"
-                    );
+                    ).GetAwaiter().GetResult();
 
                     var redirect = Assert.IsType<RedirectToActionResult>(res);
                     string? mensaje = controller.TempData["Mensaje"]?.ToString();
                     return redirect.ActionName == "SolicitarCredito" && mensaje != null && mensaje.Contains("método de pago son obligatorios");
+                });
+
+            // Escenario 22.1: Registro exitoso con ExecutionStrategy (MySqlRetryingExecutionStrategy compatible)
+            runner.Evaluar(
+                nombreEscenario: "Persistencia atómica: RegistrarSolicitudCredito guarda solicitud y registros dependientes",
+                datoEntrada: "Solicitud válida: Monto S/ 5,000, Plazo 12",
+                esperado: "Guardado: True, MetodoGuardado: True, PerfilGuardado: True, HistorialGuardado: True",
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarSolicitudCredito(
+                        montoSolicitado: 5000m,
+                        plazoMeses: 12,
+                        ingresoMensual: 4000m,
+                        egresoMensual: 1000m,
+                        tieneOtrosCreditos: "No",
+                        motivoOtro: "",
+                        ocupacion: "Ingeniero",
+                        motivoPrestamo: "Negocio",
+                        metodoPago: "Transferencia Bancaria",
+                        entidadPago: "BCP",
+                        numeroCuentaPago: "191-99999999-0-99",
+                        titularCuenta: "Rafael Rosales"
+                    ).GetAwaiter().GetResult();
+
+                    var sol = context.SOLICITUD_CREDITO.FirstOrDefault(s => s.Usuario_Id_Usuario == 1);
+                    bool solGuardada = sol != null && sol.Estado == "Pendiente" && sol.MontoSolicitado == 5000m;
+
+                    bool metodoGuardado = sol != null && context.METODO_PAGO_SOLICITUD.Any(m => m.SOLICITUD_CREDITO_Id_Solicitud == sol.Id_Solicitud && m.NumeroCuentaPago == "191-99999999-0-99");
+                    bool perfilGuardado = sol != null && context.PERFIL_FINANCIERO.Any(p => p.SOLICITUD_CREDITO_Id_Solicitud == sol.Id_Solicitud && p.IngresoMensual == 4000m);
+                    bool histGuardado = sol != null && context.HISTORIAL_ESTADO.Any(h => h.SOLICITUD_CREDITO_Id_Solicitud == sol.Id_Solicitud && h.EstadoActual == "Pendiente");
+
+                    return $"Guardado: {solGuardada}, MetodoGuardado: {metodoGuardado}, PerfilGuardado: {perfilGuardado}, HistorialGuardado: {histGuardado}";
+                });
+
+            // Escenario 22.2: Prevención de duplicados con ExecutionStrategy
+            runner.Evaluar(
+                nombreEscenario: "Prevención de duplicidad: Rechazo si el cliente ya tiene solicitud activa",
+                datoEntrada: "Cliente con solicitud 'Pendiente' existente",
+                esperado: "Rechazado: True, TotalSolicitudes: 1",
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                        .Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarClientePrueba(context);
+
+                    var controller = CrearLoginController(context);
+
+                    // Primera solicitud válida
+                    controller.RegistrarSolicitudCredito(
+                        montoSolicitado: 5000m,
+                        plazoMeses: 12,
+                        ingresoMensual: 4000m,
+                        egresoMensual: 1000m,
+                        tieneOtrosCreditos: "No",
+                        motivoOtro: "",
+                        ocupacion: "Ingeniero",
+                        motivoPrestamo: "Negocio",
+                        metodoPago: "Transferencia Bancaria",
+                        entidadPago: "BCP",
+                        numeroCuentaPago: "191-11111111-0-11",
+                        titularCuenta: "Rafael Rosales"
+                    ).GetAwaiter().GetResult();
+
+                    // Segunda solicitud (intento duplicado)
+                    var resDuplicado = controller.RegistrarSolicitudCredito(
+                        montoSolicitado: 10000m,
+                        plazoMeses: 24,
+                        ingresoMensual: 5000m,
+                        egresoMensual: 1500m,
+                        tieneOtrosCreditos: "No",
+                        motivoOtro: "",
+                        ocupacion: "Ingeniero",
+                        motivoPrestamo: "Negocio",
+                        metodoPago: "Transferencia Bancaria",
+                        entidadPago: "BCP",
+                        numeroCuentaPago: "191-22222222-0-22",
+                        titularCuenta: "Rafael Rosales"
+                    ).GetAwaiter().GetResult();
+
+                    var redirect = Assert.IsType<RedirectToActionResult>(resDuplicado);
+                    bool rechazado = redirect.ActionName == "DashboardCliente" && controller.TempData["Mensaje"] != null;
+                    int total = context.SOLICITUD_CREDITO.Count(s => s.Usuario_Id_Usuario == 1);
+
+                    return $"Rechazado: {rechazado}, TotalSolicitudes: {total}";
                 });
 
             // Escenario 23: Blindaje DOM/API - Edición de solicitud con plazo no permitido
@@ -960,6 +1053,244 @@ namespace TestTrabajoCredito
                     var correo = ObtenerPropiedad(jsonRes.Value, "correo") as string;
 
                     return string.IsNullOrEmpty(analista) && string.IsNullOrEmpty(correo);
+                });
+
+            runner.VerificarTodosAprobados();
+        }
+
+        [Fact]
+        public void ProbarSeguridadYAntiTamperingRegistrarCancelacion()
+        {
+            var runner = new EscenarioRunner(_output, "V-01: Client-Side Tampering / F12 en RegistrarCancelacion");
+
+            Action<UsuarioContext> asegurarCliente = (ctx) =>
+            {
+                if (!ctx.Usuario.Any(u => u.Dni == "72527818"))
+                {
+                    ctx.Usuario.Add(new Usuario
+                    {
+                        Id = 1,
+                        Nombre = "Rafael",
+                        Apellido = "Rosales",
+                        Dni = "72527818",
+                        Correo = "xlaforosalespapuico@gmail.com",
+                        Celular = "981999121",
+                        Rol = "Cliente",
+                        EstadoActivo = true,
+                        clave = "$2a$12$eXampleHashCrediPlus2026SecureBcryptHashValuePadding60"
+                    });
+                    ctx.SaveChanges();
+                }
+            };
+
+            // Helper para preparar solicitud aprobada
+            Func<UsuarioContext, int, decimal, SolicitudCredito> prepararSolicitudAprobada = (ctx, id, montoSolicitado) =>
+            {
+                var sol = new SolicitudCredito
+                {
+                    Id_Solicitud = id,
+                    NumeroSolicitud = $"SOL-TEST-{id}",
+                    Usuario_Id_Usuario = 1,
+                    MontoSolicitado = montoSolicitado,
+                    PlazoMeses = 12,
+                    InteresEstimado = 500m,
+                    Estado = "Aprobado",
+                    FechaSolicitud = DateTime.UtcNow
+                };
+                ctx.SOLICITUD_CREDITO.Add(sol);
+
+                // Cuotas asociadas
+                decimal capitalCuota = Math.Round(montoSolicitado / 12, 2);
+                for (int i = 1; i <= 12; i++)
+                {
+                    ctx.CUOTA.Add(new Cuota
+                    {
+                        Id_Cuota = id * 100 + i,
+                        NumeroCuota = i,
+                        SOLICITUD_CREDITO_Id_Solicitud = id,
+                        MontoCuota = capitalCuota + 41.67m,
+                        Capital = (i == 12) ? montoSolicitado - (capitalCuota * 11) : capitalCuota,
+                        Interes = 41.67m,
+                        Estado = "Pendiente",
+                        FechaVencimiento = DateTime.UtcNow.AddMonths(i),
+                        FechaLimitePago = DateTime.UtcNow.AddMonths(i).AddDays(5)
+                    });
+                }
+                ctx.SaveChanges();
+                return sol;
+            };
+
+            // Escenario 1: Monto inferior al saldo real -> rechazado
+            runner.Evaluar(
+                nombreEscenario: "1. Rechazo de monto inferior al saldo real de liquidación",
+                datoEntrada: "Saldo real: S/ 5,000.00 | Monto enviado: S/ 2,500.00",
+                esperado: "ok: False",
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarCliente(context);
+                    prepararSolicitudAprobada(context, 101, 5000m);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarCancelacion(101, 2500m, "Transferencia", "OP-101", "Cancelación");
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    bool ok = (bool)(ObtenerPropiedad(jsonRes.Value, "ok") ?? true);
+
+                    return $"ok: {ok}";
+                });
+
+            // Escenario 2: Monto superior al saldo real -> rechazado
+            runner.Evaluar(
+                nombreEscenario: "2. Rechazo de monto superior al saldo real de liquidación",
+                datoEntrada: "Saldo real: S/ 5,000.00 | Monto enviado: S/ 6,000.00",
+                esperado: "ok: False",
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarCliente(context);
+                    prepararSolicitudAprobada(context, 102, 5000m);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarCancelacion(102, 6000m, "Transferencia", "OP-102", "Cancelación");
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    bool ok = (bool)(ObtenerPropiedad(jsonRes.Value, "ok") ?? true);
+
+                    return $"ok: {ok}";
+                });
+
+            // Escenario 3: Monto cero o negativo -> rechazado
+            runner.Evaluar(
+                nombreEscenario: "3. Rechazo de monto cero o negativo",
+                datoEntrada: "Monto enviado: S/ -50.00",
+                esperado: "ok: False",
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarCliente(context);
+                    prepararSolicitudAprobada(context, 103, 5000m);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarCancelacion(103, -50m, "Transferencia", "OP-103", "Cancelación");
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    bool ok = (bool)(ObtenerPropiedad(jsonRes.Value, "ok") ?? true);
+
+                    return $"ok: {ok}";
+                });
+
+            // Escenario 4: Modificación del monto desde F12 (Tampering a S/ 1.00) -> rechazado por servidor
+            runner.Evaluar(
+                nombreEscenario: "4. Tampering F12: Intento de cancelar deuda de S/ 5,000.00 con S/ 1.00",
+                datoEntrada: "Saldo real DB: S/ 5,000.00 | Monto alterado en DOM/Network: S/ 1.00",
+                esperado: "ok: False, EstadoSolicitud: Aprobado, PagosCreados: 0",
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarCliente(context);
+                    prepararSolicitudAprobada(context, 104, 5000m);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarCancelacion(104, 1.00m, "Transferencia", "OP-HACK", "Cancelación F12");
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    bool ok = (bool)(ObtenerPropiedad(jsonRes.Value, "ok") ?? true);
+
+                    var solDb = context.SOLICITUD_CREDITO.First(s => s.Id_Solicitud == 104);
+                    int pagosCount = context.PAGO_CANCELACION.Count(p => p.SOLICITUD_CREDITO_Id_Solicitud == 104);
+
+                    return $"ok: {ok}, EstadoSolicitud: {solDb.Estado}, PagosCreados: {pagosCount}";
+                });
+
+            // Escenario 5: Cancelar crédito perteneciente a otro usuario (IDOR) -> rechazado
+            runner.Evaluar(
+                nombreEscenario: "5. Anti-IDOR: Rechazo de solicitud perteneciente a otro cliente",
+                datoEntrada: "Solicitud de Cliente ID 99 | Petición ejecutada por Cliente ID 1",
+                esperado: "ok: False",
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarCliente(context);
+
+                    // Solicitud de otro usuario
+                    var solAjena = new SolicitudCredito
+                    {
+                        Id_Solicitud = 105,
+                        NumeroSolicitud = "SOL-TEST-105",
+                        Usuario_Id_Usuario = 99,
+                        MontoSolicitado = 3000m,
+                        PlazoMeses = 6,
+                        Estado = "Aprobado",
+                        FechaSolicitud = DateTime.UtcNow
+                    };
+                    context.SOLICITUD_CREDITO.Add(solAjena);
+                    context.SaveChanges();
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarCancelacion(105, 3000m, "Transferencia", "OP-105", "Cancelación Ajena");
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    bool ok = (bool)(ObtenerPropiedad(jsonRes.Value, "ok") ?? true);
+
+                    return $"ok: {ok}";
+                });
+
+            // Escenario 6: Duplicar cancelación para el mismo crédito -> rechazado
+            runner.Evaluar(
+                nombreEscenario: "6. Anti-Duplicados: Rechazo de cancelación si ya existe una pendiente",
+                datoEntrada: "Solicitud ya en 'Pendiente cancelación' con PagoCancelacion existente",
+                esperado: "ok: False",
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarCliente(context);
+                    prepararSolicitudAprobada(context, 106, 5000m);
+
+                    var controller = CrearLoginController(context);
+
+                    // Primera cancelación válida
+                    var res1 = controller.RegistrarCancelacion(106, 5000m, "Transferencia", "OP-FIRST", "Cancelación 1");
+                    var jsonRes1 = Assert.IsType<JsonResult>(res1);
+                    bool ok1 = (bool)(ObtenerPropiedad(jsonRes1.Value, "ok") ?? false);
+
+                    // Segunda cancelación (duplicada)
+                    var res2 = controller.RegistrarCancelacion(106, 5000m, "Transferencia", "OP-SECOND", "Cancelación 2");
+                    var jsonRes2 = Assert.IsType<JsonResult>(res2);
+                    bool ok2 = (bool)(ObtenerPropiedad(jsonRes2.Value, "ok") ?? true);
+
+                    return $"ok: {ok2}";
+                });
+
+            // Escenario 7: Cancelación válida con saldo real -> aceptada
+            runner.Evaluar(
+                nombreEscenario: "7. Cancelación legítima: Aceptación con saldo real exacto",
+                datoEntrada: "Saldo real DB: S/ 5,000.00 | Monto enviado: S/ 5,000.00",
+                esperado: "ok: True, EstadoSolicitud: Pendiente cancelación, PagoRegistrado: 5000.00",
+                accion: () =>
+                {
+                    var options = new DbContextOptionsBuilder<UsuarioContext>()
+                        .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+                    using var context = new UsuarioContext(options);
+                    asegurarCliente(context);
+                    prepararSolicitudAprobada(context, 107, 5000m);
+
+                    var controller = CrearLoginController(context);
+                    var res = controller.RegistrarCancelacion(107, 5000m, "Transferencia", "OP-LEGIT", "Liquidación voluntaria");
+                    var jsonRes = Assert.IsType<JsonResult>(res);
+                    bool ok = (bool)(ObtenerPropiedad(jsonRes.Value, "ok") ?? false);
+
+                    var solDb = context.SOLICITUD_CREDITO.First(s => s.Id_Solicitud == 107);
+                    var pagoDb = context.PAGO_CANCELACION.First(p => p.SOLICITUD_CREDITO_Id_Solicitud == 107);
+
+                    return $"ok: {ok}, EstadoSolicitud: {solDb.Estado}, PagoRegistrado: {pagoDb.MontoDevuelto:F2}";
                 });
 
             runner.VerificarTodosAprobados();
