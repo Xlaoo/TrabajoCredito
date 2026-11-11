@@ -326,7 +326,7 @@
         }
 
         .chat-footer {
-            margin-top: auto; 
+            margin-top: auto;
             border-top: 1px solid #e5e7eb;
             padding: 14px 18px;
             display: flex;
@@ -556,4 +556,225 @@
 
 .input-file-oculto {
     display: none;
+}
+
+/* ========================================================
+   SECCIÓN DE SOLICITUDES CANCELADAS Y MODAL DE REVISIÓN
+======================================================== */
+
+.badge-cancelacion-pendiente {
+    background: #fef3c7;
+    color: #92400e;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    display: inline-block;
+    border: 1px solid #fde68a;
+}
+
+.monto-cancelacion-texto {
+    color: #047857;
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.metodo-badge {
+    background: #e0e7ff;
+    color: #3730a3;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+.ref-operacion {
+    display: block;
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.btn-chat-solicitud {
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-chat-solicitud:hover {
+    background: #0369a1;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.modal-box-cancelacion {
+    max-width: 840px;
+    width: 92%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.alerta-revision-info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.monto-destacado-pago {
+    color: #059669;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.badge-revision-pago {
+    background: #fef9c3;
+    color: #854d0e;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.observacion-cancelacion-box {
+    margin-top: 15px;
+    background: #f8fafc;
+    border-left: 4px solid #6366f1;
+    padding: 12px 16px;
+    border-radius: 6px;
+}
+
+.observacion-cancelacion-box p {
+    margin: 6px 0 0 0;
+    color: #334155;
+    font-size: 14px;
+}
+
+.verificacion-box {
+    background: #f0fdf4;
+    border: 2px dashed #86efac;
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-top: 18px;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #166534;
+    user-select: none;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #16a34a;
+    cursor: pointer;
+}
+
+.observacion-analista-box {
+    margin-top: 15px;
+}
+
+.observacion-analista-box label {
+    display: block;
+    font-size: 13px;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.textarea-analista {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #1e293b;
+    resize: vertical;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.textarea-analista:focus {
+    outline: none;
+    border-color: #6d28d9;
+    box-shadow: 0 0 0 2px rgba(109, 40, 217, 0.15);
+}
+
+.modal-actions-cancelacion {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-cancelar-modal-box {
+    background: #94a3b8;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-cancelar-modal-box:hover {
+    background: #64748b;
+}
+
+.btn-rechazar-cancelacion {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-rechazar-cancelacion:hover {
+    background: #dc2626;
+}
+
+.btn-aceptar-cancelacion {
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+}
+
+.btn-aceptar-cancelacion:disabled {
+    background: #86efac;
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.btn-aceptar-cancelacion:not(:disabled):hover {
+    background: #15803d;
 }

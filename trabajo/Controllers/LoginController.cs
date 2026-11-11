@@ -3943,7 +3943,8 @@ namespace trabajo.Controllers
  .FirstOrDefault(x => x.Usuario_Id_Usuario == usuario.Id &&
      (x.Estado == "Pendiente" ||
       x.Estado == "En Evaluación" ||
-      x.Estado == "Aprobado"));
+      x.Estado == "Aprobado" ||
+      x.Estado == "Pendiente cancelación"));
                 var solicitudRechazada = _Context.SOLICITUD_CREDITO
 .FirstOrDefault(x => x.Usuario_Id_Usuario == usuario.Id &&
                      x.Estado == "Rechazado");
@@ -3998,13 +3999,19 @@ namespace trabajo.Controllers
                     (x.Estado == "Pendiente" ||
                      x.Estado == "En Evaluación" ||
                      x.Estado == "Aprobado" ||
-                     x.Estado == "Rechazado"))
+                     x.Estado == "Rechazado" ||
+                     x.Estado == "Pendiente cancelación"))
                 .OrderByDescending(x => x.FechaSolicitud)
                 .FirstOrDefault();
 
             if (solicitud != null)
             {
-                if (solicitud.Estado == "Pendiente")
+                if (solicitud.Estado == "Pendiente cancelación")
+                {
+                    TempData["Mensaje"] = "No puedes solicitar un nuevo préstamo porque tienes una solicitud de cancelación pendiente de evaluación. Espera la decisión del analista.";
+                    return RedirectToAction("MisSolicitudes");
+                }
+                else if (solicitud.Estado == "Pendiente")
                 {
                     ViewBag.MostrarConfirmacion = true;
                 }
@@ -4129,7 +4136,8 @@ namespace trabajo.Controllers
                                 (x.Estado == "Pendiente" ||
                                  x.Estado == "En Evaluación" ||
                                  x.Estado == "Aprobado" ||
-                                 x.Estado == "Rechazado"));
+                                 x.Estado == "Rechazado" ||
+                                 x.Estado == "Pendiente cancelación"));
 
                         if (existeSolicitudActiva)
                         {
@@ -4137,7 +4145,15 @@ namespace trabajo.Controllers
                             {
                                 await transaccion.RollbackAsync();
                             }
-                            TempData["Mensaje"] = "Ya tienes una solicitud pendiente, aprobada o rechazada. Primero debes finalizarla o borrarla.";
+
+                            // Comprobamos si el bloqueo se debe a una cancelación pendiente
+                            bool tieneCancelacionPendiente = await _Context.SOLICITUD_CREDITO
+                                .AnyAsync(x => x.Usuario_Id_Usuario == usuario.Id && x.Estado == "Pendiente cancelación");
+
+                            TempData["Mensaje"] = tieneCancelacionPendiente
+                                ? "No puedes solicitar un nuevo préstamo porque tienes una solicitud de cancelación pendiente de evaluación. Espera la decisión del analista."
+                                : "Ya tienes una solicitud pendiente, aprobada o rechazada. Primero debes finalizarla o borrarla.";
+
                             resultadoAccion = RedirectToAction("DashboardCliente");
                             return;
                         }
@@ -4225,17 +4241,18 @@ namespace trabajo.Controllers
 
         [HttpGet]
         [Authorize(Roles = "Cliente")]
-        public IActionResult MisSolicitudes()
+        public async Task<IActionResult> MisSolicitudes()
         {
             string dni = User.FindFirst("Dni")?.Value;
 
-            var usuario = _Context.Usuario.FirstOrDefault(x => x.Dni == dni);
+            var usuario = await _Context.Usuario.FirstOrDefaultAsync(x => x.Dni == dni);
 
             if (usuario == null)
                 return RedirectToAction("IniciarSesion", "Login");
 
-            var solicitudes = _Context.SOLICITUD_CREDITO
-    .Where(x => x.Usuario_Id_Usuario == usuario.Id && x.Estado != "Cancelado")
+            // Exclusión estricta de solicitudes canceladas de la lista activa del cliente
+            var solicitudes = await _Context.SOLICITUD_CREDITO
+                .Where(x => x.Usuario_Id_Usuario == usuario.Id && x.Estado != "Cancelado")
                 .Select(x => new SolicitudCreditoViewModel
                 {
                     IdSolicitud = x.Id_Solicitud,
@@ -4246,9 +4263,70 @@ namespace trabajo.Controllers
                     FechaSolicitud = x.FechaSolicitud,
                     Estado = x.Estado
                 })
-                .ToList();
-            ViewBag.Evaluaciones = _Context.Evaluacion_Riesgo.ToList();
+                .ToListAsync();
+
+            ViewBag.Evaluaciones = await _Context.Evaluacion_Riesgo.ToListAsync();
+
+            // Identificar si existe una cancelación aceptada que el cliente aún no ha visto (RevisionPendienteVista == false)
+            var cancelacionPendienteVista = await _Context.SOLICITUD_CREDITO
+                .AsNoTracking()
+                .Where(x => x.Usuario_Id_Usuario == usuario.Id
+                    && x.Estado == "Cancelado"
+                    && x.RevisionPendienteVista == false)
+                .OrderByDescending(x => x.Id_Solicitud)
+                .FirstOrDefaultAsync();
+
+            if (cancelacionPendienteVista != null)
+            {
+                // Extraer el motivo/observación registrado en HISTORIAL_ESTADO o en CancelacionEvaluacion
+                var historialCancelacion = await _Context.HISTORIAL_ESTADO
+                    .AsNoTracking()
+                    .Where(h => h.SOLICITUD_CREDITO_Id_Solicitud == cancelacionPendienteVista.Id_Solicitud
+                        && h.EstadoActual == "Cancelado")
+                    .OrderByDescending(h => h.FechaCambio)
+                    .FirstOrDefaultAsync();
+
+                string observacion = historialCancelacion?.MotivoCambio
+                    ?? "Su solicitud de cancelación ha sido procesada y aprobada conforme a las políticas de la institución.";
+
+                ViewBag.CancelacionAgradecimiento = new
+                {
+                    IdSolicitud = cancelacionPendienteVista.Id_Solicitud,
+                    NumeroSolicitud = cancelacionPendienteVista.NumeroSolicitud ?? $"SOL-{cancelacionPendienteVista.Id_Solicitud:D5}",
+                    MontoSolicitado = cancelacionPendienteVista.MontoSolicitado,
+                    Observacion = observacion
+                };
+            }
+
             return View(solicitudes);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Cliente")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarcarCancelacionVista(int idSolicitud)
+        {
+            try
+            {
+                string dni = User.FindFirst("Dni")?.Value;
+                var usuario = await _Context.Usuario.FirstOrDefaultAsync(x => x.Dni == dni);
+                if (usuario == null)
+                    return Json(new { success = false, mensaje = "Sesión inválida." });
+
+                // Marcar RevisionPendienteVista = true condicionalmente para esta solicitud cancelada del cliente
+                int filas = await _Context.SOLICITUD_CREDITO
+                    .Where(s => s.Id_Solicitud == idSolicitud
+                        && s.Usuario_Id_Usuario == usuario.Id
+                        && s.Estado == "Cancelado")
+                    .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevisionPendienteVista, true));
+
+                return Json(new { success = filas > 0 });
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[LoginController.MarcarCancelacionVista] Error: {ex.Message}");
+                return Json(new { success = false });
+            }
         }
 
         [HttpPost]
@@ -4454,8 +4532,8 @@ namespace trabajo.Controllers
 <br/>
 
 <div style='background:#f8d7da;color:#842029;padding:15px;border-radius:8px;'>
-    <b>Fecha límite de pago:</b> {fechaLimite:dd/MM/yyyy}. 
-    Tiene hasta 15 días para pagar. Los domingos no se consideran dentro del plazo. 
+    <b>Fecha límite de pago:</b> {fechaLimite:dd/MM/yyyy}.
+    Tiene hasta 15 días para pagar. Los domingos no se consideran dentro del plazo.
     Si se retrasa, se aplicarán intereses por mora.
 </div>
 
@@ -4868,6 +4946,7 @@ namespace trabajo.Controllers
             try
             {
                 var strategy = _Context.Database.CreateExecutionStrategy();
+                DatosNotificacionCancelacionDesembolso? datosNotificacion = null;
 
                 var resultado = await strategy.ExecuteAsync(async () =>
                 {
@@ -4976,6 +5055,21 @@ namespace trabajo.Controllers
                         await _Context.SaveChangesAsync();
                         await transaccion.CommitAsync();
 
+                        // Guardamos datos para la notificación por correo fuera del bloque de transacción
+                        datosNotificacion = new DatosNotificacionCancelacionDesembolso
+                        {
+                            IdSolicitud = idSolicitud,
+                            NumeroSolicitud = solicitud.NumeroSolicitud ?? $"SOL-{solicitud.Id_Solicitud:D5}",
+                            NombreCliente = $"{usuario.Nombre} {usuario.Apellido}".Trim(),
+                            DniCliente = usuario.Dni,
+                            MontoSolicitado = solicitud.MontoSolicitado,
+                            SaldoRequerido = saldoRequerido,
+                            MetodoPago = metodoPago.Trim(),
+                            CodigoOperacion = codigoOperacion.Trim(),
+                            MotivoCancelacion = motivoCancelacion.Trim(),
+                            FechaRegistro = DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                        };
+
                         return new
                         {
                             ok = true,
@@ -4988,6 +5082,73 @@ namespace trabajo.Controllers
                         throw;
                     }
                 });
+
+                // =========================================================================
+                // NOTIFICACIÓN POR CORREO ELECTRÓNICO (ESTRICTAMENTE FUERA DE LA TRANSACCIÓN)
+                // =========================================================================
+                // Se envía únicamente tras el Commit exitoso de la transacción, evitando
+                // duplicación de correos en caso de reintentos transaccionales automáticos.
+                if (datosNotificacion != null)
+                {
+                    try
+                    {
+                        // Identificación del analista responsable a partir del registro histórico de evaluación
+                        var evaluacion = await _Context.Evaluacion_Riesgo
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(e => e.SOLICITUD_CREDITO_Id_Solicitud == datosNotificacion.IdSolicitud);
+
+                        Usuario? analistaResponsable = null;
+
+                        if (evaluacion != null && !string.IsNullOrWhiteSpace(evaluacion.Responsable))
+                        {
+                            string respNombre = evaluacion.Responsable.Trim();
+
+                            // Intentar asociar si el responsable coincide con Nombre o Apellido del analista
+                            analistaResponsable = await _Context.Usuario
+                                .AsNoTracking()
+                                .FirstOrDefaultAsync(u => u.Rol == "Analista" && !string.IsNullOrWhiteSpace(u.Correo) &&
+                                    (u.Nombre.Contains(respNombre) || respNombre.Contains(u.Nombre)));
+                        }
+
+                        // REGLA DE SEGURIDAD AUDITORÍA: Si no existe un responsable unívoco verificable (por ejemplo, valor genérico
+                        // "Analista de riesgo"), NO se selecciona un analista arbitrario con FirstOrDefaultAsync ni se envían correos a ciegas.
+                        if (analistaResponsable != null && !string.IsNullOrWhiteSpace(analistaResponsable.Correo))
+                        {
+                            var emailService = new EmailService();
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    await emailService.EnviarNotificacionCancelacionDesembolsadaAsync(
+                                        analistaResponsable.Correo,
+                                        $"{analistaResponsable.Nombre} {analistaResponsable.Apellido}".Trim(),
+                                        datosNotificacion.NumeroSolicitud,
+                                        datosNotificacion.NombreCliente,
+                                        datosNotificacion.DniCliente,
+                                        datosNotificacion.MontoSolicitado,
+                                        datosNotificacion.SaldoRequerido,
+                                        datosNotificacion.MetodoPago,
+                                        datosNotificacion.CodigoOperacion,
+                                        datosNotificacion.MotivoCancelacion,
+                                        datosNotificacion.FechaRegistro
+                                    );
+                                }
+                                catch (Exception exEmail)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"[NotificarAnalista] Error envío correo: {exEmail.Message}");
+                                }
+                            });
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[NotificarAnalista] No se identificó un analista específico unívoco para SOL-{datosNotificacion.IdSolicitud:D5} (Responsable: '{evaluacion?.Responsable}'). Se omitió el envío indiscriminado de correo por política de integridad.");
+                        }
+                    }
+                    catch (Exception exNotif)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[NotificarAnalista] Excepción al procesar notificación analista: {exNotif.Message}");
+                    }
+                }
 
                 return Json(resultado);
             }
@@ -5229,6 +5390,7 @@ namespace trabajo.Controllers
         }
         [HttpPost]
         [Authorize(Roles = "Cliente")]
+        [ValidateAntiForgeryToken]
         public async Task<JsonResult> EnviarMensaje(
      int idSolicitud,
      string? mensaje,
@@ -5349,7 +5511,7 @@ namespace trabajo.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Cliente")]
-        public JsonResult CancelarEvaluacion(int idSolicitud, string motivo)
+        public async Task<IActionResult> CancelarEvaluacion(int idSolicitud, string motivo)
         {
             try
             {
@@ -5359,90 +5521,197 @@ namespace trabajo.Controllers
                 }
 
                 // ==========================================
-                // IDOR GUARD: verificar propiedad del recurso
+                // IDOR GUARD: Verificación sin rastreo previo en ChangeTracker
                 // ==========================================
                 string dni = User.FindFirst("Dni")?.Value;
-                var usuarioAutenticado = _Context.Usuario.FirstOrDefault(u => u.Dni == dni);
+                var usuarioAutenticado = await _Context.Usuario
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Dni == dni);
+
                 if (usuarioAutenticado == null)
                     return Json(new { ok = false, mensaje = "Sesión inválida." });
 
-                var solicitud = _Context.SOLICITUD_CREDITO
-                    .FirstOrDefault(x => x.Id_Solicitud == idSolicitud
-                        && x.Estado == "En Evaluación"
+                var solicitudPrevia = await _Context.SOLICITUD_CREDITO
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Id_Solicitud == idSolicitud
                         && x.Usuario_Id_Usuario == usuarioAutenticado.Id);
 
-                if (solicitud == null)
+                if (solicitudPrevia == null)
                 {
-                    return Json(new { ok = false, mensaje = "No se encontró la solicitud en evaluación." });
+                    return Json(new { ok = false, mensaje = "No se encontró la solicitud." });
                 }
 
-                var propuestaRecomendada = _Context.PROPUESTA_CREDITO
-                    .FirstOrDefault(x =>
-                        x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud &&
-                        x.EsRecomendada == true);
-
-                decimal montoFinal = propuestaRecomendada != null
-                    ? propuestaRecomendada.Monto
-                    : solicitud.MontoSolicitado;
-
-                var cancelacion = new CancelacionEvaluacion
+                // ==========================================
+                // CONTROL DE IDEMPOTENCIA Y ESTADOS PREVIOS
+                // ==========================================
+                if (solicitudPrevia.Estado == "Cancelado")
                 {
-                    IdSolicitud = null,
-                    MontoSolicitado = montoFinal,
-                    MotivoCancelacion = motivo.Trim(),
-                    FechaCancelacion = DateTime.UtcNow,
-                    Responsable = "Analista de Riesgo"
-                };
+                    // Si ya está cancelada, verificar que exista la auditoría de cancelación del cliente
+                    var cancelacionExistente = await _Context.CancelacionEvaluacion
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(c => c.IdSolicitud == idSolicitud && c.Responsable == "Cliente");
 
-                _Context.CancelacionEvaluacion.Add(cancelacion);
+                    if (cancelacionExistente != null)
+                    {
+                        return Json(new
+                        {
+                            ok = true,
+                            mensaje = "Tu solicitud fue cancelada correctamente."
+                        });
+                    }
 
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = "La solicitud ya se encuentra cancelada pero no tiene registro de auditoría válido."
+                    });
+                }
 
-                var propuestas = _Context.PROPUESTA_CREDITO
-                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+                if (solicitudPrevia.Estado != "En Evaluación")
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        mensaje = $"La solicitud se encuentra en estado '{solicitudPrevia.Estado}' y no admite cancelación."
+                    });
+                }
 
-                var perfil = _Context.PERFIL_FINANCIERO
-                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+                // ==========================================
+                // TRANSACCIÓN ATÓMICA RESILIENTE A REINTENTOS Y CONCURRENCIA
+                // ==========================================
+                var strategy = _Context.Database.CreateExecutionStrategy();
+                return await strategy.ExecuteAsync(async () =>
+                {
+                    await using var transaccion = await _Context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
+                    HistorialEstado historialEstado = null;
+                    CancelacionEvaluacion cancelacion = null;
 
-                var mensajes = _Context.MENSAJE
-                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+                    try
+                    {
+                        // 1. ACTUALIZACIÓN ATÓMICA CONDICIONAL EN MYSQL
+                        // Cambia el estado a "Cancelado" ÚNICAMENTE si en la base de datos el estado ES exactamente "En Evaluación"
+                        // y pertenece al usuario autenticado.
+                        int filasAfectadas = await _Context.SOLICITUD_CREDITO
+                            .Where(x => x.Id_Solicitud == idSolicitud
+                                && x.Usuario_Id_Usuario == usuarioAutenticado.Id
+                                && x.Estado == "En Evaluación")
+                            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Estado, "Cancelado"));
 
-                var evaluacion = _Context.Evaluacion_Riesgo
-                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
-                var historialCrediticio = _Context.HISTORIAL_CREDITO
-    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
-                var cuotas = _Context.CUOTA
-    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+                        // 2. TRATAMIENTO DE CONFIRMACIÓN INCIERTA E IDEMPOTENCIA
+                        if (filasAfectadas == 0)
+                        {
+                            try
+                            {
+                                await transaccion.RollbackAsync();
+                            }
+                            catch (Exception rbEx)
+                            {
+                                Console.Error.WriteLine($"[LoginController.CancelarEvaluacion] Rollback warning: {rbEx.Message}");
+                            }
 
-                var cronogramas = _Context.CRONOGRAMA
-                    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
-                var pagosCancelacion = _Context.PAGO_CANCELACION
-    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+                            // Consultamos directamente en MySQL si la solicitud ya quedó en estado Cancelado
+                            // con su correspondiente registro de CancelacionEvaluacion emitido por el cliente.
+                            var solicitudPersistida = await _Context.SOLICITUD_CREDITO
+                                .AsNoTracking()
+                                .Where(x => x.Id_Solicitud == idSolicitud && x.Usuario_Id_Usuario == usuarioAutenticado.Id)
+                                .Select(x => new { x.Estado })
+                                .FirstOrDefaultAsync();
 
-                _Context.PROPUESTA_CREDITO.RemoveRange(propuestas);
-                _Context.PERFIL_FINANCIERO.RemoveRange(perfil);
-                _Context.MENSAJE.RemoveRange(mensajes);
-                _Context.Evaluacion_Riesgo.RemoveRange(evaluacion);
-                _Context.HISTORIAL_CREDITO.RemoveRange(historialCrediticio);
-                _Context.CUOTA.RemoveRange(cuotas);
-                _Context.CRONOGRAMA.RemoveRange(cronogramas);
-                _Context.PAGO_CANCELACION.RemoveRange(pagosCancelacion);
-                var historialEstado = _Context.HISTORIAL_ESTADO
-    .Where(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud);
+                            if (solicitudPersistida == null)
+                            {
+                                return Json(new { ok = false, mensaje = "No se encontró la solicitud." });
+                            }
 
-                _Context.HISTORIAL_ESTADO.RemoveRange(historialEstado);
-                _Context.SOLICITUD_CREDITO.Remove(solicitud);
+                            if (solicitudPersistida.Estado == "Cancelado")
+                            {
+                                var cancelacionPrevia = await _Context.CancelacionEvaluacion
+                                    .AsNoTracking()
+                                    .FirstOrDefaultAsync(c => c.IdSolicitud == idSolicitud && c.Responsable == "Cliente");
 
+                                if (cancelacionPrevia != null)
+                                {
+                                    // ÉXITO IDEMPOTENTE: Ya confirmada por el cliente en un intento previo
+                                    return Json(new { ok = true, mensaje = "Tu solicitud fue cancelada correctamente." });
+                                }
+                            }
 
+                            // La solicitud cambió a otro estado (ej. "Aprobado", "Rechazado")
+                            return Json(new
+                            {
+                                ok = false,
+                                mensaje = $"La solicitud se encuentra en estado '{solicitudPersistida.Estado}' y ya no admite cancelación."
+                            });
+                        }
 
+                        // 3. REGISTROS DE AUDITORÍA (ÚNICAMENTE SI SE AFECTÓ LA FILA)
+                        historialEstado = new HistorialEstado
+                        {
+                            SOLICITUD_CREDITO_Id_Solicitud = idSolicitud,
+                            EstadoActual = "Cancelado",
+                            MotivoCambio = motivo.Trim(),
+                            FechaCambio = DateTime.UtcNow
+                        };
+                        _Context.HISTORIAL_ESTADO.Add(historialEstado);
 
-                _Context.SaveChanges();
+                        var propuestaRecomendada = await _Context.PROPUESTA_CREDITO
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(x => x.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud && x.EsRecomendada == true);
 
-                return Json(new { ok = true, mensaje = "Tu solicitud fue cancelada correctamente." });
+                        decimal montoFinal = propuestaRecomendada != null
+                            ? propuestaRecomendada.Monto
+                            : solicitudPrevia.MontoSolicitado;
+
+                        cancelacion = new CancelacionEvaluacion
+                        {
+                            IdSolicitud = idSolicitud,
+                            MontoSolicitado = montoFinal,
+                            MotivoCancelacion = motivo.Trim(),
+                            FechaCancelacion = DateTime.UtcNow,
+                            Responsable = "Cliente"
+                        };
+                        _Context.CancelacionEvaluacion.Add(cancelacion);
+
+                        // 4. GUARDAR CAMBIOS Y CONFIRMAR ATÓMICAMENTE
+                        await _Context.SaveChangesAsync();
+                        await transaccion.CommitAsync();
+
+                        return Json(new { ok = true, mensaje = "Tu solicitud fue cancelada correctamente." });
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            await transaccion.RollbackAsync();
+                        }
+                        catch (Exception rbEx)
+                        {
+                            Console.Error.WriteLine($"[LoginController.CancelarEvaluacion] Rollback error: {rbEx.Message}");
+                        }
+                        finally
+                        {
+                            // Desacoplamiento puntual garantizado para que un reintento transaccional no encuentre entidades en estado Added
+                            if (historialEstado != null)
+                            {
+                                _Context.Entry(historialEstado).State = EntityState.Detached;
+                            }
+                            if (cancelacion != null)
+                            {
+                                _Context.Entry(cancelacion).State = EntityState.Detached;
+                            }
+                        }
+
+                        throw;
+                    }
+                });
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"[LoginController.CancelarEvaluacion] Error: {ex}");
-                return Json(new { ok = false, mensaje = "Ocurrió un error al cancelar la evaluación." });
+                return Json(new
+                {
+                    ok = false,
+                    mensaje = "No se pudo confirmar el estado de la cancelación debido a un problema de conexión. Actualice la página y verifique el estado de su solicitud antes de volver a intentarlo."
+                });
             }
         }
         [HttpPost]
@@ -7693,6 +7962,20 @@ namespace trabajo.Controllers
                         "No se pudo consultar la solicitud."
                 });
             }
+        }
+
+        private sealed class DatosNotificacionCancelacionDesembolso
+        {
+            public int IdSolicitud { get; set; }
+            public string NumeroSolicitud { get; set; } = string.Empty;
+            public string NombreCliente { get; set; } = string.Empty;
+            public string DniCliente { get; set; } = string.Empty;
+            public decimal MontoSolicitado { get; set; }
+            public decimal SaldoRequerido { get; set; }
+            public string MetodoPago { get; set; } = string.Empty;
+            public string CodigoOperacion { get; set; } = string.Empty;
+            public string MotivoCancelacion { get; set; } = string.Empty;
+            public string FechaRegistro { get; set; } = string.Empty;
         }
 
     }

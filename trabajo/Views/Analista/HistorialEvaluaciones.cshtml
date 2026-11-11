@@ -11,6 +11,14 @@
         .Where(x => x.Estado == "Rechazado")
         .ToList();
 
+    var canceladas = Model
+        .Where(x => x.Estado == "Pendiente cancelación")
+        .ToList();
+
+    var pagosCancelacion = ViewBag.PagosCancelacion != null
+        ? ((List<trabajo.Models.PagoCancelacion>)ViewBag.PagosCancelacion)
+        : new List<trabajo.Models.PagoCancelacion>();
+
     Layout = "~/Views/Shared/_LayoutAnalista.cshtml";
     ViewData["Title"] = "Historial Evaluaciones";
     ViewData["ActivePage"] = "HistorialEvaluaciones";
@@ -19,10 +27,12 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/sweetalert2.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/analista-css/historial-evaluaciones.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/analista-css/contactar-soporte.css" asp-append-version="true" />
 }
 
 <div class="content">
     <div class="contenedor">
+        @Html.AntiForgeryToken()
         <h1>Solicitudes Aprobadas</h1>
 
         <div class="total">
@@ -195,6 +205,107 @@
                 }
             </tbody>
         </table>
+
+        <br /><br />
+
+        <h1>Solicitudes canceladas</h1>
+
+        <div class="total">
+            Total registros: @canceladas.Count()
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>N° Solicitud</th>
+                    <th>Cliente</th>
+                    <th>Fecha Solicitud</th>
+                    <th>Estado</th>
+                    <th>Monto Liquidado</th>
+                    <th>Método / Ref.</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @if (canceladas.Any())
+                {
+                    foreach (var solicitud in canceladas)
+                    {
+                        var pago = pagosCancelacion.FirstOrDefault(p => p.SOLICITUD_CREDITO_Id_Solicitud == solicitud.Id_Solicitud);
+                        var fechaCancelacion = pago?.FechaPago ?? solicitud.FechaSolicitud;
+                        var montoDevuelto = pago?.MontoDevuelto ?? solicitud.MontoSolicitado;
+                        var metodoPago = pago?.MetodoPago ?? "Transferencia bancaria";
+                        var codigoOperacion = pago?.CodigoOperacion ?? "Pendiente";
+                        var motivo = pago?.MotivoCancelacion ?? "Cancelación solicitada por el cliente.";
+                        var estadoRevision = pago?.Estado ?? "Pendiente";
+
+                        <tr>
+                            <td>SOL-@solicitud.Id_Solicitud.ToString("D5")</td>
+                            <td>@solicitud.USUARIO.Nombre @solicitud.USUARIO.Apellido</td>
+                            <td>@fechaCancelacion.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <span class="badge-cancelacion-pendiente">
+                                    ⏳ @solicitud.Estado
+                                </span>
+                            </td>
+                            <td>
+                                <strong class="monto-cancelacion-texto">S/ @montoDevuelto.ToString("N2")</strong>
+                            </td>
+                            <td>
+                                <span class="metodo-badge">@metodoPago</span>
+                                <small class="ref-operacion">Op: @codigoOperacion</small>
+                            </td>
+                            <td>
+                                <div class="acciones-historial">
+                                    <button type="button"
+                                            class="btn-ojo btn-ver-cancelacion"
+                                            data-id="@solicitud.Id_Solicitud"
+                                            data-num="SOL-@solicitud.Id_Solicitud.ToString("D5")"
+                                            data-cliente="@(solicitud.USUARIO.Nombre + " " + solicitud.USUARIO.Apellido)"
+                                            data-dni="@solicitud.USUARIO.Dni"
+                                            data-celular="@solicitud.USUARIO.Celular"
+                                            data-correo="@solicitud.USUARIO.Correo"
+                                            data-monto-solicitado="@solicitud.MontoSolicitado.ToString("N2")"
+                                            data-monto-devuelto="@montoDevuelto.ToString("N2")"
+                                            data-plazo="@solicitud.PlazoMeses"
+                                            data-metodo="@metodoPago"
+                                            data-codigo="@codigoOperacion"
+                                            data-motivo="@motivo"
+                                            data-fecha="@fechaCancelacion.ToString("dd/MM/yyyy HH:mm")"
+                                            data-estado="@estadoRevision"
+                                            title="Revisar cancelación">
+                                        👁
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn-chat-solicitud"
+                                            data-id="@solicitud.Id_Solicitud"
+                                            title="Chat / Mensajes con el Cliente">
+                                        <i class="fas fa-comments"></i>
+                                    </button>
+
+                                    <button type="button"
+                                            class="btn-chat-admin btn-abrir-chat-admin"
+                                            data-solicitud="SOL-@solicitud.Id_Solicitud.ToString("D5")"
+                                            title="Comunicar con Administrador sobre esta solicitud (SOL-@solicitud.Id_Solicitud.ToString("D5"))">
+                                        <i class="fas fa-user-shield"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="td-sin-registros-historial">
+                            📄 No hay solicitudes canceladas pendientes de revisión.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -240,6 +351,84 @@
         <div class="modal-actions">
             <button type="button" class="btn-aceptar" id="btnAceptarDetalle">Aceptar</button>
             <button type="button" class="btn-mensaje" id="btnMensajeHistorial">💬 Mensaje</button>
+        </div>
+    </div>
+</div>
+
+<div id="modalRevisionCancelacion" class="modal-historial">
+    <div class="modal-box modal-box-cancelacion">
+        <div class="modal-title" id="tituloModalCancelacion">
+            <i class="fas fa-file-invoice-dollar"></i> Revisión de Solicitud de Cancelación
+        </div>
+
+        <div class="alerta-revision-info">
+            <i class="fas fa-info-circle"></i>
+            <span>Revisa los datos del pago de devolución antes de registrar tu decisión. El monto y código de operación deben coincidir con la cuenta bancaria de CrediPlus.</span>
+        </div>
+
+        <div class="modal-grid">
+            <div class="info-card">
+                <h3><i class="fas fa-user"></i> Datos del cliente</h3>
+                <div class="fila"><span>Cliente:</span><strong id="cCliente"></strong></div>
+                <div class="fila"><span>DNI:</span><strong id="cDni"></strong></div>
+                <div class="fila"><span>Teléfono:</span><strong id="cCelular"></strong></div>
+                <div class="fila"><span>Email:</span><strong id="cCorreo"></strong></div>
+            </div>
+
+            <div class="info-card">
+                <h3><i class="fas fa-file-contract"></i> Información del crédito</h3>
+                <div class="fila"><span>N° Solicitud:</span><strong id="cSolicitud"></strong></div>
+                <div class="fila"><span>Monto desembolsado:</span><strong id="cMontoPrestamo"></strong></div>
+                <div class="fila"><span>Plazo:</span><strong id="cPlazo"></strong></div>
+                <div class="fila"><span>Fecha solicitud:</span><strong id="cFecha"></strong></div>
+            </div>
+
+            <div class="info-card">
+                <h3><i class="fas fa-money-check-alt"></i> Devolución y Pago</h3>
+                <div class="fila"><span>Monto liquidado:</span><strong id="cMontoDevuelto" class="monto-destacado-pago"></strong></div>
+                <div class="fila"><span>Método de pago:</span><strong id="cMetodo"></strong></div>
+                <div class="fila"><span>Banco / Entidad:</span><strong id="cEntidad"></strong></div>
+                <div class="fila"><span>Código operación:</span><strong id="cCodigo"></strong></div>
+            </div>
+
+            <div class="info-card">
+                <h3><i class="fas fa-tasks"></i> Estado y Comprobante</h3>
+                <div class="fila"><span>Estado revisión:</span><strong id="cEstadoRevision" class="badge-revision-pago"></strong></div>
+                <div class="fila"><span>Comprobante:</span><span id="cComprobanteTexto">Validación por Código de Operación bancaria</span></div>
+            </div>
+        </div>
+
+        <div class="observacion observacion-cancelacion-box">
+            <b>Motivo de cancelación manifestado por el cliente:</b>
+            <p id="cMotivo"></p>
+        </div>
+
+        <div class="verificacion-box">
+            <label class="checkbox-container">
+                <input type="checkbox" id="chkVerificado" />
+                <span class="label-texto"><strong>He comprobado los datos de la transferencia en los movimientos bancarios de CrediPlus.</strong></span>
+            </label>
+        </div>
+
+        <div class="observacion-analista-box">
+            <label for="txtObservacionAnalista"><b>Observación o sustento de la decisión:</b></label>
+            <textarea id="txtObservacionAnalista" class="textarea-analista" maxlength="255" rows="2" placeholder="Agregue una nota o justificación sobre la verificación de la transferencia..."></textarea>
+        </div>
+
+        <div class="modal-actions modal-actions-cancelacion">
+            <button type="button" class="btn-cancelar-modal-box" id="btnCerrarModalCancelacion">Cerrar</button>
+            <button type="button" class="btn-rechazar-cancelacion" id="btnRechazarCancelacion">
+                <i class="fas fa-times-circle"></i> Rechazar Cancelación
+            </button>
+            <button type="button" class="btn-aceptar-cancelacion" id="btnAceptarCancelacion" disabled>
+                <i class="fas fa-check-circle"></i> Aceptar Cancelación
+            </button>
+            <button type="button" class="btn-chat-admin-modal" id="btnChatAdminDesdeModal">
+                <i class="fas fa-user-shield"></i> Comunicarme con el Administrador
+            </button>
+            <button type="button" class="btn-chat-solicitud-modal" id="btnChatClienteDesdeModal" style="background:#0284c7;color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;">
+                <i class="fas fa-comments"></i> Chat con Cliente
+            </button>
         </div>
     </div>
 </div>
@@ -305,7 +494,73 @@
     </div>
 </div>
 
+<!-- MODAL DE COMUNICACIÓN CON ADMINISTRADOR EN TIEMPO REAL (SIGNALR) -->
+<div class="modal fade" id="modalChatAdmin" tabindex="-1" data-admin-id="@ViewBag.IdAdministrador" data-analista-id="@ViewBag.IdAnalista">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content modal-chat-custom">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">
+                    <i class="fas fa-comments"></i> Comunicación con Administrador
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-0">
+                <div class="analistas-panel chat-panel">
+                    <div class="analistas-panel-header">
+                        <div>
+                            <h3 class="analistas-panel-title">Chat con Administrador</h3>
+                            <span id="chatEstadoAdmin" class="chat-estado @(ViewBag.AdminActivo == true ? "activo" : "inactivo")">
+                                <i class="fas fa-circle"></i>
+                                <span id="chatEstadoAdminTexto">@(ViewBag.AdminActivo == true ? "Administrador Activo" : "Administrador Inactivo")</span>
+                            </span>
+                            <p class="analistas-panel-subtitle">Mensajes en tiempo real Analista ↔ Administrador.</p>
+                        </div>
+                    </div>
+
+                    <div id="chatAlertaError" class="chat-alerta-error d-none" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="chatAlertaErrorTexto"></span>
+                    </div>
+
+                    <div class="chat-messages" id="chatMensajesAdmin">
+                        @if (ViewBag.MensajesAdmin != null)
+                        {
+                            foreach (var mensaje in ViewBag.MensajesAdmin)
+                            {
+                                var claseMensaje = mensaje.RemitenteRol == "Analista" ? "analista" : "admin";
+
+                                <div class="chat-message @claseMensaje" data-id-mensaje="@mensaje.IdMensaje">
+                                    <div class="chat-bubble">@mensaje.Mensaje</div>
+                                    <div class="chat-meta">
+                                        @mensaje.RemitenteRol · @mensaje.FechaEnvio.ToString("dd/MM/yyyy hh:mm tt")
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    <form class="chat-form" id="formChatAdmin">
+                        <input type="text"
+                               id="mensajeAdminInput"
+                               autocomplete="off"
+                               placeholder="Escribe un mensaje para el administrador..." />
+
+                        <button type="submit" class="chat-send-btn" id="btnEnviarAdmin" title="Enviar mensaje">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
+            integrity="sha384-mU1xC5yC2LldSW74Rj1Ax8wPiLw/28V5eh51uKJMlBbRVsOtUYd4xyzNsgIAJARB"
+            crossorigin="anonymous"></script>
     <script src="~/js/sweetalert2.min.js" asp-append-version="true"></script>
     <script src="~/js/analista-js/historial-evaluaciones.js" asp-append-version="true"></script>
 }

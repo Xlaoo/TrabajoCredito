@@ -305,5 +305,126 @@ namespace trabajo.Service
 
             await cliente.SendMailAsync(mensaje);
         }
+
+        public async Task EnviarNotificacionCancelacionDesembolsadaAsync(
+            string destino,
+            string analistaNombre,
+            string numeroSolicitud,
+            string clienteNombre,
+            string dniCliente,
+            decimal montoSolicitado,
+            decimal montoDevuelto,
+            string metodoPago,
+            string codigoOperacion,
+            string motivoCancelacion,
+            string fechaHora)
+        {
+            using var cliente = CrearClienteSmtp(8000);
+
+            string cuerpo = $@"
+<!DOCTYPE html>
+<html lang=""es"">
+<head>
+<meta charset=""utf-8"">
+<meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+<title>Solicitud de Cancelación de Crédito</title>
+</head>
+<body style=""margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;"">
+  <table width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""background-color:#f1f5f9;padding:30px 15px;"">
+    <tr>
+      <td align=""center"">
+        <table width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""max-width:580px;background-color:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 10px 25px rgba(0,0,0,0.07);"">
+          <tr>
+            <td style=""background:linear-gradient(135deg, #0F4C81 0%, #2F80ED 100%);padding:35px 30px;text-align:center;color:#ffffff;"">
+              <div style=""font-size:26px;font-weight:800;letter-spacing:1px;"">CREDIPLUS</div>
+              <div style=""font-size:12px;letter-spacing:2px;text-transform:uppercase;opacity:0.9;margin-top:4px;"">Centro de Operaciones Crediticias</div>
+              <div style=""display:inline-block;margin-top:16px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);padding:6px 16px;border-radius:20px;font-size:13px;font-weight:600;"">
+                ⚠️ SOLICITUD DE CANCELACIÓN (DESEMBOLSO)
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style=""padding:35px 30px;color:#1e293b;"">
+              <p style=""font-size:17px;font-weight:700;margin:0 0 14px 0;color:#0f172a;"">Estimado(a) {WebUtility.HtmlEncode(analistaNombre)},</p>
+              <p style=""font-size:15px;line-height:1.6;margin:0 0 20px 0;color:#334155;"">
+                Se ha recibido una solicitud de <strong>cancelación y liquidación</strong> para un crédito previamente desembolsado. Se requiere su revisión y validación de la transferencia para proceder con el cierre correspondiente.
+              </p>
+              <table width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:26px;"">
+                <tr>
+                  <td colspan=""2"" style=""padding:14px 18px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f4c81;font-weight:700;"">
+                    DETALLES DE LA SOLICITUD Y PAGO
+                  </td>
+                </tr>
+                <tr>
+                  <td style=""padding:10px 18px;font-size:13px;color:#64748b;width:40%;border-bottom:1px solid #f1f5f9;"">N° Solicitud:</td>
+                  <td style=""padding:10px 18px;font-size:14px;color:#0f172a;font-weight:700;border-bottom:1px solid #f1f5f9;"">{WebUtility.HtmlEncode(numeroSolicitud)}</td>
+                </tr>
+                <tr>
+                  <td style=""padding:10px 18px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;"">Cliente:</td>
+                  <td style=""padding:10px 18px;font-size:14px;color:#1e293b;border-bottom:1px solid #f1f5f9;"">{WebUtility.HtmlEncode(clienteNombre)} (DNI: {WebUtility.HtmlEncode(dniCliente)})</td>
+                </tr>
+                <tr>
+                  <td style=""padding:10px 18px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;"">Monto Desembolsado:</td>
+                  <td style=""padding:10px 18px;font-size:14px;color:#1e293b;border-bottom:1px solid #f1f5f9;"">S/ {montoSolicitado:N2}</td>
+                </tr>
+                <tr>
+                  <td style=""padding:10px 18px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;"">Monto Liquidado / Devuelto:</td>
+                  <td style=""padding:10px 18px;font-size:15px;color:#16a34a;font-weight:800;border-bottom:1px solid #f1f5f9;"">S/ {montoDevuelto:N2}</td>
+                </tr>
+                <tr>
+                  <td style=""padding:10px 18px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;"">Método de Pago:</td>
+                  <td style=""padding:10px 18px;font-size:14px;color:#1e293b;border-bottom:1px solid #f1f5f9;"">{WebUtility.HtmlEncode(metodoPago)}</td>
+                </tr>
+                <tr>
+                  <td style=""padding:10px 18px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;"">Código Operación / Ref:</td>
+                  <td style=""padding:10px 18px;font-size:14px;color:#1e293b;font-weight:600;border-bottom:1px solid #f1f5f9;"">{WebUtility.HtmlEncode(codigoOperacion)}</td>
+                </tr>
+                <tr>
+                  <td style=""padding:10px 18px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;"">Motivo de Cancelación:</td>
+                  <td style=""padding:10px 18px;font-size:14px;color:#475569;border-bottom:1px solid #f1f5f9;"">{WebUtility.HtmlEncode(motivoCancelacion)}</td>
+                </tr>
+                <tr>
+                  <td style=""padding:10px 18px;font-size:13px;color:#64748b;"">Fecha de Registro:</td>
+                  <td style=""padding:10px 18px;font-size:14px;color:#1e293b;"">{WebUtility.HtmlEncode(fechaHora)}</td>
+                </tr>
+              </table>
+              <div style=""text-align:center;margin:30px 0 20px 0;"">
+                <a href=""https://crediplus.com/Analista/HistorialEvaluaciones"" style=""display:inline-block;background:linear-gradient(135deg, #0F4C81 0%, #2F80ED 100%);color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:14px;box-shadow:0 4px 12px rgba(47,128,237,0.35);"">
+                  Revisar en Historial de Evaluaciones
+                </a>
+              </div>
+              <div style=""background-color:#f1f5f9;border-radius:12px;padding:16px;font-size:13px;line-height:1.6;color:#475569;"">
+                ℹ️ <strong>Nota de verificación:</strong> Recuerde comprobar el extracto de cuenta bancaria de CrediPlus antes de aceptar la cancelación y verificar que el código de operación corresponda al abono exacto.
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style=""background-color:#f8fafc;padding:22px 30px;text-align:center;border-top:1px solid #e2e8f0;font-size:12px;color:#94a3b8;"">
+              <p style=""margin:0 0 4px 0;font-weight:600;color:#64748b;"">CREDIPLUS • Gestión Integral de Créditos</p>
+              <p style=""margin:0;"">Este es un mensaje automático de notificación interna.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+
+            using var mensaje = new MailMessage
+            {
+                From = new MailAddress(remitente, "CrediPlus Operaciones", Encoding.UTF8),
+                Subject = $"⚠️ CrediPlus | Solicitud de Cancelación de Crédito {numeroSolicitud}",
+                Body = cuerpo,
+                IsBodyHtml = true,
+                SubjectEncoding = Encoding.UTF8,
+                BodyEncoding = Encoding.UTF8,
+                Priority = MailPriority.High
+            };
+            mensaje.To.Add(destino);
+            mensaje.Headers.Add("X-Mailer", "CrediPlus Operations Mailer v2.0");
+
+            await cliente.SendMailAsync(mensaje);
+        }
     }
 }

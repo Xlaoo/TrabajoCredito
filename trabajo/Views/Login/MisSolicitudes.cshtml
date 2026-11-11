@@ -331,6 +331,49 @@
 	</div>
 </div>
 
+@if (ViewBag.CancelacionAgradecimiento != null)
+{
+	var datosAgradecimiento = ViewBag.CancelacionAgradecimiento;
+	<div id="modalAgradecimientoCancelacion" class="modal-pago" style="display:flex;">
+		<div class="modal-content-pago" style="max-width:540px; text-align:center; padding:32px 28px; border-radius:18px; box-shadow:0 20px 40px rgba(0,0,0,0.18);">
+			<div style="width:72px; height:72px; margin:0 auto 18px auto; background:#dcfce7; color:#16a34a; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:36px;">
+				✓
+			</div>
+
+			<h2 style="color:#0f172a; font-size:22px; font-weight:800; margin-bottom:12px;">
+				Cancelación Aceptada con Éxito
+			</h2>
+
+			<p style="color:#475569; font-size:15px; line-height:1.6; margin-bottom:18px;">
+				Estimado(a) cliente, le informamos que su solicitud <strong>@datosAgradecimiento.NumeroSolicitud</strong> ha sido definitivamente <strong>cancelada</strong> conforme a su requerimiento.
+			</p>
+
+			<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; text-align:left; margin-bottom:20px;">
+				<span style="display:block; font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase; margin-bottom:6px;">
+					Observación de la resolución:
+				</span>
+				<p style="color:#1e293b; font-size:14px; margin:0; line-height:1.5;">
+					@datosAgradecimiento.Observacion
+				</p>
+			</div>
+
+			<p style="color:#64748b; font-size:13px; margin-bottom:24px;">
+				Agradecemos su confianza y preferencia en los servicios financieros de CrediPlus. Estamos a su entera disposición cuando requiera una nueva evaluación.
+			</p>
+
+			<div class="modal-actions" style="justify-content:center;">
+				<button type="button"
+						id="btnEntendidoAgradecimiento"
+						data-id-solicitud="@datosAgradecimiento.IdSolicitud"
+						class="btn-pagar-modal"
+						style="min-width:180px; padding:12px 24px; font-size:15px; border-radius:10px; background:#16a34a;">
+					Entendido
+				</button>
+			</div>
+		</div>
+	</div>
+}
+
 @section Scripts {
 	<script src="~/js/sweetalert2.min.js"></script>
 	<script src="~/js/mis-solicitudes.js"></script>

@@ -1,4 +1,5 @@
 let solicitudSeleccionada = 0;
+let solicitudCancelacionSeleccionada = 0;
 let imagenSeleccionada = null;
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -20,6 +21,72 @@ document.addEventListener("DOMContentLoaded", function () {
                 btn.dataset.estado || "",
                 btn.dataset.observacion || ""
             );
+            return;
+        }
+
+        var btnCanc = e.target.closest(".btn-ver-cancelacion");
+        if (btnCanc) {
+            abrirModalCancelacion(
+                btnCanc.dataset.id,
+                btnCanc.dataset.num || "",
+                btnCanc.dataset.cliente || "",
+                btnCanc.dataset.dni || "",
+                btnCanc.dataset.celular || "",
+                btnCanc.dataset.correo || "",
+                btnCanc.dataset.montoSolicitado || "",
+                btnCanc.dataset.montoDevuelto || "",
+                btnCanc.dataset.plazo || "",
+                btnCanc.dataset.metodo || "",
+                btnCanc.dataset.codigo || "",
+                btnCanc.dataset.motivo || "",
+                btnCanc.dataset.fecha || "",
+                btnCanc.dataset.estado || ""
+            );
+            return;
+        }
+
+        var btnChatSol = e.target.closest(".btn-chat-solicitud");
+        if (btnChatSol && btnChatSol.id !== "btnChatClienteDesdeModal") {
+            var idSol = btnChatSol.dataset.id;
+            if (idSol) {
+                abrirChat(idSol);
+            }
+            return;
+        }
+
+        var btnChatAdmin = e.target.closest(".btn-abrir-chat-admin");
+        if (btnChatAdmin) {
+            var solRef = btnChatAdmin.dataset.solicitud || "";
+            abrirChatAdmin(solRef);
+            return;
+        }
+
+        if (e.target.closest("#btnCerrarModalCancelacion")) {
+            cerrarModalCancelacion();
+            return;
+        }
+
+        if (e.target.closest("#btnChatAdminDesdeModal")) {
+            cerrarModalCancelacion();
+            var ref = solicitudCancelacionSeleccionada > 0
+                ? "SOL-" + solicitudCancelacionSeleccionada.toString().padStart(5, "0")
+                : "";
+            abrirChatAdmin(ref);
+            return;
+        }
+
+        if (e.target.closest("#btnChatClienteDesdeModal")) {
+            abrirMensajeDesdeCancelacion();
+            return;
+        }
+
+        if (e.target.closest("#btnAceptarCancelacion")) {
+            confirmarDecisionCancelacion("Aceptar");
+            return;
+        }
+
+        if (e.target.closest("#btnRechazarCancelacion")) {
+            confirmarDecisionCancelacion("Rechazar");
             return;
         }
 
@@ -77,6 +144,19 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     }
+
+    var chkVerif = document.getElementById("chkVerificado");
+    if (chkVerif) {
+        chkVerif.addEventListener("change", function () {
+            var btnAceptar = document.getElementById("btnAceptarCancelacion");
+            if (btnAceptar) {
+                btnAceptar.disabled = !this.checked;
+            }
+        });
+    }
+
+    // Inicializar SignalR para el chat con Administrador si el modal existe
+    inicializarSignalRAdmin();
 });
 
 function abrirDetalle(id, cliente, dni, celular, correo, monto, plazo, motivo, ocupacion, ingreso, egreso, estado, observacion) {
@@ -205,9 +285,15 @@ function enviarMensaje() {
         return;
     }
 
+    var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || "";
+
     let formData = new FormData();
     formData.append("idSolicitud", solicitudSeleccionada);
     formData.append("mensaje", mensaje);
+
+    if (token) {
+        formData.append("__RequestVerificationToken", token);
+    }
 
     if (imagenSeleccionada != null) {
         formData.append("imagen", imagenSeleccionada);
@@ -215,6 +301,7 @@ function enviarMensaje() {
 
     fetch('/Analista/EnviarMensaje', {
         method: 'POST',
+        headers: token ? { "RequestVerificationToken": token } : {},
         body: formData
     })
         .then(r => r.json())
@@ -321,4 +408,384 @@ function cargarMensajes(idSolicitud) {
             if (cont) cont.innerHTML = html;
         })
         .catch(err => console.error("Error al cargar mensajes:", err));
+}
+
+function abrirModalCancelacion(id, num, cliente, dni, celular, correo, montoSolicitado, montoDevuelto, plazo, metodo, codigo, motivo, fecha, estado) {
+    solicitudCancelacionSeleccionada = parseInt(id, 10);
+
+    var btnChatModal = document.getElementById("btnChatClienteDesdeModal");
+    if (btnChatModal) {
+        btnChatModal.dataset.id = id;
+    }
+
+    var modalTitulo = document.getElementById("tituloModalCancelacion");
+    if (modalTitulo) {
+        modalTitulo.innerHTML = `<i class="fas fa-file-invoice-dollar"></i> Revisión de Solicitud de Cancelación - ${num || ("SOL-" + id.toString().padStart(5, "0"))}`;
+    }
+
+    var cCliente = document.getElementById("cCliente");
+    if (cCliente) cCliente.innerText = cliente || "-";
+
+    var cDni = document.getElementById("cDni");
+    if (cDni) cDni.innerText = dni || "-";
+
+    var cCelular = document.getElementById("cCelular");
+    if (cCelular) cCelular.innerText = celular || "-";
+
+    var cCorreo = document.getElementById("cCorreo");
+    if (cCorreo) cCorreo.innerText = correo || "-";
+
+    var cSolicitud = document.getElementById("cSolicitud");
+    if (cSolicitud) cSolicitud.innerText = num || ("SOL-" + id.toString().padStart(5, "0"));
+
+    var cMontoPrestamo = document.getElementById("cMontoPrestamo");
+    if (cMontoPrestamo) cMontoPrestamo.innerText = "S/ " + montoSolicitado;
+
+    var cPlazo = document.getElementById("cPlazo");
+    if (cPlazo) cPlazo.innerText = plazo + " meses";
+
+    var cFecha = document.getElementById("cFecha");
+    if (cFecha) cFecha.innerText = fecha || "-";
+
+    var cMontoDevuelto = document.getElementById("cMontoDevuelto");
+    if (cMontoDevuelto) cMontoDevuelto.innerText = "S/ " + montoDevuelto;
+
+    var cMetodo = document.getElementById("cMetodo");
+    if (cMetodo) cMetodo.innerText = metodo || "Transferencia bancaria";
+
+    var cEntidad = document.getElementById("cEntidad");
+    if (cEntidad) cEntidad.innerText = metodo || "Entidad Financiera";
+
+    var cCodigo = document.getElementById("cCodigo");
+    if (cCodigo) cCodigo.innerText = codigo || "Pendiente";
+
+    var cEstadoRevision = document.getElementById("cEstadoRevision");
+    if (cEstadoRevision) cEstadoRevision.innerText = estado || "Pendiente";
+
+    var cMotivo = document.getElementById("cMotivo");
+    if (cMotivo) cMotivo.innerText = motivo || "Sin motivo especificado.";
+
+    var chk = document.getElementById("chkVerificado");
+    if (chk) chk.checked = false;
+
+    var btnAceptar = document.getElementById("btnAceptarCancelacion");
+    if (btnAceptar) btnAceptar.disabled = true;
+
+    var txtObs = document.getElementById("txtObservacionAnalista");
+    if (txtObs) txtObs.value = "";
+
+    var modal = document.getElementById("modalRevisionCancelacion");
+    if (modal) {
+        modal.style.display = "flex";
+    }
+}
+
+function cerrarModalCancelacion() {
+    var modal = document.getElementById("modalRevisionCancelacion");
+    if (modal) {
+        modal.style.display = "none";
+    }
+}
+
+function abrirMensajeDesdeCancelacion() {
+    if (!solicitudCancelacionSeleccionada || solicitudCancelacionSeleccionada === 0) {
+        alert("No se encontró la solicitud seleccionada.");
+        return;
+    }
+
+    cerrarModalCancelacion();
+
+    setTimeout(function () {
+        abrirChat(solicitudCancelacionSeleccionada);
+    }, 150);
+}
+
+function confirmarDecisionCancelacion(decision) {
+    if (!solicitudCancelacionSeleccionada || solicitudCancelacionSeleccionada === 0) {
+        alert("No se ha seleccionado una solicitud válida.");
+        return;
+    }
+
+    var txtObs = document.getElementById("txtObservacionAnalista");
+    var observacion = txtObs ? txtObs.value.trim() : "";
+
+    // Validación obligatoria de observación en frontend (tanto para Aceptar como para Rechazar)
+    if (!observacion) {
+        if (window.Swal) {
+            Swal.fire({
+                icon: "warning",
+                title: "Observación obligatoria",
+                text: "Debe ingresar obligatoriamente una observación o motivo para registrar la decisión.",
+                confirmButtonColor: "#6d28d9"
+            });
+        } else {
+            alert("Debe ingresar obligatoriamente una observación o motivo para registrar la decisión.");
+        }
+        if (txtObs) txtObs.focus();
+        return;
+    }
+
+    if (decision === "Aceptar") {
+        var chk = document.getElementById("chkVerificado");
+        var verificado = chk ? chk.checked : false;
+
+        if (!verificado) {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Verificación requerida",
+                    text: "Debe marcar que ha comprobado los datos de la transferencia antes de confirmar la cancelación.",
+                    confirmButtonColor: "#6d28d9"
+                });
+            } else {
+                alert("Debe marcar que ha comprobado los datos de la transferencia antes de confirmar la cancelación.");
+            }
+            return;
+        }
+
+        if (window.Swal) {
+            Swal.fire({
+                title: "¿Estás seguro de confirmar la cancelación?",
+                text: "Esta acción registrará la decisión del analista y el crédito quedará definitivamente cancelado.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#16a34a",
+                cancelButtonColor: "#64748b",
+                confirmButtonText: "Sí, confirmar cancelación",
+                cancelButtonText: "Cancelar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    ejecutarDecisionCancelacion(solicitudCancelacionSeleccionada, "Aceptar", true, observacion);
+                }
+            });
+        } else {
+            if (confirm("¿Estás seguro de confirmar la cancelación? Se registrará la decisión del analista.")) {
+                ejecutarDecisionCancelacion(solicitudCancelacionSeleccionada, "Aceptar", true, observacion);
+            }
+        }
+    } else {
+        if (window.Swal) {
+            Swal.fire({
+                title: "¿Estás seguro de rechazar la cancelación?",
+                text: "Esta acción registrará el rechazo del analista. La solicitud volverá al estado Aprobado y el cliente mantendrá el crédito activo con sus cuotas vigentes.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#dc2626",
+                cancelButtonColor: "#64748b",
+                confirmButtonText: "Sí, rechazar",
+                cancelButtonText: "Cancelar"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    ejecutarDecisionCancelacion(solicitudCancelacionSeleccionada, "Rechazar", false, observacion);
+                }
+            });
+        } else {
+            if (confirm("¿Estás seguro de rechazar la cancelación? La solicitud volverá al estado Aprobado.")) {
+                ejecutarDecisionCancelacion(solicitudCancelacionSeleccionada, "Rechazar", false, observacion);
+            }
+        }
+    }
+}
+
+function ejecutarDecisionCancelacion(idSolicitud, decision, verificado, observacion) {
+    var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || "";
+
+    var formData = new FormData();
+    formData.append("idSolicitud", idSolicitud);
+    formData.append("decision", decision);
+    formData.append("verificado", verificado ? "true" : "false");
+    formData.append("observacion", observacion);
+    if (token) {
+        formData.append("__RequestVerificationToken", token);
+    }
+
+    if (window.Swal) {
+        Swal.fire({
+            title: "Procesando...",
+            text: "Registrando la decisión del analista en el sistema...",
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+
+    fetch('/Analista/ProcesarDecisionCancelacion', {
+        method: 'POST',
+        headers: token ? { "RequestVerificationToken": token } : {},
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: "success",
+                    title: "Operación completada",
+                    text: data.mensaje,
+                    confirmButtonColor: "#6d28d9"
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                alert(data.mensaje);
+                location.reload();
+            }
+        } else {
+            if (window.Swal) {
+                Swal.fire({
+                    icon: "error",
+                    title: "No se pudo procesar",
+                    text: data.mensaje || "Ocurrió un error al procesar la cancelación.",
+                    confirmButtonColor: "#6d28d9"
+                });
+            } else {
+                alert(data.mensaje || "Ocurrió un error al procesar la cancelación.");
+            }
+        }
+    })
+    .catch(err => {
+        console.error("Error al procesar cancelación:", err);
+        if (window.Swal) {
+            Swal.fire({
+                icon: "error",
+                title: "Error de comunicación",
+                text: "No se pudo conectar con el servidor.",
+                confirmButtonColor: "#6d28d9"
+            });
+        } else {
+            alert("No se pudo conectar con el servidor.");
+        }
+    });
+}
+
+// =========================================================================
+// CHAT ANALISTA <-> ADMINISTRADOR INTEGRADO EN MODAL (SIGNALR)
+// =========================================================================
+let hubConnectionAdmin = null;
+
+function inicializarSignalRAdmin() {
+    const modalChatAdmin = document.getElementById("modalChatAdmin");
+    if (!modalChatAdmin || typeof signalR === "undefined") return;
+
+    if (hubConnectionAdmin) return;
+
+    const idAdministrador = parseInt(modalChatAdmin.getAttribute("data-admin-id") || "0", 10);
+    const idAnalista = parseInt(modalChatAdmin.getAttribute("data-analista-id") || "0", 10);
+
+    hubConnectionAdmin = new signalR.HubConnectionBuilder()
+        .withUrl("/chatAnalistaHub")
+        .withAutomaticReconnect()
+        .build();
+
+    hubConnectionAdmin.on("RecibirMensajeAdmin", function (idRemitente, rolRemitente, mensaje, fechaTexto, idMensaje) {
+        agregarMensajeAdminAlDom(mensaje, fechaTexto, rolRemitente === "Analista" ? "analista" : "admin", idMensaje);
+        scrollChatAdminAlFinal();
+    });
+
+    hubConnectionAdmin.on("ActualizarEstadoAdmin", function (activo, texto) {
+        actualizarIndicadorAdmin(activo, texto);
+    });
+
+    hubConnectionAdmin.start()
+        .then(() => {
+            console.log("[SignalR Historial] Conectado al chat de soporte con Administrador.");
+        })
+        .catch(err => {
+            console.error("[SignalR Historial] Error conexion hub:", err);
+        });
+
+    const formChatAdmin = document.getElementById("formChatAdmin");
+    if (formChatAdmin) {
+        formChatAdmin.addEventListener("submit", function (e) {
+            e.preventDefault();
+            enviarMensajeAdminHub(idAdministrador, idAnalista);
+        });
+    }
+}
+
+function abrirChatAdmin(solicitudRef) {
+    inicializarSignalRAdmin();
+
+    const inputMsg = document.getElementById("mensajeAdminInput");
+    if (inputMsg && solicitudRef) {
+        inputMsg.value = `[${solicitudRef}] `;
+    }
+
+    const modalElem = document.getElementById("modalChatAdmin");
+    if (modalElem && typeof bootstrap !== "undefined") {
+        const modalInstance = bootstrap.Modal.getInstance(modalElem) || new bootstrap.Modal(modalElem);
+        modalInstance.show();
+        setTimeout(() => {
+            scrollChatAdminAlFinal();
+            if (inputMsg) inputMsg.focus();
+        }, 300);
+    }
+}
+
+function enviarMensajeAdminHub(idAdmin, idAnalista) {
+    const inputMsg = document.getElementById("mensajeAdminInput");
+    if (!inputMsg) return;
+
+    const texto = inputMsg.value.trim();
+    if (!texto) return;
+
+    if (!hubConnectionAdmin || hubConnectionAdmin.state !== signalR.HubConnectionState.Connected) {
+        alert("La conexión con el administrador aún no está lista. Intente en un instante.");
+        return;
+    }
+
+    const btnEnviar = document.getElementById("btnEnviarAdmin");
+    if (btnEnviar) btnEnviar.disabled = true;
+
+    hubConnectionAdmin.invoke("EnviarMensaje", idAdmin, idAnalista, texto, "Analista")
+        .then(() => {
+            inputMsg.value = "";
+            if (btnEnviar) btnEnviar.disabled = false;
+            inputMsg.focus();
+        })
+        .catch(err => {
+            console.error("[SignalR Historial] Error al enviar mensaje:", err);
+            if (btnEnviar) btnEnviar.disabled = false;
+        });
+}
+
+function agregarMensajeAdminAlDom(texto, fechaTexto, claseRol, idMensaje) {
+    const contenedor = document.getElementById("chatMensajesAdmin");
+    if (!contenedor) return;
+
+    const divMsg = document.createElement("div");
+    divMsg.className = `chat-message ${claseRol}`;
+    if (idMensaje) divMsg.dataset.idMensaje = idMensaje;
+
+    divMsg.innerHTML = `
+        <div class="chat-bubble">${escapeHtml(texto)}</div>
+        <div class="chat-meta">${claseRol === "analista" ? "Analista" : "Administrador"} · ${fechaTexto}</div>
+    `;
+
+    contenedor.appendChild(divMsg);
+}
+
+function actualizarIndicadorAdmin(activo, texto) {
+    const estadoElem = document.getElementById("chatEstadoAdmin");
+    const textoElem = document.getElementById("chatEstadoAdminTexto");
+    if (estadoElem) {
+        estadoElem.className = `chat-estado ${activo ? "activo" : "inactivo"}`;
+    }
+    if (textoElem) {
+        textoElem.textContent = texto || (activo ? "Administrador Activo" : "Administrador Inactivo");
+    }
+}
+
+function scrollChatAdminAlFinal() {
+    const contenedor = document.getElementById("chatMensajesAdmin");
+    if (contenedor) {
+        contenedor.scrollTop = contenedor.scrollHeight;
+    }
+}
+
+function escapeHtml(texto) {
+    var div = document.createElement("div");
+    div.innerText = texto;
+    return div.innerHTML;
 }

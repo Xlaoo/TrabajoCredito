@@ -348,4 +348,28 @@
             integrity="sha384-mU1xC5yC2LldSW74Rj1Ax8wPiLw/28V5eh51uKJMlBbRVsOtUYd4xyzNsgIAJARB"
             crossorigin="anonymous"></script>
     <script src="~/js/analista-js/contactar-soporte.js" asp-append-version="true"></script>
+    @if (!string.IsNullOrWhiteSpace(ViewBag.SolicitudReferencia as string))
+    {
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                var refSol = '@Html.Raw(ViewBag.SolicitudReferencia)';
+                var inputAsunto = document.getElementById("asunto");
+                if (inputAsunto) {
+                    inputAsunto.value = "Consulta sobre Solicitud " + refSol;
+                }
+                var inputChatAdmin = document.getElementById("mensajeAdminInput");
+                if (inputChatAdmin) {
+                    inputChatAdmin.value = "[" + refSol + "] ";
+                }
+                var modalElem = document.getElementById("modalChatAdmin");
+                if (modalElem && typeof bootstrap !== "undefined") {
+                    var modalChat = bootstrap.Modal.getInstance(modalElem) || new bootstrap.Modal(modalElem);
+                    modalChat.show();
+                    setTimeout(function () {
+                        if (inputChatAdmin) inputChatAdmin.focus();
+                    }, 400);
+                }
+            });
+        </script>
+    }
 }

@@ -88,15 +88,15 @@ namespace trabajo.Controllers
 
             if (criticasHoy > 0 || tiposActivos >= 2)
             {
-                ViewBag.ColorNotificacion = "#ef4444"; 
+                ViewBag.ColorNotificacion = "#ef4444";
             }
             else if (mensajesNuevos > 0)
             {
-                ViewBag.ColorNotificacion = "#2563eb"; 
+                ViewBag.ColorNotificacion = "#2563eb";
             }
             else if (calificacionesHoy > 0)
             {
-                ViewBag.ColorNotificacion = "#7c3aed"; 
+                ViewBag.ColorNotificacion = "#7c3aed";
             }
             else
             {
@@ -129,7 +129,8 @@ namespace trabajo.Controllers
             ViewBag.EnEvaluacion = evaluacion;
 
             return View(pendientes);
-        }        public IActionResult VerSolicitud(int id, bool abrirMensaje = false)
+        }
+        public IActionResult VerSolicitud(int id, bool abrirMensaje = false)
         {
             var solicitud = _context.SOLICITUD_CREDITO
                 .Include(x => x.USUARIO)
@@ -262,8 +263,8 @@ namespace trabajo.Controllers
                 activas = resumen.DeudasActivas;
                 pagadas = Math.Max(0, resumen.DeudasPagadas);
                 vencidas = resumen.DeudasVencidas;
-                ultimaActualizacion = (resumen.UltimaActualizacion > DateTime.MinValue) 
-                    ? resumen.UltimaActualizacion 
+                ultimaActualizacion = (resumen.UltimaActualizacion > DateTime.MinValue)
+                    ? resumen.UltimaActualizacion
                     : DateTime.Now.AddDays(-15);
             }
             else
@@ -1082,6 +1083,7 @@ namespace trabajo.Controllers
             return Json(mensajes);
         }
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<JsonResult> EnviarMensaje(
     int idSolicitud,
     string? mensaje,
@@ -1717,7 +1719,7 @@ namespace trabajo.Controllers
                 .Include(x => x.USUARIO)
                 .Include(x => x.PERFIL_FINANCIERO)
                 .Include(x => x.HISTORIAL_ESTADOS)
-                .Where(x => x.Estado == "Aprobado" || x.Estado == "Rechazado")
+                .Where(x => x.Estado == "Aprobado" || x.Estado == "Rechazado" || x.Estado == "Pendiente cancelación")
                 .AsEnumerable()
                 .OrderByDescending(x =>
                     x.HISTORIAL_ESTADOS?
@@ -1727,8 +1729,216 @@ namespace trabajo.Controllers
                 .ToList();
 
             ViewBag.Evaluaciones = _context.Evaluacion_Riesgo.ToList();
+            ViewBag.PagosCancelacion = _context.PAGO_CANCELACION.ToList();
+
+            // Carga de contexto para el modal de chat Analista <-> Administrador
+            var admin = _context.Usuario.FirstOrDefault(x => x.Rol == "Administrador");
+            string dni = User.FindFirst("Dni")?.Value ?? "";
+            var analista = _context.Usuario.FirstOrDefault(x => x.Dni == dni && x.Rol == "Analista")
+                           ?? _context.Usuario.FirstOrDefault(x => x.Rol == "Analista");
+
+            ViewBag.IdAdministrador = admin?.Id ?? 0;
+            ViewBag.IdAnalista = analista?.Id ?? 0;
+            ViewBag.MensajesAdmin = _context.MENSAJE_ADMIN_ANALISTA
+                .OrderBy(x => x.FechaEnvio)
+                .ToList();
+            ViewBag.AdminActivo = admin != null &&
+                                  admin.EstadoActivo &&
+                                  admin.UltimaConexion.HasValue &&
+                                  admin.UltimaConexion.Value >= DateTime.Now.AddMinutes(-2);
 
             return View(historial);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Analista,Administrador")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcesarDecisionCancelacion(int idSolicitud, string decision, bool verificado, string? observacion)
+        {
+            try
+            {
+                if (idSolicitud <= 0)
+                    return Json(new { success = false, mensaje = "Identificador de solicitud inválido." });
+
+                if (decision != "Aceptar" && decision != "Rechazar")
+                    return Json(new { success = false, mensaje = "Decisión inválida. Debe ser Aceptar o Rechazar." });
+
+                // Validación obligatoria de observación en el servidor (tanto aceptar como rechazar)
+                if (string.IsNullOrWhiteSpace(observacion))
+                {
+                    return Json(new { success = false, mensaje = "Debe ingresar obligatoriamente una observación o motivo para registrar la decisión." });
+                }
+
+                // Validación estricta del checkbox en el backend: declaración explícita de revisión de transferencia
+                if (decision == "Aceptar" && !verificado)
+                {
+                    return Json(new { success = false, mensaje = "Debe certificar en el sistema que ha verificado los datos de la transferencia bancaria antes de aceptar la cancelación." });
+                }
+
+                string dni = User.FindFirst("Dni")?.Value;
+                var analista = await _context.Usuario.FirstOrDefaultAsync(u => u.Dni == dni);
+                if (analista == null)
+                    return Json(new { success = false, mensaje = "Sesión de analista no válida." });
+
+                var strategy = _context.Database.CreateExecutionStrategy();
+
+                var resultado = await strategy.ExecuteAsync(async () =>
+                {
+                    await using var transaccion = await _context.Database.BeginTransactionAsync(
+                        System.Data.IsolationLevel.ReadCommitted);
+
+                    HistorialEstado? nuevoHistorial = null;
+
+                    try
+                    {
+                        // 1. Verificación inicial de existencia y autorización sin rastreo (No-Tracking)
+                        var solicitudPrevia = await _context.SOLICITUD_CREDITO
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(s => s.Id_Solicitud == idSolicitud);
+
+                        if (solicitudPrevia == null)
+                            return new { success = false, mensaje = "Solicitud no encontrada." };
+
+                        // Protección contra autoaprobación de solicitudes propias
+                        if (solicitudPrevia.Usuario_Id_Usuario == analista.Id)
+                            return new { success = false, mensaje = "No tiene autorización para procesar su propia solicitud." };
+
+                        if (solicitudPrevia.Estado != "Pendiente cancelación")
+                        {
+                            return new { success = false, mensaje = "La solicitud no se encuentra en estado pendiente de cancelación o ya fue procesada." };
+                        }
+
+                        // 2. Comprobación del pago de devolución pendiente en base de datos
+                        var pagoPrevio = await _context.PAGO_CANCELACION
+                            .AsNoTracking()
+                            .Where(p => p.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud && p.Estado == "Pendiente")
+                            .OrderByDescending(p => p.FechaPago)
+                            .FirstOrDefaultAsync();
+
+                        if (pagoPrevio == null)
+                        {
+                            return new { success = false, mensaje = "No se encontró un registro de pago de liquidación pendiente para esta solicitud." };
+                        }
+
+                        // 3. ACTUALIZACIÓN CONDICIONAL ATÓMICA DE LA SOLICITUD (PROTECCIÓN CONCURRENTE)
+                        // Garantiza que la transición de estado sólo se ejecute si en MySQL el estado aún es exactamente "Pendiente cancelación".
+                        string nuevoEstadoSolicitud = decision == "Aceptar" ? "Cancelado" : "Aprobado";
+                        int filasSolicitud = 0;
+
+                        if (decision == "Aceptar")
+                        {
+                            // Al aceptar, actualizamos Estado a "Cancelado" y establecemos RevisionPendienteVista = false
+                            // para que al cliente le aparezca el modal de agradecimiento institucional en MisSolicitudes.
+                            filasSolicitud = await _context.SOLICITUD_CREDITO
+                                .Where(s => s.Id_Solicitud == idSolicitud && s.Estado == "Pendiente cancelación")
+                                .ExecuteUpdateAsync(s => s
+                                    .SetProperty(x => x.Estado, "Cancelado")
+                                    .SetProperty(x => x.RevisionPendienteVista, false));
+                        }
+                        else
+                        {
+                            // Al rechazar, regresa a "Aprobado" manteniendo intactas cuotas y deudas activas
+                            filasSolicitud = await _context.SOLICITUD_CREDITO
+                                .Where(s => s.Id_Solicitud == idSolicitud && s.Estado == "Pendiente cancelación")
+                                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Estado, "Aprobado"));
+                        }
+
+                        if (filasSolicitud == 0)
+                        {
+                            // Concurrencia detectada: otro analista/proceso ya cambió el estado en MySQL.
+                            await transaccion.RollbackAsync();
+                            return new { success = false, mensaje = "La solicitud ya no se encuentra en estado pendiente de cancelación o fue procesada por otro analista." };
+                        }
+
+                        // 4. ACTUALIZACIÓN CONDICIONAL ATÓMICA DEL PAGO ASOCIADO
+                        // Garantiza que el pago solo se apruebe o rechace si aún se encuentra en estado "Pendiente".
+                        string nuevoEstadoPago = decision == "Aceptar" ? "Aprobado" : "Rechazado";
+                        int filasPago = await _context.PAGO_CANCELACION
+                            .Where(p => p.Id_PagoCancelacion == pagoPrevio.Id_PagoCancelacion && p.Estado == "Pendiente")
+                            .ExecuteUpdateAsync(p => p.SetProperty(x => x.Estado, nuevoEstadoPago));
+
+                        if (filasPago == 0)
+                        {
+                            // Inconsistencia o carrera concurrente en el pago: abortar la transacción completa
+                            await transaccion.RollbackAsync();
+                            return new { success = false, mensaje = "El pago asociado ya no se encuentra en estado pendiente o fue modificado." };
+                        }
+
+                        // 5. ACTUALIZACIÓN DE CUOTAS Y RESUMEN CREDITICIO (SOLO EN CASO DE ACEPTAR CANCELACIÓN)
+                        if (decision == "Aceptar")
+                        {
+                            // Cancelar atómicamente todas las cuotas no pagadas
+                            await _context.CUOTA
+                                .Where(c => c.SOLICITUD_CREDITO_Id_Solicitud == idSolicitud && c.Estado != "Pagado")
+                                .ExecuteUpdateAsync(c => c.SetProperty(x => x.Estado, "Cancelado"));
+
+                            // Actualizar resumen crediticio deudas activas atómicamente
+                            await _context.RESUMEN_CREDITICIO
+                                .Where(r => r.Usuario_Id == solicitudPrevia.Usuario_Id_Usuario && r.DeudasActivas > 0)
+                                .ExecuteUpdateAsync(r => r
+                                    .SetProperty(x => x.DeudasActivas, x => x.DeudasActivas - 1)
+                                    .SetProperty(x => x.UltimaActualizacion, DateTime.UtcNow));
+                        }
+
+                        // 6. REGISTRO DE AUDITORÍA HISTORIAL_ESTADO
+                        string analistaNombre = $"{analista.Nombre} {analista.Apellido}".Trim();
+                        if (string.IsNullOrWhiteSpace(analistaNombre)) analistaNombre = "Analista de riesgo";
+
+                        string motivoAuditoria = decision == "Aceptar"
+                            ? $"Cancelación aprobada por analista {analistaNombre}. Verificación de transferencia/pago conforme. {observacion.Trim()}".Trim()
+                            : $"Cancelación rechazada por analista {analistaNombre}. Motivo: {observacion.Trim()}".Trim();
+
+                        nuevoHistorial = new HistorialEstado
+                        {
+                            SOLICITUD_CREDITO_Id_Solicitud = idSolicitud,
+                            EstadoActual = nuevoEstadoSolicitud,
+                            MotivoCambio = motivoAuditoria,
+                            FechaCambio = DateTime.UtcNow
+                        };
+                        _context.HISTORIAL_ESTADO.Add(nuevoHistorial);
+
+                        // 7. CONFIRMACIÓN ATÓMICA DE LA TRANSACCIÓN
+                        await _context.SaveChangesAsync();
+                        await transaccion.CommitAsync();
+
+                        return new
+                        {
+                            success = true,
+                            mensaje = decision == "Aceptar"
+                                ? "Cancelación aprobada exitosamente. La solicitud ha sido cancelada."
+                                : "Cancelación rechazada. La solicitud ha retornado al estado Aprobado."
+                        };
+                    }
+                    catch
+                    {
+                        try
+                        {
+                            await transaccion.RollbackAsync();
+                        }
+                        catch (Exception rbEx)
+                        {
+                            Console.Error.WriteLine($"[AnalistaController.ProcesarDecisionCancelacion] Rollback error: {rbEx.Message}");
+                        }
+                        finally
+                        {
+                            // Desacoplamiento puntual para que reintentos de ExecutionStrategy no encuentren entidades en estado Added en el ChangeTracker
+                            if (nuevoHistorial != null)
+                            {
+                                _context.Entry(nuevoHistorial).State = EntityState.Detached;
+                            }
+                        }
+
+                        throw;
+                    }
+                });
+
+                return Json(resultado);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[AnalistaController.ProcesarDecisionCancelacion] Error: {ex}");
+                return Json(new { success = false, mensaje = "Ocurrió un error inesperado al procesar la cancelación." });
+            }
         }
         public IActionResult AlertasNotificaciones()
         {
@@ -2562,7 +2772,7 @@ namespace trabajo.Controllers
 
             return View();
         }
-        public IActionResult ContactarSoporte()
+        public IActionResult ContactarSoporte(string? solicitud = null)
         {
             string nombre = User.FindFirst(ClaimTypes.Name)?.Value ?? "";
             string apellido = User.FindFirst("Apellido")?.Value ?? "";
@@ -2577,6 +2787,7 @@ namespace trabajo.Controllers
 
             ViewBag.IdAdministrador = admin?.Id ?? 0;
             ViewBag.IdAnalista = analista?.Id ?? 0;
+            ViewBag.SolicitudReferencia = solicitud;
 
             ViewBag.MensajesAdmin = _context.MENSAJE_ADMIN_ANALISTA
                 .OrderBy(x => x.FechaEnvio)

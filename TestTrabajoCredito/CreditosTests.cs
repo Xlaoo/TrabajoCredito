@@ -1295,5 +1295,254 @@ namespace TestTrabajoCredito
 
             runner.VerificarTodosAprobados();
         }
+
+        [Fact]
+        public async Task ProbarF01CancelacionEvaluacionPreservaHistorialYDatosFinancieros()
+        {
+            var runner = new EscenarioRunner(_output, "F-01: Protección del Historial Financiero en CancelarEvaluacion");
+
+            var options = new DbContextOptionsBuilder<UsuarioContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+                .Options;
+
+            using (var context = new UsuarioContext(options))
+            {
+                var usuario1 = new Usuario
+                {
+                    Id = 1,
+                    Nombre = "Juan",
+                    Apellido = "Perez",
+                    Dni = "72527818",
+                    Celular = "987654321",
+                    Correo = "juan@test.com",
+                    clave = "hash123",
+                    Rol = "Cliente",
+                    EstadoActivo = true
+                };
+
+                var usuario2 = new Usuario
+                {
+                    Id = 2,
+                    Nombre = "Carlos",
+                    Apellido = "Gomez",
+                    Dni = "11223344",
+                    Celular = "912345678",
+                    Correo = "carlos@test.com",
+                    clave = "hash456",
+                    Rol = "Cliente",
+                    EstadoActivo = true
+                };
+
+                context.Usuario.AddRange(usuario1, usuario2);
+
+                var solicitud = new SolicitudCredito
+                {
+                    Id_Solicitud = 301,
+                    NumeroSolicitud = "SOL-00301",
+                    MontoSolicitado = 10000m,
+                    PlazoMeses = 24,
+                    InteresEstimado = 15m,
+                    FechaSolicitud = DateTime.UtcNow,
+                    Estado = "En Evaluación",
+                    Usuario_Id_Usuario = 1
+                };
+                context.SOLICITUD_CREDITO.Add(solicitud);
+
+                var perfil = new PerfilFinanciero
+                {
+                    Id_PerfilFinanciero = 301,
+                    SOLICITUD_CREDITO_Id_Solicitud = 301,
+                    IngresoMensual = 4000m,
+                    EgresoMensual = 1500m,
+                    OtrosCreditos = false,
+                    Ocupacion = "Contador",
+                    MotivoPrestamo = "Estudios",
+                    FechaRegistro = DateTime.UtcNow
+                };
+                context.PERFIL_FINANCIERO.Add(perfil);
+
+                var cuota = new Cuota
+                {
+                    Id_Cuota = 301,
+                    NumeroCuota = 1,
+                    MontoCuota = 500m,
+                    Capital = 400m,
+                    Interes = 100m,
+                    FechaVencimiento = DateTime.UtcNow.AddMonths(1),
+                    Estado = "Pendiente",
+                    SOLICITUD_CREDITO_Id_Solicitud = 301
+                };
+                context.CUOTA.Add(cuota);
+
+                var cronograma = new Cronograma
+                {
+                    Id_Cronograma = 301,
+                    CorreoDestino = "juan@test.com",
+                    FechaEnvio = DateTime.UtcNow,
+                    EstadoEnvio = "Generado",
+                    NumeroOperacion = "CRON-00301",
+                    SOLICITUD_CREDITO_Id_Solicitud = 301
+                };
+                context.CRONOGRAMA.Add(cronograma);
+
+                var evaluacion = new Evaluacion_Riesgo
+                {
+                    Id_Evaluacion = 301,
+                    Resultado = "En Revisión",
+                    Observacion = "Documentación completa",
+                    FechaEvaluacion = DateTime.UtcNow,
+                    Responsable = "Analista",
+                    SOLICITUD_CREDITO_Id_Solicitud = 301
+                };
+                context.Evaluacion_Riesgo.Add(evaluacion);
+
+                var historialCred = new HistorialCredito
+                {
+                    Id_Historial = 301,
+                    Banco = "BCP",
+                    TipoCredito = "Consumo",
+                    Monto = 3000m,
+                    PlazoMeses = 12,
+                    EstadoCredito = "Pagado",
+                    SOLICITUD_CREDITO_Id_Solicitud = 301
+                };
+                context.HISTORIAL_CREDITO.Add(historialCred);
+
+                var propuesta = new PropuestaCredito
+                {
+                    Id_Propuesta = 301,
+                    SOLICITUD_CREDITO_Id_Solicitud = 301,
+                    Monto = 10000m,
+                    PlazoMeses = 24,
+                    EsRecomendada = true,
+                    FechaRegistro = DateTime.UtcNow
+                };
+                context.PROPUESTA_CREDITO.Add(propuesta);
+
+                var estadoInicial = new HistorialEstado
+                {
+                    Id_Historial = 301,
+                    SOLICITUD_CREDITO_Id_Solicitud = 301,
+                    EstadoActual = "En Evaluación",
+                    MotivoCambio = "Solicitud enviada a evaluación",
+                    FechaCambio = DateTime.UtcNow.AddDays(-1)
+                };
+                context.HISTORIAL_ESTADO.Add(estadoInicial);
+
+                context.SaveChanges();
+
+                // 1. Anti-IDOR: Usuario 2 no puede cancelar la solicitud de Usuario 1
+                var controllerUser2 = CrearLoginController(context);
+                var identity = new ClaimsIdentity(new[] { new Claim("Dni", "11223344"), new Claim(ClaimTypes.Role, "Cliente") }, "TestAuth");
+                controllerUser2.ControllerContext.HttpContext.User = new ClaimsPrincipal(identity);
+
+                var res1 = await controllerUser2.CancelarEvaluacion(301, "Intento ajeno");
+                var jsonRes1 = Assert.IsType<JsonResult>(res1);
+                bool ok1 = (bool)(ObtenerPropiedad(jsonRes1.Value, "ok") ?? false);
+
+                runner.Evaluar(
+                    nombreEscenario: "1. Anti-IDOR: Rechazo de cancelación si la solicitud pertenece a otro cliente",
+                    datoEntrada: "Usuario ID 2 intenta cancelar Solicitud 301 de Usuario 1",
+                    esperado: "ok: False",
+                    accion: () => $"ok: {ok1}");
+
+                // 2. Validación de motivo obligatorio
+                var controller = CrearLoginController(context);
+                var res2 = await controller.CancelarEvaluacion(301, "   ");
+                var jsonRes2 = Assert.IsType<JsonResult>(res2);
+                bool ok2 = (bool)(ObtenerPropiedad(jsonRes2.Value, "ok") ?? false);
+
+                runner.Evaluar(
+                    nombreEscenario: "2. Validación de motivo: Rechazo si el motivo es vacío o solo espacios",
+                    datoEntrada: "motivo = '   '",
+                    esperado: "ok: False",
+                    accion: () => $"ok: {ok2}");
+
+                // 3. Cancelación legítima: Conservación absoluta de todas las entidades financieras
+                var res3 = await controller.CancelarEvaluacion(301, "Desistimiento voluntario del cliente");
+                var jsonRes3 = Assert.IsType<JsonResult>(res3);
+                bool ok3 = (bool)(ObtenerPropiedad(jsonRes3.Value, "ok") ?? false);
+
+                var solDb = context.SOLICITUD_CREDITO.FirstOrDefault(s => s.Id_Solicitud == 301);
+                bool solExiste = solDb != null;
+                string estado = solDb?.Estado ?? "";
+
+                bool perfilExiste = context.PERFIL_FINANCIERO.Any(p => p.SOLICITUD_CREDITO_Id_Solicitud == 301);
+                bool cuotasExisten = context.CUOTA.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == 301);
+                bool cronogramaExiste = context.CRONOGRAMA.Any(c => c.SOLICITUD_CREDITO_Id_Solicitud == 301);
+                bool evalExiste = context.Evaluacion_Riesgo.Any(e => e.SOLICITUD_CREDITO_Id_Solicitud == 301);
+                bool histCredExiste = context.HISTORIAL_CREDITO.Any(h => h.SOLICITUD_CREDITO_Id_Solicitud == 301);
+
+                runner.Evaluar(
+                    nombreEscenario: "3. Cancelación legítima: Estado cambia a 'Cancelado' y se conservan todas las entidades",
+                    datoEntrada: "Solicitud 301 en evaluación cancelada con motivo válido",
+                    esperado: "ok: True, SolicitudExiste: True, Estado: Cancelado, PerfilExiste: True, CuotasExisten: True, CronogramaExiste: True, EvaluacionExiste: True, HistorialCreditoExiste: True",
+                    accion: () => $"ok: {ok3}, SolicitudExiste: {solExiste}, Estado: {estado}, PerfilExiste: {perfilExiste}, CuotasExisten: {cuotasExisten}, CronogramaExiste: {cronogramaExiste}, EvaluacionExiste: {evalExiste}, HistorialCreditoExiste: {histCredExiste}");
+
+                // 4. Verificación de auditoría en HISTORIAL_ESTADO y CancelacionEvaluacion
+                var histEstado = context.HISTORIAL_ESTADO
+                    .Where(h => h.SOLICITUD_CREDITO_Id_Solicitud == 301 && h.EstadoActual == "Cancelado")
+                    .OrderByDescending(h => h.FechaCambio)
+                    .FirstOrDefault();
+
+                bool histRegistrado = histEstado != null;
+                string motivoHistorial = histEstado?.MotivoCambio ?? "";
+
+                var cancEval = context.CancelacionEvaluacion
+                    .FirstOrDefault(c => c.IdSolicitud == 301);
+
+                int? cancIdSol = cancEval?.IdSolicitud;
+                string responsable = cancEval?.Responsable ?? "";
+
+                runner.Evaluar(
+                    nombreEscenario: "4. Auditoría: Registro en HISTORIAL_ESTADO y CancelacionEvaluacion con Responsable 'Cliente'",
+                    datoEntrada: "Inspección de HISTORIAL_ESTADO y CancelacionEvaluacion tras cancelación",
+                    esperado: "HistorialRegistrado: True, MotivoHistorial: Desistimiento voluntario del cliente, CancelacionIdSolicitud: 301, Responsable: Cliente",
+                    accion: () => $"HistorialRegistrado: {histRegistrado}, MotivoHistorial: {motivoHistorial}, CancelacionIdSolicitud: {cancIdSol}, Responsable: {responsable}");
+
+                // 5. Segunda petición: Éxito idempotente y no duplicación de auditoría
+                var res5 = await controller.CancelarEvaluacion(301, "Segundo intento repetido");
+                var jsonRes5 = Assert.IsType<JsonResult>(res5);
+                bool ok5 = (bool)(ObtenerPropiedad(jsonRes5.Value, "ok") ?? false);
+                string mensaje5 = (string)(ObtenerPropiedad(jsonRes5.Value, "mensaje") ?? "");
+
+                int totalHistorialCancelado = context.HISTORIAL_ESTADO.Count(h => h.SOLICITUD_CREDITO_Id_Solicitud == 301 && h.EstadoActual == "Cancelado");
+                int totalCancelacionEval = context.CancelacionEvaluacion.Count(c => c.IdSolicitud == 301 && c.Responsable == "Cliente");
+
+                runner.Evaluar(
+                    nombreEscenario: "5. Idempotencia: Segunda petición devuelve éxito y no duplica registros de auditoría",
+                    datoEntrada: "Segunda llamada a CancelarEvaluacion sobre Solicitud 301 (ya cancelada con auditoría)",
+                    esperado: "ok: True, TotalHistorial: 1, TotalCancelacion: 1, Mensaje: Tu solicitud fue cancelada correctamente.",
+                    accion: () => $"ok: {ok5}, TotalHistorial: {totalHistorialCancelado}, TotalCancelacion: {totalCancelacionEval}, Mensaje: {mensaje5}");
+
+                // 6. Rechazo de cancelación sobre solicitud en estado Aprobado
+                var solicitudAprobada = new SolicitudCredito
+                {
+                    Id_Solicitud = 302,
+                    NumeroSolicitud = "SOL-00302",
+                    MontoSolicitado = 5000m,
+                    PlazoMeses = 12,
+                    InteresEstimado = 10m,
+                    FechaSolicitud = DateTime.UtcNow,
+                    Estado = "Aprobado",
+                    Usuario_Id_Usuario = 1
+                };
+                context.SOLICITUD_CREDITO.Add(solicitudAprobada);
+                context.SaveChanges();
+
+                var res6 = await controller.CancelarEvaluacion(302, "Intento sobre aprobada");
+                var jsonRes6 = Assert.IsType<JsonResult>(res6);
+                bool ok6 = (bool)(ObtenerPropiedad(jsonRes6.Value, "ok") ?? true);
+
+                runner.Evaluar(
+                    nombreEscenario: "6. Regla de Negocio: Rechazo de cancelación sobre crédito en estado Aprobado",
+                    datoEntrada: "Llamada a CancelarEvaluacion sobre Solicitud 302 (Estado = 'Aprobado')",
+                    esperado: "ok: False",
+                    accion: () => $"ok: {ok6}");
+            }
+
+            runner.VerificarTodosAprobados();
+        }
     }
 }

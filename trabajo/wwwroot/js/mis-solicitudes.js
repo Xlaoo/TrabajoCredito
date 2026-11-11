@@ -16,6 +16,40 @@ function marcarCambio() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+    // Modal de Agradecimiento institucional de Cancelación
+    const btnEntendido = document.getElementById("btnEntendidoAgradecimiento");
+    if (btnEntendido) {
+        btnEntendido.addEventListener("click", function () {
+            const idSol = this.getAttribute("data-id-solicitud");
+            const modalAgr = document.getElementById("modalAgradecimientoCancelacion");
+
+            btnEntendido.disabled = true;
+            btnEntendido.textContent = "Cerrando...";
+
+            fetch('/Login/MarcarCancelacionVista', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': getCsrfToken()
+                },
+                body: 'idSolicitud=' + encodeURIComponent(idSol)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (modalAgr) {
+                    modalAgr.style.display = 'none';
+                    modalAgr.remove();
+                }
+            })
+            .catch(err => {
+                console.error("[Agradecimiento] Error al marcar como vista:", err);
+                if (modalAgr) {
+                    modalAgr.style.display = 'none';
+                }
+            });
+        });
+    }
+
     // Entradas editables
     document.querySelectorAll(".input-edicion, .select-edicion").forEach(function (el) {
         el.addEventListener("input", marcarCambio);

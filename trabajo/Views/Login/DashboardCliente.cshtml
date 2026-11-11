@@ -139,6 +139,16 @@
             <div class="loan-line"></div>
 
             @if (ViewBag.SolicitudActiva != null &&
+                                ViewBag.SolicitudActiva.Estado == "Pendiente cancelación")
+            {
+                <button type="button" class="loan-btn bloqueado" disabled style="background:#e2e8f0;color:#64748b;cursor:not-allowed;">
+                    Solicitud de cancelación en evaluación
+                </button>
+                <p class="loan-notice" style="color:#b45309;font-weight:600;margin-top:8px;">
+                    No puedes solicitar un nuevo préstamo porque tienes una solicitud de cancelación pendiente de evaluación. Espera la decisión del analista.
+                </p>
+            }
+            else if (ViewBag.SolicitudActiva != null &&
                                 ViewBag.SolicitudActiva.Estado == "Aprobado")
             {
                 <button type="button" class="loan-btn bloqueado" disabled>

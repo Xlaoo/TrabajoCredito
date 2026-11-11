@@ -1,3 +1,13 @@
+@inject trabajo.Models.UsuarioContext _contextLayout
+@{
+    string? dniLayout = User.FindFirst("Dni")?.Value;
+    bool tieneCancelacionPendienteLayout = false;
+    if (!string.IsNullOrWhiteSpace(dniLayout))
+    {
+        tieneCancelacionPendienteLayout = _contextLayout.SOLICITUD_CREDITO
+            .Any(s => s.USUARIO.Dni == dniLayout && s.Estado == "Pendiente cancelación");
+    }
+}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -32,10 +42,23 @@
 
                 <div class="section-title">Mis Créditos</div>
 
-                <a href="@Url.Action("SolicitarCredito", "Login")"
-                   class="@(ViewData["ActivePage"]?.ToString() == "SolicitarCredito" ? "active" : "")">
-                    <i class="fas fa-plus-circle"></i> Solicitar Crédito
-                </a>
+                @if (tieneCancelacionPendienteLayout)
+                {
+                    <a href="javascript:void(0);"
+                       class="bloqueado-nav"
+                       style="opacity:0.55;cursor:not-allowed;"
+                       title="No puedes solicitar un nuevo préstamo porque tienes una solicitud de cancelación pendiente de evaluación. Espera la decisión del analista."
+                       onclick="alert('No puedes solicitar un nuevo préstamo porque tienes una solicitud de cancelación pendiente de evaluación. Espera la decisión del analista.');">
+                        <i class="fas fa-lock"></i> Solicitar Crédito
+                    </a>
+                }
+                else
+                {
+                    <a href="@Url.Action("SolicitarCredito", "Login")"
+                       class="@(ViewData["ActivePage"]?.ToString() == "SolicitarCredito" ? "active" : "")">
+                        <i class="fas fa-plus-circle"></i> Solicitar Crédito
+                    </a>
+                }
 
                 <a href="@Url.Action("MisSolicitudes", "Login")"
                    class="@(ViewData["ActivePage"]?.ToString() == "MisSolicitudes" ? "active" : "")">
